@@ -28,6 +28,7 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-wedding_calculator}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-test_bot_token}
     depends_on:
       postgres:
         condition: service_healthy
