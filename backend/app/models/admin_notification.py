@@ -14,7 +14,15 @@ class AdminNotification(Base):
     lead_id: Mapped[int] = mapped_column(ForeignKey('leads.id', ondelete='CASCADE'), nullable=False)
     notification_type: Mapped[str] = mapped_column(String(100), nullable=False)
     priority: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    status: Mapped[NotificationStatus] = mapped_column(Enum(NotificationStatus, native_enum=False, length=50), nullable=False)
+    status: Mapped[NotificationStatus] = mapped_column(
+        Enum(
+            NotificationStatus,
+            native_enum=False,
+            length=50,
+            values_callable=lambda enum_class: [item.value for item in enum_class],
+        ),
+        nullable=False,
+    )
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

@@ -27,7 +27,13 @@ class Lead(Base):
     guests_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_budget: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     lead_status: Mapped[LeadStatus | None] = mapped_column(
-        Enum(LeadStatus, native_enum=False, length=50), nullable=True
+        Enum(
+            LeadStatus,
+            native_enum=False,
+            length=50,
+            values_callable=lambda enum_class: [item.value for item in enum_class],
+        ),
+        nullable=True,
     )
 
     source: Mapped[str | None] = mapped_column(String(100), nullable=True)

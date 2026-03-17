@@ -16,7 +16,13 @@ class ScheduledMessage(Base):
     message_code: Mapped[str] = mapped_column(String(100), nullable=False)
     send_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
     status: Mapped[ScheduledMessageStatus] = mapped_column(
-        Enum(ScheduledMessageStatus, native_enum=False, length=50), nullable=False
+        Enum(
+            ScheduledMessageStatus,
+            native_enum=False,
+            length=50,
+            values_callable=lambda enum_class: [item.value for item in enum_class],
+        ),
+        nullable=False,
     )
     retry_count: Mapped[int] = mapped_column(Integer, server_default='0', nullable=False)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
