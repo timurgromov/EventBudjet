@@ -5,6 +5,7 @@ from app.models.lead import Lead
 from app.repositories.lead_repository import LeadRepository
 from app.schemas.lead import LeadCreate, LeadUpdate
 from app.services.event_service import EventService
+from app.services.event_types import EventType
 
 
 class LeadService:
@@ -21,11 +22,12 @@ class LeadService:
         data.setdefault('lead_status', LeadStatus.ACTIVE)
 
         lead = self.leads.create(user_id=user_id, data=data)
-        self.events.write_event(lead.id, 'lead_created', {'user_id': user_id})
-        self.events.write_event(lead.id, 'profile_started', {'user_id': user_id})
+        self.events.write_event(lead.id, EventType.BOT_STARTED, {'user_id': user_id})
+        self.events.write_event(lead.id, EventType.LEAD_CREATED, {'user_id': user_id})
+        self.events.write_event(lead.id, EventType.PROFILE_STARTED, {'user_id': user_id})
 
-        if self._is_profile_completed(lead) and not self.events.has_event(lead.id, 'profile_completed'):
-            self.events.write_event(lead.id, 'profile_completed', {'user_id': user_id})
+        if self._is_profile_completed(lead) and not self.events.has_event(lead.id, EventType.PROFILE_COMPLETED):
+            self.events.write_event(lead.id, EventType.PROFILE_COMPLETED, {'user_id': user_id})
 
         self.db.commit()
         self.db.refresh(lead)
@@ -35,13 +37,29 @@ class LeadService:
         data = payload.model_dump(exclude_unset=True)
         updated = self.leads.update(lead=lead, data=data)
 
-        self.events.write_event(updated.id, 'profile_updated', {'updated_fields': sorted(list(data.keys()))})
-        if self._is_profile_completed(updated) and not self.events.has_event(updated.id, 'profile_completed'):
-            self.events.write_event(updated.id, 'profile_completed', {'user_id': updated.user_id})
+        self.events.write_event(updated.id, EventType.PROFILE_UPDATED, {'updated_fields': sorted(list(data.keys()))})
+        if self._is_profile_completed(updated) and not self.events.has_event(updated.id, EventType.PROFILE_COMPLETED):
+            self.events.write_event(updated.id, EventType.PROFILE_COMPLETED, {'user_id': updated.user_id})
 
         self.db.commit()
         self.db.refresh(updated)
         return updated
+
+    def record_progress_entry(self, lead: Lead, expenses_count: int) -> None:
+        if self.events.has_event(lead.id, EventType.MINIAPP_OPENED):
+            event_type = EventType.APP_RESUMED
+        else:
+            event_type = EventType.MINIAPP_OPENED
+
+        self.events.write_event(
+            lead.id,
+            event_type,
+            {
+                'user_id': lead.user_id,
+                'expenses_count': expenses_count,
+            },
+        )
+        self.db.commit()
 
     @staticmethod
     def _is_profile_completed(lead: Lead) -> bool:

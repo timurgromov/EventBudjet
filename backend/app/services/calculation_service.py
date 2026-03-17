@@ -6,6 +6,7 @@ from app.models.lead import Lead
 from app.repositories.expense_repository import ExpenseRepository
 from app.repositories.lead_repository import LeadRepository
 from app.services.event_service import EventService
+from app.services.event_types import EventType
 
 
 class CalculationService:
@@ -22,7 +23,7 @@ class CalculationService:
         self.leads.update(lead, {'total_budget': total})
         self.events.write_event(
             lead.id,
-            'budget_calculated',
+            EventType.BUDGET_CALCULATED,
             {
                 'total_budget': str(total),
                 'expenses_count': len(items),

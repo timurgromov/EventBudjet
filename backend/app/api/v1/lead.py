@@ -7,7 +7,6 @@ from app.models.user import User
 from app.schemas.expense import ExpenseRead
 from app.schemas.lead import LeadCalculateResponse, LeadCreate, LeadProgressResponse, LeadRead, LeadUpdate
 from app.services.calculation_service import CalculationService
-from app.services.event_service import EventService
 from app.services.expense_service import ExpenseService
 from app.services.lead_service import LeadService
 
@@ -70,20 +69,13 @@ def get_lead_progress(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> LeadProgressResponse:
-    lead = LeadService(db).get_user_lead(current_user.id)
+    lead_service = LeadService(db)
+    lead = lead_service.get_user_lead(current_user.id)
     if lead is None:
         return LeadProgressResponse(lead=None, expenses=[], total_budget=None, lead_status=None)
 
     expenses = ExpenseService(db).list_expenses(lead)
-    EventService(db).write_event(
-        lead.id,
-        'app_resumed',
-        {
-            'user_id': current_user.id,
-            'expenses_count': len(expenses),
-        },
-    )
-    db.commit()
+    lead_service.record_progress_entry(lead, expenses_count=len(expenses))
 
     return LeadProgressResponse(
         lead=LeadRead.model_validate(lead),

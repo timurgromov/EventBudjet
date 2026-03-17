@@ -6,6 +6,7 @@ from app.models.lead import Lead
 from app.repositories.expense_repository import ExpenseRepository
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate
 from app.services.event_service import EventService
+from app.services.event_types import EventType
 
 BASE_EXPENSE_CATEGORIES: dict[str, str] = {
     'banquet': 'Банкет',
@@ -51,7 +52,7 @@ class ExpenseService:
         )
         self.events.write_event(
             lead.id,
-            'expense_added',
+            EventType.EXPENSE_ADDED,
             {
                 'expense_id': expense.id,
                 'category_code': expense.category_code,
@@ -79,7 +80,7 @@ class ExpenseService:
         updated = self.repo.update(expense, data)
         self.events.write_event(
             lead.id,
-            'expense_updated',
+            EventType.EXPENSE_UPDATED,
             {
                 'expense_id': updated.id,
                 'updated_fields': sorted(list(payload.model_fields_set)),
@@ -101,7 +102,7 @@ class ExpenseService:
             'amount': str(expense.amount),
         }
         self.repo.delete(expense)
-        self.events.write_event(lead.id, 'expense_removed', deleted_payload)
+        self.events.write_event(lead.id, EventType.EXPENSE_REMOVED, deleted_payload)
         self.db.commit()
 
     @staticmethod
