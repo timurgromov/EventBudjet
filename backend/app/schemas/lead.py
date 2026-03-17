@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.expense import ExpenseRead
+
 
 class LeadBase(BaseModel):
     role: str | None = None
@@ -37,3 +39,15 @@ class LeadRead(LeadBase):
     updated_at: datetime
 
     model_config = {'from_attributes': True}
+
+
+class LeadCalculateResponse(BaseModel):
+    lead_id: int
+    total_budget: Decimal
+
+
+class LeadProgressResponse(BaseModel):
+    lead: LeadRead | None
+    expenses: list[ExpenseRead]
+    total_budget: Decimal | None
+    lead_status: str | None
