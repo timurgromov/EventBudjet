@@ -28,7 +28,7 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-wedding_calculator}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-test_bot_token}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-123456:TEST_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,6 +49,16 @@ services:
     build:
       context: .
       dockerfile: bot/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-wedding_calculator}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-123456:TEST_TOKEN}
+      BOT_ADMIN_CHAT_ID: ${BOT_ADMIN_CHAT_ID:-0}
+      MINI_APP_URL: ${MINI_APP_URL:-https://example.com}
+      BOT_DRY_RUN: ${BOT_DRY_RUN:-true}
+      BOT_EVENT_POLL_INTERVAL_SECONDS: ${BOT_EVENT_POLL_INTERVAL_SECONDS:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "${BOT_PORT:-8081}:8081"
     healthcheck:
@@ -57,7 +67,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8081').status==200 else sys.exit(1)"
+          "import pathlib,sys; sys.exit(0) if pathlib.Path('/tmp/bot_ready').exists() else sys.exit(1)"
         ]
       interval: 10s
       timeout: 5s

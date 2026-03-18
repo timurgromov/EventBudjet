@@ -1,0 +1,17 @@
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    telegram_bot_token: str = '123456:TEST_TOKEN'
+    bot_admin_chat_id: int | None = None
+    mini_app_url: str = 'https://example.com'
+    bot_dry_run: bool = True
+    bot_event_poll_interval_seconds: int = 10
+
+    database_url: str = 'postgresql+psycopg://postgres:postgres@postgres:5432/wedding_calculator'
+
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
+
+
+settings = Settings()
