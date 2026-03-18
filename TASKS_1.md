@@ -1,4 +1,4 @@
-# TASKS.md
+# TASKS_1.md
 
 ## Phase 1 — MVP Calculator in Telegram Mini App
 
@@ -347,6 +347,11 @@ Admin must be able to:
 - [ ] Add deployment instructions for VPS
 - [ ] Verify all services run on VPS
 - [ ] Verify Mini App works over HTTPS
+- [ ] Set stable production `MINI_APP_URL` (domain + HTTPS)
+- [ ] Configure BotFather entry points to production URL:
+  - `Menu Button`
+  - `Main App`
+  - `Attachment Menu`
 
 ### Acceptance criteria
 - App is deployable on VPS from documented steps
@@ -376,6 +381,7 @@ Admin must be able to:
 ## 16. Phase 1 completion checklist
 
 - [ ] Telegram bot launches Mini App
+- [ ] BotFather entry points open Mini App (`Menu Button`, `Main App`, `Attachment Menu`)
 - [ ] Telegram auth validation works
 - [ ] User profile saves
 - [ ] Expenses save
