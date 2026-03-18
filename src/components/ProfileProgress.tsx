@@ -21,7 +21,7 @@ const paramLabels: Array<{ key: string; label: string; check: (q: NonNullable<Pr
   { key: "role", label: "кто вы", check: (q) => !!q.role },
   { key: "guests", label: "количество гостей", check: (q) => !!q.guests && q.guests > 0 },
   { key: "date", label: "дата", check: (q) => !q.dateUndecided && !!q.date },
-  { key: "venue", label: "площадка", check: (q) => q.venue === "chosen" && !!q.venueName },
+  { key: "venue", label: "площадка", check: (q) => !!q.venue },
 ];
 
 const SegmentedProgress: React.FC<{ filled: number; total: number }> = ({ filled, total }) => {

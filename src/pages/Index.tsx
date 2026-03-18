@@ -1,10 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import QualificationScreen from "@/components/QualificationScreen";
 import EstimateScreen from "@/components/EstimateScreen";
 import TelegramProfile from "@/components/TelegramProfile";
 import AppHeader from "@/components/AppHeader";
 import ProfileProgress from "@/components/ProfileProgress";
-import { useTelegramUser, getStorageKey } from "@/hooks/useTelegramUser";
+import {
+  authTelegramInit,
+  calculateLead,
+  createExpense,
+  createLead,
+  deleteExpense,
+  getLeadProgress,
+  listExpenses,
+  updateLead,
+} from "@/lib/api";
+import { defaultItems } from "@/components/expense-items-data";
+import { useTelegramContext } from "@/hooks/useTelegramUser";
 
 interface SavedData {
   screen: "qualification" | "estimate";
@@ -23,71 +35,264 @@ interface SavedData {
   customItems?: Array<{ id: string; name: string; checked: boolean; userPrice: string }>;
 }
 
+const parseMoney = (raw: string): number => {
+  const cleaned = raw.replace(/\D/g, "");
+  if (!cleaned) return 0;
+  return Number.parseInt(cleaned, 10);
+};
+
+const itemById = new Map(defaultItems.map((item) => [item.id, item]));
+
 const Index = () => {
-  const user = useTelegramUser();
+  const { user, initData, isTelegram } = useTelegramContext();
+
+  const [bootstrapTick, setBootstrapTick] = useState(0);
+  const [bootLoading, setBootLoading] = useState(true);
+  const [bootError, setBootError] = useState<string | null>(null);
+
   const [screen, setScreen] = useState<"qualification" | "estimate">("qualification");
   const [guests, setGuests] = useState(0);
-  const [loaded, setLoaded] = useState(false);
-  const [savedEstimate, setSavedEstimate] = useState<SavedData["estimateItems"]>();
-  const [savedCustomItems, setSavedCustomItems] = useState<SavedData["customItems"]>();
+  const [savedEstimate, setSavedEstimate] = useState<SavedData["estimateItems"]>({});
+  const [savedCustomItems, setSavedCustomItems] = useState<SavedData["customItems"]>([]);
   const [savedQualification, setSavedQualification] = useState<SavedData["qualification"]>();
 
-  // Load saved data
-  useEffect(() => {
-    const key = getStorageKey(user?.id ?? null);
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const data: SavedData = JSON.parse(raw);
-        setScreen(data.screen);
-        setGuests(data.guests);
-        if (data.estimateItems) setSavedEstimate(data.estimateItems);
-        if (data.customItems) setSavedCustomItems(data.customItems);
-        if (data.qualification) setSavedQualification(data.qualification);
-      }
-    } catch {}
-    setLoaded(true);
-  }, [user]);
+  const [hasLead, setHasLead] = useState(false);
+  const [backendTotal, setBackendTotal] = useState<number | null>(null);
 
-  const saveData = (data: Partial<SavedData>) => {
-    const key = getStorageKey(user?.id ?? null);
-    try {
-      const existing = JSON.parse(localStorage.getItem(key) || "{}");
-      localStorage.setItem(key, JSON.stringify({ ...existing, ...data }));
-    } catch {}
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  const syncTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current !== null) {
+        window.clearTimeout(syncTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const bootstrap = async () => {
+      setBootLoading(true);
+      setBootError(null);
+
+      if (!isTelegram || !initData) {
+        setBootError("Откройте калькулятор через Telegram Mini App");
+        setBootLoading(false);
+        return;
+      }
+
+      try {
+        await authTelegramInit(initData);
+        const progress = await getLeadProgress(initData);
+
+        if (!progress.lead) {
+          setHasLead(false);
+          setSavedQualification(undefined);
+          setSavedEstimate({});
+          setSavedCustomItems([]);
+          setGuests(0);
+          setScreen("qualification");
+          setBackendTotal(null);
+          setBootLoading(false);
+          return;
+        }
+
+        setHasLead(true);
+        setGuests(progress.lead.guests_count ?? 0);
+        setBackendTotal(progress.total_budget ? Number.parseFloat(progress.total_budget) : null);
+
+        const dateUndecided = !progress.lead.wedding_date_exact;
+        const dateSeason = progress.lead.next_year_flag
+          ? "next_year"
+          : (progress.lead.season ?? "");
+
+        setSavedQualification({
+          role: progress.lead.role ?? "",
+          city: progress.lead.city ?? "",
+          date: progress.lead.wedding_date_exact ?? "",
+          guests: progress.lead.guests_count ?? 0,
+          venue: progress.lead.venue_status ?? "",
+          venueName: "",
+          dateUndecided,
+          dateSeason,
+        });
+
+        const estimateItems: Record<string, { checked: boolean; userPrice: string }> = {};
+        const customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }> = [];
+
+        progress.expenses.forEach((expense) => {
+          const amount = Number.parseFloat(expense.amount);
+          const amountValue = Number.isFinite(amount) ? Math.round(amount).toString() : "";
+
+          if (expense.category_code && itemById.has(expense.category_code)) {
+            estimateItems[expense.category_code] = { checked: true, userPrice: amountValue };
+          } else {
+            customItems.push({
+              id: `custom-${expense.id}`,
+              name: expense.category_name,
+              checked: true,
+              userPrice: amountValue,
+            });
+          }
+        });
+
+        setSavedEstimate(estimateItems);
+        setSavedCustomItems(customItems);
+        setScreen("estimate");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Не удалось загрузить данные";
+        setBootError(message);
+      } finally {
+        setBootLoading(false);
+      }
+    };
+
+    void bootstrap();
+  }, [bootstrapTick, initData, isTelegram]);
+
+  const buildLeadPayload = (q: SavedData["qualification"]) => {
+    if (!q) return {};
+
+    const nextYear = q.dateUndecided && q.dateSeason === "next_year";
+    const hasSeason = q.dateUndecided && q.dateSeason && q.dateSeason !== "next_year";
+
+    return {
+      role: q.role,
+      city: q.city,
+      venue_status: q.venue || undefined,
+      wedding_date_exact: q.dateUndecided ? null : (q.date || null),
+      wedding_date_mode: q.dateUndecided ? "season" : "exact",
+      season: hasSeason ? q.dateSeason : null,
+      next_year_flag: nextYear,
+      guests_count: q.guests,
+      source: "telegram_mini_app",
+    };
   };
 
-  if (!loaded) return null;
+  const syncExpensesToBackend = async (
+    estimateItems: Record<string, { checked: boolean; userPrice: string }>,
+    customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>,
+  ) => {
+    if (!initData || !hasLead) return;
+
+    const desired: Array<{ category_code: string | null; category_name?: string; amount: string }> = [];
+
+    Object.entries(estimateItems).forEach(([categoryCode, value]) => {
+      if (!value.checked) return;
+
+      const item = itemById.get(categoryCode);
+      const manual = parseMoney(value.userPrice);
+      const suggested = item ? (item.getPrice(guests) ?? 0) : 0;
+      const amount = manual || suggested;
+      if (amount <= 0) return;
+
+      desired.push({
+        category_code: categoryCode,
+        amount: String(amount),
+      });
+    });
+
+    customItems.forEach((item) => {
+      if (!item.checked) return;
+      const amount = parseMoney(item.userPrice);
+      if (amount <= 0) return;
+      desired.push({
+        category_code: "custom",
+        category_name: item.name,
+        amount: String(amount),
+      });
+    });
+
+    const existing = await listExpenses(initData);
+    for (const expense of existing) {
+      await deleteExpense(initData, expense.id);
+    }
+
+    for (const item of desired) {
+      await createExpense(initData, item);
+    }
+  };
+
+  const scheduleAutoSync = (
+    estimateItems: Record<string, { checked: boolean; userPrice: string }>,
+    customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>,
+  ) => {
+    if (!hasLead || !initData) return;
+
+    if (syncTimerRef.current !== null) {
+      window.clearTimeout(syncTimerRef.current);
+    }
+
+    syncTimerRef.current = window.setTimeout(() => {
+      void (async () => {
+        try {
+          setSyncError(null);
+          await syncExpensesToBackend(estimateItems, customItems);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Ошибка синхронизации расходов";
+          setSyncError(`Расходы не сохранены: ${message}`);
+        }
+      })();
+    }, 700);
+  };
+
+  const formattedWeddingDate = useMemo(() => {
+    if (!savedQualification) return undefined;
+    if (savedQualification.dateUndecided) {
+      return savedQualification.dateSeason || "Не определена";
+    }
+    if (!savedQualification.date) return undefined;
+    return new Date(savedQualification.date).toLocaleDateString("ru-RU");
+  }, [savedQualification]);
+
+  if (bootLoading) {
+    return <div className="max-w-md mx-auto min-h-screen bg-background p-6 text-sm text-muted-foreground">Загрузка...</div>;
+  }
+
+  if (bootError) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen bg-background p-6 space-y-4">
+        <div className="text-sm text-destructive">{bootError}</div>
+        <button
+          onClick={() => setBootstrapTick((x) => x + 1)}
+          className="h-10 px-4 rounded-lg border border-border bg-card text-sm"
+        >
+          Повторить
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-background">
       <TelegramProfile user={user} />
-      <AppHeader onBack={screen === "estimate" ? () => {
-        setScreen("qualification");
-        saveData({ screen: "qualification" });
-        const key = getStorageKey(user?.id ?? null);
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const data: SavedData = JSON.parse(raw);
-            if (data.qualification) setSavedQualification(data.qualification);
-          }
-        } catch {}
-      } : undefined} />
+      <AppHeader
+        onBack={
+          screen === "estimate"
+            ? () => {
+                setScreen("qualification");
+              }
+            : undefined
+        }
+      />
       {screen === "estimate" && (
         <ProfileProgress
           qualification={savedQualification}
           onFill={() => {
             setScreen("qualification");
-            saveData({ screen: "qualification" });
           }}
         />
       )}
       {screen === "qualification" ? (
         <QualificationScreen
           savedData={savedQualification}
-          onFieldChange={(q) => saveData({ qualification: q, guests: q.guests })}
-          onNext={(data) => {
+          onFieldChange={(q) => {
+            setSavedQualification(q);
+            setGuests(q.guests);
+          }}
+          onNext={async (data) => {
             const q = {
               role: data.role,
               city: data.city,
@@ -98,23 +303,73 @@ const Index = () => {
               dateUndecided: data.dateUndecided ?? false,
               dateSeason: data.dateSeason ?? "",
             };
-            setGuests(data.guests);
-            setSavedQualification(q);
-            setScreen("estimate");
-            window.scrollTo(0, 0);
-            saveData({ screen: "estimate", guests: data.guests, qualification: q });
+
+            try {
+              setSyncError(null);
+              if (!initData) {
+                throw new Error("Отсутствует Telegram initData");
+              }
+
+              if (hasLead) {
+                await updateLead(initData, buildLeadPayload(q));
+              } else {
+                await createLead(initData, buildLeadPayload(q));
+                setHasLead(true);
+              }
+
+              setGuests(data.guests);
+              setSavedQualification(q);
+              setScreen("estimate");
+              window.scrollTo(0, 0);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Ошибка сохранения профиля";
+              setSyncError(message);
+              toast.error(`Профиль не сохранён: ${message}`);
+            }
           }}
         />
       ) : (
         <EstimateScreen
           guests={guests}
           city={savedQualification?.city}
-          weddingDate={savedQualification?.dateUndecided
-            ? (savedQualification?.dateSeason || "Не определена")
-            : (savedQualification?.date ? new Date(savedQualification.date).toLocaleDateString("ru-RU") : undefined)}
+          weddingDate={formattedWeddingDate}
           savedItems={savedEstimate}
           savedCustomItems={savedCustomItems}
-          onSave={(estimateItems, customItems) => saveData({ estimateItems, customItems })}
+          backendTotal={backendTotal}
+          syncError={syncError}
+          isCalculating={isCalculating}
+          onSave={(estimateItems, customItems) => {
+            setSavedEstimate(estimateItems);
+            setSavedCustomItems(customItems);
+            scheduleAutoSync(estimateItems, customItems);
+          }}
+          onCalculate={async (estimateItems, customItems) => {
+            if (!initData) {
+              setSyncError("Отсутствует Telegram initData");
+              return;
+            }
+
+            try {
+              setIsCalculating(true);
+              setSyncError(null);
+
+              if (syncTimerRef.current !== null) {
+                window.clearTimeout(syncTimerRef.current);
+                syncTimerRef.current = null;
+              }
+
+              await syncExpensesToBackend(estimateItems, customItems);
+              const calculated = await calculateLead(initData);
+              setBackendTotal(Number.parseFloat(calculated.total_budget));
+              toast.success("Бюджет сохранён и рассчитан");
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Ошибка расчёта";
+              setSyncError(message);
+              toast.error(`Расчёт не выполнен: ${message}`);
+            } finally {
+              setIsCalculating(false);
+            }
+          }}
         />
       )}
     </div>

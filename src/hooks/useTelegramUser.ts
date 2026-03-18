@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 export interface TelegramUser {
   id: number;
@@ -6,47 +6,52 @@ export interface TelegramUser {
   username?: string;
 }
 
+interface TelegramWebApp {
+  initData: string;
+  initDataUnsafe: {
+    user?: TelegramUser;
+  };
+  ready: () => void;
+  expand: () => void;
+  sendData?: (data: string) => void;
+}
+
 declare global {
   interface Window {
     Telegram?: {
-      WebApp: {
-        initDataUnsafe: {
-          user?: TelegramUser;
-        };
-        ready: () => void;
-        expand: () => void;
-        sendData: (data: string) => void;
-      };
+      WebApp: TelegramWebApp;
     };
   }
 }
 
-function getTelegramUser(): TelegramUser | null {
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-    const tgUser = tg.initDataUnsafe?.user;
-    if (tgUser) {
-      try {
-        tg.sendData(JSON.stringify({
-          event: "app_open",
-          telegram_id: tgUser.id,
-          first_name: tgUser.first_name,
-          username: tgUser.username,
-          timestamp: new Date().toISOString(),
-        }));
-      } catch {}
-      return tgUser;
-    }
-  }
-  return null;
+export interface TelegramContext {
+  user: TelegramUser | null;
+  initData: string;
+  isTelegram: boolean;
 }
 
-const resolvedUser = getTelegramUser();
+function readTelegramContext(): TelegramContext {
+  const tg = window.Telegram?.WebApp;
+  if (!tg) {
+    return { user: null, initData: "", isTelegram: false };
+  }
+
+  tg.ready();
+  tg.expand();
+
+  return {
+    user: tg.initDataUnsafe?.user ?? null,
+    initData: tg.initData ?? "",
+    isTelegram: true,
+  };
+}
+
+export function useTelegramContext(): TelegramContext {
+  return useMemo(() => readTelegramContext(), []);
+}
 
 export function useTelegramUser(): TelegramUser | null {
-  return resolvedUser;
+  return useTelegramContext().user;
 }
 
 export function getStorageKey(userId: number | null): string {
