@@ -134,7 +134,18 @@ const Index = () => {
 
         setSavedEstimate(estimateItems);
         setSavedCustomItems(customItems);
-        setScreen("estimate");
+        const hasProfileData = Boolean(
+          progress.lead.role ||
+          progress.lead.city ||
+          progress.lead.venue_status ||
+          progress.lead.wedding_date_exact ||
+          progress.lead.season ||
+          progress.lead.next_year_flag ||
+          (progress.lead.guests_count ?? 0) > 0,
+        );
+        const hasProgressData = hasProfileData || progress.expenses.length > 0 || progress.total_budget !== null;
+        setScreen(hasProgressData ? "estimate" : "qualification");
+        window.scrollTo(0, 0);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Не удалось загрузить данные";
         setBootError(message);
