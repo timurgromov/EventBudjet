@@ -22,7 +22,7 @@ def build_start_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='Open Wedding Calculator',
+                    text='Открыть свадебный калькулятор',
                     web_app=WebAppInfo(url=settings.mini_app_url),
                 )
             ]
@@ -48,7 +48,7 @@ async def start_handler(message: Message, bot: Bot) -> None:
     repository.create_lead_event(lead_id, 'bot_started')
 
     await message.answer(
-        'Welcome to Wedding Calculator. Open Mini App to start planning your budget.',
+        'Нажмите кнопку ниже, чтобы открыть свадебный калькулятор и начать планирование бюджета.',
         reply_markup=build_start_keyboard(),
     )
 
