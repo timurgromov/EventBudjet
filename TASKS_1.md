@@ -313,7 +313,10 @@ Admin must be able to:
 
 ## 13. Minimal admin frontend
 
+- [ ] Implement admin frontend in existing stack (`React + Vite + TypeScript`)
 - [ ] Create minimal admin route/page
+- [ ] Use dedicated route `/admin` in the same frontend app
+- [ ] Open admin in regular browser (not inside Telegram Mini App)
 - [ ] Build lead list page
 - [ ] Build lead detail page
 - [ ] Display:
@@ -327,11 +330,13 @@ Admin must be able to:
   - last_seen_at
 - [ ] Add basic status display
 - [ ] Ensure admin view is readable and operational, not decorative
+- [ ] Ensure admin route works locally and after VPS deployment
 
 ### Acceptance criteria
 - Admin can open lead list
 - Admin can inspect one lead without DB access
 - MVP admin page is useful for real work
+- Admin page is accessible via browser on production domain (`/admin`)
 
 ---
 
