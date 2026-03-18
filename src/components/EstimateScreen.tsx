@@ -11,11 +11,6 @@ interface EstimateScreenProps {
   savedItems?: Record<string, { checked: boolean; userPrice: string }>;
   savedCustomItems?: Array<{ id: string; name: string; checked: boolean; userPrice: string }>;
   onSave?: (items: Record<string, { checked: boolean; userPrice: string }>, customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>) => void;
-  onCalculate?: (
-    items: Record<string, { checked: boolean; userPrice: string }>,
-    customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>,
-  ) => Promise<void> | void;
-  isCalculating?: boolean;
   backendTotal?: number | null;
   syncError?: string | null;
 }
@@ -68,8 +63,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   savedItems,
   savedCustomItems,
   onSave,
-  onCalculate,
-  isCalculating = false,
   backendTotal = null,
   syncError = null,
 }) => {
@@ -154,19 +147,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       triggerSave(next);
       return next;
     });
-  };
-
-  const snapshotData = () => {
-    const estimateItems: Record<string, { checked: boolean; userPrice: string }> = {};
-    const customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }> = [];
-    items.forEach((it) => {
-      if (it.isCustom) {
-        customItems.push({ id: it.id, name: it.name, checked: it.checked, userPrice: it.userPrice });
-      } else {
-        estimateItems[it.id] = { checked: it.checked, userPrice: it.userPrice };
-      }
-    });
-    return { estimateItems, customItems };
   };
 
   return (
@@ -282,17 +262,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
           </div>
         )}
         {syncError && <div className="text-xs text-destructive">{syncError}</div>}
-        <button
-          onClick={() => {
-            if (!onCalculate) return;
-            const snapshot = snapshotData();
-            onCalculate(snapshot.estimateItems, snapshot.customItems);
-          }}
-          disabled={isCalculating}
-          className="w-full h-11 rounded-xl border border-border bg-card text-foreground font-medium text-sm hover:bg-secondary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {isCalculating ? "Сохраняем..." : "Сохранить и рассчитать"}
-        </button>
         <button
           onClick={() => {
             const lines: string[] = ["📋 Смета свадьбы\n"];

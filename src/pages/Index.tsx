@@ -60,7 +60,6 @@ const Index = () => {
   const [backendTotal, setBackendTotal] = useState<number | null>(null);
 
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
 
   const syncTimerRef = useRef<number | null>(null);
 
@@ -230,6 +229,8 @@ const Index = () => {
         try {
           setSyncError(null);
           await syncExpensesToBackend(estimateItems, customItems);
+          const calculated = await calculateLead(initData);
+          setBackendTotal(Number.parseFloat(calculated.total_budget));
         } catch (error) {
           const message = error instanceof Error ? error.message : "Ошибка синхронизации расходов";
           setSyncError(`Расходы не сохранены: ${message}`);
@@ -337,38 +338,10 @@ const Index = () => {
           savedCustomItems={savedCustomItems}
           backendTotal={backendTotal}
           syncError={syncError}
-          isCalculating={isCalculating}
           onSave={(estimateItems, customItems) => {
             setSavedEstimate(estimateItems);
             setSavedCustomItems(customItems);
             scheduleAutoSync(estimateItems, customItems);
-          }}
-          onCalculate={async (estimateItems, customItems) => {
-            if (!initData) {
-              setSyncError("Отсутствует Telegram initData");
-              return;
-            }
-
-            try {
-              setIsCalculating(true);
-              setSyncError(null);
-
-              if (syncTimerRef.current !== null) {
-                window.clearTimeout(syncTimerRef.current);
-                syncTimerRef.current = null;
-              }
-
-              await syncExpensesToBackend(estimateItems, customItems);
-              const calculated = await calculateLead(initData);
-              setBackendTotal(Number.parseFloat(calculated.total_budget));
-              toast.success("Бюджет сохранён и рассчитан");
-            } catch (error) {
-              const message = error instanceof Error ? error.message : "Ошибка расчёта";
-              setSyncError(message);
-              toast.error(`Расчёт не выполнен: ${message}`);
-            } finally {
-              setIsCalculating(false);
-            }
           }}
         />
       )}

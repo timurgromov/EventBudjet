@@ -7,7 +7,7 @@ interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = ({ onBack }) => {
   return (
-    <div className="text-center pt-6 pb-3 px-5 relative">
+    <div className={`text-center pt-6 pb-3 px-5 relative ${onBack ? "pl-14 pr-14" : ""}`}>
       {onBack && (
         <button
           onClick={onBack}
