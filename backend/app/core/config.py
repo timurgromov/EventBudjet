@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # Mini App access defaults can be overridden via CORS_ALLOW_ORIGINS.
     cors_allow_origins: list[str] = Field(default_factory=lambda: ['*'])
     telegram_bot_token: str = 'test_bot_token'
+    admin_api_token: str = 'change-me-admin-token'
 
     database_url: str = 'postgresql+psycopg://postgres:postgres@localhost:5432/wedding_calculator'
 

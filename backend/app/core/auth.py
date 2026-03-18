@@ -1,6 +1,7 @@
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -25,3 +26,12 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='User is not initialized')
 
     return user
+
+
+def require_admin_access(x_admin_token: str | None = Header(default=None, alias='X-Admin-Token')) -> None:
+    configured_token = settings.admin_api_token
+    if not configured_token:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail='Admin access is not configured')
+
+    if x_admin_token != configured_token:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access denied')
