@@ -60,16 +60,11 @@ const Index = () => {
   const [backendTotal, setBackendTotal] = useState<number | null>(null);
 
   const [syncError, setSyncError] = useState<string | null>(null);
-
-  const syncTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (syncTimerRef.current !== null) {
-        window.clearTimeout(syncTimerRef.current);
-      }
-    };
-  }, []);
+  const syncInFlightRef = useRef(false);
+  const pendingSyncRef = useRef<{
+    estimateItems: Record<string, { checked: boolean; userPrice: string }>;
+    customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>;
+  } | null>(null);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -214,29 +209,38 @@ const Index = () => {
     }
   };
 
-  const scheduleAutoSync = (
-    estimateItems: Record<string, { checked: boolean; userPrice: string }>,
-    customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>,
-  ) => {
-    if (!hasLead || !initData) return;
+  const runAutoSync = async () => {
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
 
-    if (syncTimerRef.current !== null) {
-      window.clearTimeout(syncTimerRef.current);
-    }
+    try {
+      while (pendingSyncRef.current) {
+        const payload = pendingSyncRef.current;
+        pendingSyncRef.current = null;
 
-    syncTimerRef.current = window.setTimeout(() => {
-      void (async () => {
         try {
           setSyncError(null);
-          await syncExpensesToBackend(estimateItems, customItems);
+          await syncExpensesToBackend(payload.estimateItems, payload.customItems);
           const calculated = await calculateLead(initData);
           setBackendTotal(Number.parseFloat(calculated.total_budget));
         } catch (error) {
           const message = error instanceof Error ? error.message : "Ошибка синхронизации расходов";
           setSyncError(`Расходы не сохранены: ${message}`);
         }
-      })();
-    }, 700);
+      }
+    } finally {
+      syncInFlightRef.current = false;
+    }
+  };
+
+  const scheduleAutoSync = (
+    estimateItems: Record<string, { checked: boolean; userPrice: string }>,
+    customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>,
+  ) => {
+    if (!hasLead || !initData) return;
+
+    pendingSyncRef.current = { estimateItems, customItems };
+    void runAutoSync();
   };
 
   const formattedWeddingDate = useMemo(() => {
