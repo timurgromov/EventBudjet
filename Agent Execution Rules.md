@@ -228,3 +228,22 @@ If conflict occurs:
 1. `PROJECT_SPEC.md`
 2. `TASKS.md`
 3. This file
+
+---
+
+## 20. Code Hygiene And Cleanup
+
+- Do not leave dead code, abandoned branches, or obsolete helpers in the codebase
+- Do not keep temporary debug logic, temporary access hacks, or one-off operational workarounds after they are no longer needed
+- Do not layer new logic on top of old broken logic if the old path can be safely removed
+- When a temporary workaround is required to complete a task:
+  - mark it clearly
+  - contain it narrowly
+  - remove it as soon as the stable path is implemented
+- When a task changes architecture or behavior materially:
+  - update the real source-of-truth files
+  - remove superseded logic
+  - keep the repository in a clean final state, not an intermediate state
+
+This rule does not authorize broad speculative refactoring.
+Cleanup must be targeted, justified, and directly connected to the implemented task.
