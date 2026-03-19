@@ -6,6 +6,7 @@ import { defaultItems, ItemInfo } from "./expense-items-data";
 
 interface EstimateScreenProps {
   guests: number;
+  role?: string;
   city?: string;
   weddingDate?: string;
   venue?: string;
@@ -28,6 +29,42 @@ interface ExpenseItem {
 }
 
 const formatPrice = (price: number): string => price.toLocaleString("ru-RU");
+
+const ROLE_LABELS: Record<string, string> = {
+  bride: "Невеста",
+  groom: "Жених",
+  mother: "Мама",
+  pro: "Свадебный специалист",
+};
+
+const CITY_LABELS: Record<string, string> = {
+  moscow: "Москва",
+  mo: "МО",
+  region: "Другой регион",
+};
+
+const WEDDING_DATE_LABELS: Record<string, string> = {
+  spring: "Весна",
+  summer: "Лето",
+  autumn: "Осень",
+  winter: "Зима",
+  next_year: "В следующем году",
+};
+
+const formatRoleLabel = (role?: string): string | undefined => {
+  if (!role) return undefined;
+  return ROLE_LABELS[role] ?? role;
+};
+
+const formatCityLabel = (city?: string): string | undefined => {
+  if (!city) return undefined;
+  return CITY_LABELS[city] ?? city;
+};
+
+const formatWeddingDateLabel = (weddingDate?: string): string | undefined => {
+  if (!weddingDate) return undefined;
+  return WEDDING_DATE_LABELS[weddingDate] ?? weddingDate;
+};
 
 const formatVenueLabel = (venue?: string, venueName?: string): string => {
   if (venue === "chosen" && venueName?.trim()) {
@@ -70,6 +107,7 @@ const InfoBlock: React.FC<{ info: ItemInfo }> = ({ info }) => (
 
 const EstimateScreen: React.FC<EstimateScreenProps> = ({
   guests,
+  role,
   city,
   weddingDate,
   venue,
@@ -279,9 +317,13 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
         <button
           onClick={() => {
             const lines: string[] = ["📋 Смета свадьбы\n"];
-            if (city) lines.push(`Город: ${city}`);
+            const roleLabel = formatRoleLabel(role);
+            const cityLabel = formatCityLabel(city);
+            const weddingDateLabel = formatWeddingDateLabel(weddingDate);
+            if (roleLabel) lines.push(`Кто: ${roleLabel}`);
+            if (cityLabel) lines.push(`Город: ${cityLabel}`);
             lines.push(`Площадка: ${formatVenueLabel(venue, venueName)}`);
-            if (weddingDate) lines.push(`Дата свадьбы: ${weddingDate}`);
+            if (weddingDateLabel) lines.push(`Дата свадьбы: ${weddingDateLabel}`);
             lines.push(`Гостей: ${guests}\n`);
             items.forEach((item) => {
               if (!item.checked) return;

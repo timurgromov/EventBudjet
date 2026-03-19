@@ -406,6 +406,7 @@ const Index = () => {
       ) : (
         <EstimateScreen
           guests={guests}
+          role={savedQualification?.role}
           city={savedQualification?.city}
           weddingDate={formattedWeddingDate}
           venue={savedQualification?.venue}
