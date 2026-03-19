@@ -277,6 +277,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
             });
             lines.push(`\nИтого: ${formatPrice(total)} ₽`);
             lines.push(`\nРасчёт сделан в свадебном калькуляторе Тимура Громова`);
+            lines.push(`Сайт: https://timurgromov.ru/`);
             navigator.clipboard.writeText(lines.join("\n")).then(() => {
               toast("Смета скопирована");
             });
