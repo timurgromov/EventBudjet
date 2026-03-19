@@ -17,10 +17,6 @@ class AdminNotificationService:
         self.bot = bot
         self.repository = repository
 
-    async def notify_bot_started(self, lead_id: int, telegram_id: int, username: str | None) -> None:
-        text = f'Пользователь запустил бота: @{username}' if username else f'Пользователь запустил бота (telegram_id={telegram_id})'
-        await self._send_and_log(lead_id, 'bot_started', 'low', text, actor_telegram_id=telegram_id)
-
     async def notify_lead_event_batch(self, batch: PendingLeadEventBatch) -> None:
         rendered = self._render_lead_event_batch(batch)
         if rendered is None:

@@ -31,7 +31,7 @@ def build_start_keyboard() -> InlineKeyboardMarkup:
 
 
 @router.message(CommandStart())
-async def start_handler(message: Message, bot: Bot) -> None:
+async def start_handler(message: Message) -> None:
     if message.from_user is None:
         return
 
@@ -54,14 +54,6 @@ async def start_handler(message: Message, bot: Bot) -> None:
         'Нажмите кнопку ниже, чтобы открыть свадебный калькулятор и начать планирование бюджета.',
         reply_markup=build_start_keyboard(),
     )
-
-    notification_service = AdminNotificationService(bot=bot, repository=repository)
-    await notification_service.notify_bot_started(
-        lead_id=lead_id,
-        telegram_id=message.from_user.id,
-        username=message.from_user.username,
-    )
-
 
 async def main() -> None:
     Path('/tmp/bot_ready').write_text('ready')
