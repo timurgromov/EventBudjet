@@ -87,16 +87,7 @@ class AdminNotificationService:
         actor = self._format_actor(batch.events[0])
         snapshot = self.repository.get_lead_snapshot(batch.lead_id)
         lines = [f'{actor} завершил сессию в приложении.', '']
-        changes: list[str] = []
-        priority = 'medium'
-        for event in batch.events:
-            rendered = self._render_event_summary_line(event)
-            if rendered is None:
-                continue
-            line, line_priority = rendered
-            changes.append(line)
-            if line_priority == 'high':
-                priority = 'high'
+        changes, priority = self._build_batch_change_lines(batch.events)
         if not changes:
             return None
         lines.append('Что изменил:')
@@ -105,6 +96,136 @@ class AdminNotificationService:
         if snapshot_text:
             lines.extend(['', snapshot_text])
         return ('\n'.join(lines), priority)
+
+    def _build_batch_change_lines(self, events: list[PendingLeadEvent]) -> tuple[list[str], str]:
+        priority = 'medium'
+        profile_changes: dict[str, dict[str, Any]] = {}
+        expense_changes: dict[int, dict[str, Any]] = {}
+        ui_actions: list[str] = []
+        budget_line: str | None = None
+
+        for event in events:
+            payload = event.event_payload or {}
+            if event.event_type == 'profile_updated':
+                self._merge_change_set(profile_changes, payload.get('changes'))
+                continue
+
+            if event.event_type == 'expense_added':
+                expense_id = self._parse_expense_id(payload.get('expense_id'))
+                if expense_id is None:
+                    continue
+                expense_changes[expense_id] = {
+                    'action': 'added',
+                    'name': payload.get('category_name') or 'Новая статья',
+                    'amount': payload.get('amount'),
+                    'changes': {},
+                }
+                continue
+
+            if event.event_type == 'expense_updated':
+                expense_id = self._parse_expense_id(payload.get('expense_id'))
+                if expense_id is None:
+                    continue
+                entry = expense_changes.setdefault(
+                    expense_id,
+                    {
+                        'action': 'updated',
+                        'name': payload.get('category_name') or 'Статья расходов',
+                        'amount': payload.get('amount'),
+                        'changes': {},
+                    },
+                )
+                if entry.get('action') != 'added':
+                    entry['action'] = 'updated'
+                entry['name'] = payload.get('category_name') or entry.get('name') or 'Статья расходов'
+                entry['amount'] = payload.get('amount') or entry.get('amount')
+                self._merge_change_set(entry['changes'], payload.get('changes'))
+                continue
+
+            if event.event_type == 'expense_removed':
+                expense_id = self._parse_expense_id(payload.get('expense_id'))
+                if expense_id is None:
+                    continue
+                existing = expense_changes.get(expense_id)
+                if existing and existing.get('action') == 'added':
+                    expense_changes.pop(expense_id, None)
+                    continue
+                expense_changes[expense_id] = {
+                    'action': 'removed',
+                    'name': payload.get('category_name') or 'Статья расходов',
+                    'amount': payload.get('amount'),
+                    'changes': {},
+                }
+                continue
+
+            rendered = self._render_event_summary_line(event)
+            if rendered is None:
+                continue
+            line, line_priority = rendered
+            if event.event_type == 'ui_action':
+                if line not in ui_actions:
+                    ui_actions.append(line)
+            elif event.event_type == 'budget_calculated':
+                budget_line = line
+            else:
+                ui_actions.append(line)
+            if line_priority == 'high':
+                priority = 'high'
+
+        lines: list[str] = []
+        profile_details = self._format_changes(list(profile_changes.values()), PROFILE_FIELD_LABELS)
+        if profile_details:
+            lines.extend(profile_details.splitlines())
+
+        for expense_entry in expense_changes.values():
+            rendered_expense_lines = self._render_expense_summary_lines(expense_entry)
+            lines.extend(rendered_expense_lines)
+
+        if budget_line:
+            lines.append(budget_line)
+        lines.extend(ui_actions)
+        return lines, priority
+
+    @staticmethod
+    def _merge_change_set(target: dict[str, dict[str, Any]], changes: Any) -> None:
+        if not isinstance(changes, list):
+            return
+        for change in changes:
+            if not isinstance(change, dict):
+                continue
+            field = str(change.get('field') or '')
+            if not field:
+                continue
+            if field not in target:
+                target[field] = {
+                    'field': field,
+                    'old': change.get('old'),
+                    'new': change.get('new'),
+                }
+            else:
+                target[field]['new'] = change.get('new')
+
+    def _render_expense_summary_lines(self, entry: dict[str, Any]) -> list[str]:
+        action = str(entry.get('action') or '')
+        name = str(entry.get('name') or 'Статья расходов')
+        if action == 'added':
+            return [f'• Добавил расход: {name} — {self._format_amount(entry.get("amount"))}']
+        if action == 'removed':
+            return [f'• Удалил расход: {name} — {self._format_amount(entry.get("amount"))}']
+        changes = entry.get('changes') or {}
+        details = self._format_changes(list(changes.values()), EXPENSE_FIELD_LABELS)
+        if not details:
+            return []
+        lines = [f'• Изменил расход: {name}']
+        lines.extend([f'  {line}' for line in details.splitlines()])
+        return lines
+
+    @staticmethod
+    def _parse_expense_id(value: Any) -> int | None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
 
     def _render_event_summary_line(self, event: PendingLeadEvent) -> tuple[str, str] | None:
         payload = event.event_payload or {}
@@ -195,6 +316,8 @@ class AdminNotificationService:
             label = labels.get(field, field)
             old_value = AdminNotificationService._format_field_value(field, change.get('old'))
             new_value = AdminNotificationService._format_field_value(field, change.get('new'))
+            if old_value == new_value:
+                continue
             lines.append(f'• {label}: {old_value} -> {new_value}')
         if has_venue_status or has_venue_name:
             if has_venue_name and not has_venue_status:
@@ -209,7 +332,8 @@ class AdminNotificationService:
                     str(venue_status_new) if venue_status_new is not None else None,
                     str(venue_name_new).strip() if venue_name_new else None,
                 )
-            lines.append(f'• Площадка: {old_value} -> {new_value}')
+            if old_value != new_value:
+                lines.append(f'• Площадка: {old_value} -> {new_value}')
         return '\n'.join(lines)
 
     @staticmethod
