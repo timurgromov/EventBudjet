@@ -109,19 +109,18 @@ class AdminNotificationService:
     def _render_event_summary_line(self, event: PendingLeadEvent) -> tuple[str, str] | None:
         payload = event.event_payload or {}
         if event.event_type == 'miniapp_opened':
-            return ('• Открыл мини-приложение', 'low')
+            return None
         if event.event_type == 'app_resumed':
-            return ('• Вернулся в мини-приложение', 'low')
+            return None
         if event.event_type == 'profile_started':
-            return ('• Начал заполнять профиль', 'medium')
+            return None
         if event.event_type == 'profile_completed':
-            return ('• Заполнил профиль', 'high')
+            return None
         if event.event_type == 'profile_updated':
             details = self._format_changes(payload.get('changes'), PROFILE_FIELD_LABELS)
             if details:
-                details = details.replace('\n', '\n  ')
-                return (f'• Обновил профиль\n  {details}', 'medium')
-            return ('• Обновил профиль', 'medium')
+                return (details, 'medium')
+            return None
         if event.event_type == 'expense_added':
             name = payload.get('category_name') or 'Новая статья'
             amount = self._format_amount(payload.get('amount'))
