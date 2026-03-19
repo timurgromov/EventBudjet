@@ -35,6 +35,10 @@ async def start_handler(message: Message, bot: Bot) -> None:
     if message.from_user is None:
         return
 
+    if message.chat.type != 'private':
+        await message.answer(f'Admin chat id: `{message.chat.id}`', parse_mode='Markdown')
+        return
+
     telegram_user = {
         'id': message.from_user.id,
         'username': message.from_user.username,
