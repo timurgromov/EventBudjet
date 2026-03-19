@@ -8,6 +8,8 @@ interface EstimateScreenProps {
   guests: number;
   city?: string;
   weddingDate?: string;
+  venue?: string;
+  venueName?: string;
   savedItems?: Record<string, { checked: boolean; userPrice: string }>;
   savedCustomItems?: Array<{ id: string; name: string; checked: boolean; userPrice: string }>;
   onSave?: (items: Record<string, { checked: boolean; userPrice: string }>, customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>) => void;
@@ -26,6 +28,16 @@ interface ExpenseItem {
 }
 
 const formatPrice = (price: number): string => price.toLocaleString("ru-RU");
+
+const formatVenueLabel = (venue?: string, venueName?: string): string => {
+  if (venue === "chosen" && venueName?.trim()) {
+    return venueName.trim();
+  }
+  if (venue === "chosen") {
+    return "выбрано";
+  }
+  return "не выбрано";
+};
 
 const InfoBlock: React.FC<{ info: ItemInfo }> = ({ info }) => (
   <div className="px-3 pb-3 pt-0">
@@ -60,6 +72,8 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   guests,
   city,
   weddingDate,
+  venue,
+  venueName,
   savedItems,
   savedCustomItems,
   onSave,
@@ -266,6 +280,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
           onClick={() => {
             const lines: string[] = ["📋 Смета свадьбы\n"];
             if (city) lines.push(`Город: ${city}`);
+            lines.push(`Площадка: ${formatVenueLabel(venue, venueName)}`);
             if (weddingDate) lines.push(`Дата свадьбы: ${weddingDate}`);
             lines.push(`Гостей: ${guests}\n`);
             items.forEach((item) => {

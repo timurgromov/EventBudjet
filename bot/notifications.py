@@ -220,10 +220,7 @@ class AdminNotificationService:
             lines.append(f'Кто: {self._format_field_value("role", snapshot.role)}')
         if snapshot.city:
             lines.append(f'Город: {self._format_field_value("city", snapshot.city)}')
-        if snapshot.venue_status:
-            lines.append(f'Статус площадки: {self._format_field_value("venue_status", snapshot.venue_status)}')
-        if snapshot.venue_name:
-            lines.append(f'Площадка: {snapshot.venue_name}')
+        lines.append(f'Площадка: {self._format_venue_value(snapshot.venue_status, snapshot.venue_name)}')
         wedding_date = self._format_wedding_date(snapshot)
         if wedding_date:
             lines.append(f'Дата свадьбы: {wedding_date}')
@@ -258,6 +255,14 @@ class AdminNotificationService:
             return parsed.strftime('%d.%m.%Y')
         except Exception:
             return str(value)
+
+    @staticmethod
+    def _format_venue_value(status: str | None, name: str | None) -> str:
+        if status == 'chosen' and name:
+            return name
+        if status == 'chosen':
+            return 'выбрано'
+        return 'не выбрано'
 
 
 PROFILE_FIELD_LABELS = {

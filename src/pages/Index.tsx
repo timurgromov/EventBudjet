@@ -408,6 +408,8 @@ const Index = () => {
           guests={guests}
           city={savedQualification?.city}
           weddingDate={formattedWeddingDate}
+          venue={savedQualification?.venue}
+          venueName={savedQualification?.venueName}
           savedItems={savedEstimate}
           savedCustomItems={savedCustomItems}
           backendTotal={backendTotal}
