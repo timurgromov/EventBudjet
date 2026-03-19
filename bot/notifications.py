@@ -160,14 +160,42 @@ class AdminNotificationService:
         if not isinstance(changes, list) or not changes:
             return ''
         lines: list[str] = []
+        venue_status_old = venue_status_new = None
+        venue_name_old = venue_name_new = None
+        has_venue_status = False
+        has_venue_name = False
         for change in changes:
             if not isinstance(change, dict):
                 continue
             field = str(change.get('field'))
+            if field == 'venue_status':
+                has_venue_status = True
+                venue_status_old = change.get('old')
+                venue_status_new = change.get('new')
+                continue
+            if field == 'venue_name':
+                has_venue_name = True
+                venue_name_old = change.get('old')
+                venue_name_new = change.get('new')
+                continue
             label = labels.get(field, field)
             old_value = AdminNotificationService._format_field_value(field, change.get('old'))
             new_value = AdminNotificationService._format_field_value(field, change.get('new'))
             lines.append(f'• {label}: {old_value} -> {new_value}')
+        if has_venue_status or has_venue_name:
+            if has_venue_name and not has_venue_status:
+                old_value = str(venue_name_old).strip() if venue_name_old else 'выбрали'
+                new_value = str(venue_name_new).strip() if venue_name_new else 'выбрали'
+            else:
+                old_value = AdminNotificationService._format_venue_value(
+                    str(venue_status_old) if venue_status_old is not None else None,
+                    str(venue_name_old).strip() if venue_name_old else None,
+                )
+                new_value = AdminNotificationService._format_venue_value(
+                    str(venue_status_new) if venue_status_new is not None else None,
+                    str(venue_name_new).strip() if venue_name_new else None,
+                )
+            lines.append(f'• Площадка: {old_value} -> {new_value}')
         return '\n'.join(lines)
 
     @staticmethod
@@ -258,18 +286,18 @@ class AdminNotificationService:
 
     @staticmethod
     def _format_venue_value(status: str | None, name: str | None) -> str:
-        if status == 'chosen' and name:
+        if name:
             return name
         if status == 'chosen':
-            return 'выбрано'
-        return 'не выбрано'
+            return 'выбрали'
+        return 'не выбрали'
 
 
 PROFILE_FIELD_LABELS = {
     'role': 'Роль',
     'city': 'Город',
     'venue_status': 'Площадка',
-    'venue_name': 'Название площадки',
+    'venue_name': 'Площадка',
     'wedding_date_exact': 'Дата свадьбы',
     'wedding_date_mode': 'Формат даты',
     'season': 'Сезон',
