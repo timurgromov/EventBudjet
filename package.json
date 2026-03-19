@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "local:up": "sh ./scripts/local-up.sh",
+    "local:down": "sh ./scripts/local-down.sh",
+    "deploy:vps": "sh ./scripts/deploy-vps.sh",
+    "logs:vps": "sh ./scripts/vps-logs.sh",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
