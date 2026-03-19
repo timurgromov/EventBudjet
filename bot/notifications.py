@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -164,8 +165,8 @@ class AdminNotificationService:
                 continue
             field = str(change.get('field'))
             label = labels.get(field, field)
-            old_value = AdminNotificationService._format_value(change.get('old'))
-            new_value = AdminNotificationService._format_value(change.get('new'))
+            old_value = AdminNotificationService._format_field_value(field, change.get('old'))
+            new_value = AdminNotificationService._format_field_value(field, change.get('new'))
             lines.append(f'• {label}: {old_value} -> {new_value}')
         return '\n'.join(lines)
 
@@ -176,6 +177,26 @@ class AdminNotificationService:
         if isinstance(value, bool):
             return 'да' if value else 'нет'
         return str(value)
+
+    @staticmethod
+    def _format_field_value(field: str, value: Any) -> str:
+        if value is None or value == '':
+            return 'пусто'
+        if field == 'role':
+            return ROLE_VALUES.get(str(value), str(value))
+        if field == 'city':
+            return CITY_VALUES.get(str(value), str(value))
+        if field == 'venue_status':
+            return VENUE_STATUS_VALUES.get(str(value), str(value))
+        if field == 'season':
+            return SEASON_VALUES.get(str(value), str(value))
+        if field == 'wedding_date_mode':
+            return WEDDING_DATE_MODE_VALUES.get(str(value), str(value))
+        if field == 'source':
+            return SOURCE_VALUES.get(str(value), str(value))
+        if field == 'wedding_date_exact':
+            return AdminNotificationService._format_date_value(value)
+        return AdminNotificationService._format_value(value)
 
     @staticmethod
     def _format_amount(value: Any) -> str:
@@ -195,8 +216,12 @@ class AdminNotificationService:
             return ''
 
         lines: list[str] = ['📋 Смета свадьбы', '']
+        if snapshot.role:
+            lines.append(f'Кто: {self._format_field_value("role", snapshot.role)}')
         if snapshot.city:
-            lines.append(f'Город: {snapshot.city}')
+            lines.append(f'Город: {self._format_field_value("city", snapshot.city)}')
+        if snapshot.venue_status:
+            lines.append(f'Статус площадки: {self._format_field_value("venue_status", snapshot.venue_status)}')
         if snapshot.venue_name:
             lines.append(f'Площадка: {snapshot.venue_name}')
         wedding_date = self._format_wedding_date(snapshot)
@@ -212,19 +237,27 @@ class AdminNotificationService:
         total = self._format_amount(snapshot.total_budget)
         lines.append('')
         lines.append(f'Итого: {total}')
-        lines.append('')
-        lines.append('Расчёт сделан в свадебном калькуляторе Тимура Громова')
         return '\n'.join(lines)
 
     @staticmethod
     def _format_wedding_date(snapshot: LeadSnapshot) -> str | None:
         if snapshot.wedding_date_exact:
-            return snapshot.wedding_date_exact
+            return AdminNotificationService._format_date_value(snapshot.wedding_date_exact)
         if snapshot.next_year_flag:
-            return 'next_year'
+            return SEASON_VALUES['next_year']
         if snapshot.season:
-            return snapshot.season
+            return SEASON_VALUES.get(snapshot.season, snapshot.season)
         return None
+
+    @staticmethod
+    def _format_date_value(value: Any) -> str:
+        if value is None or value == '':
+            return 'пусто'
+        try:
+            parsed = date.fromisoformat(str(value))
+            return parsed.strftime('%d.%m.%Y')
+        except Exception:
+            return str(value)
 
 
 PROFILE_FIELD_LABELS = {
@@ -248,6 +281,41 @@ EXPENSE_FIELD_LABELS = {
     'category_code': 'Код категории',
     'category_name': 'Категория',
     'amount': 'Сумма',
+}
+
+ROLE_VALUES = {
+    'bride': 'Невеста',
+    'groom': 'Жених',
+    'mother': 'Мама',
+    'pro': 'Свадебный специалист',
+}
+
+CITY_VALUES = {
+    'moscow': 'Москва',
+    'mo': 'МО',
+    'region': 'Другой регион',
+}
+
+VENUE_STATUS_VALUES = {
+    'chosen': 'Уже выбрали',
+    'searching': 'Пока выбираем',
+}
+
+SEASON_VALUES = {
+    'spring': 'Весна',
+    'summer': 'Лето',
+    'autumn': 'Осень',
+    'winter': 'Зима',
+    'next_year': 'В следующем году',
+}
+
+WEDDING_DATE_MODE_VALUES = {
+    'exact': 'Точная дата',
+    'season': 'Сезон',
+}
+
+SOURCE_VALUES = {
+    'telegram_mini_app': 'Telegram Mini App',
 }
 
 

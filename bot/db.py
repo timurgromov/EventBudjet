@@ -45,7 +45,9 @@ class LeadExpenseSnapshot:
 
 @dataclass
 class LeadSnapshot:
+    role: str | None
     city: str | None
+    venue_status: str | None
     venue_name: str | None
     wedding_date_exact: str | None
     season: str | None
@@ -248,7 +250,9 @@ class BotRepository:
                 text(
                     """
                     SELECT
+                      role,
                       city,
+                      venue_status,
                       venue_name,
                       wedding_date_exact::text AS wedding_date_exact,
                       season,
@@ -281,7 +285,9 @@ class BotRepository:
             ).mappings().all()
 
             return LeadSnapshot(
+                role=lead_row['role'],
                 city=lead_row['city'],
+                venue_status=lead_row['venue_status'],
                 venue_name=lead_row['venue_name'],
                 wedding_date_exact=lead_row['wedding_date_exact'],
                 season=lead_row['season'],
