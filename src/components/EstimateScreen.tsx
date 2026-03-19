@@ -147,6 +147,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
+  const [isEditingField, setIsEditingField] = useState(false);
 
   const triggerSave = useCallback((currentItems: ExpenseItem[]) => {
     if (!onSave) return;
@@ -207,8 +208,24 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     });
   };
 
+  const focusField = (input: HTMLInputElement) => {
+    setIsEditingField(true);
+    window.setTimeout(() => {
+      input.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 250);
+  };
+
+  const blurField = () => {
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      if (!(active instanceof HTMLInputElement)) {
+        setIsEditingField(false);
+      }
+    }, 120);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col pb-64">
+    <div className={cn("min-h-screen flex flex-col", isEditingField ? "pb-24" : "pb-64")}>
       {/* Subtitle */}
       <p className="text-sm text-foreground/80 text-center px-4 pt-1 pb-1">Рассчитайте бюджет вашего торжества</p>
 
@@ -266,8 +283,11 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
                     type="text"
                     value={item.userPrice}
                     onChange={(e) => updateItem(item.id, { userPrice: e.target.value })}
+                    onFocus={(e) => focusField(e.currentTarget)}
+                    onBlur={blurField}
                     placeholder={calcPrice !== null ? `от ${formatPrice(calcPrice)}` : item.isCustom ? "введите сумму" : "—"}
-                    className="w-full text-right text-sm bg-transparent border-b border-border/50 py-1 px-1 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary transition-colors"
+                    inputMode="numeric"
+                    className="w-full text-right text-base md:text-sm bg-transparent border-b border-border/50 py-1 px-1 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary transition-colors"
                   />
                 </div>
 
@@ -290,9 +310,11 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCustomItem()}
+              onFocus={(e) => focusField(e.currentTarget)}
+              onBlur={blurField}
               placeholder="Название расхода..."
               autoFocus
-              className="flex-1 h-10 rounded-lg bg-card border border-border px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+              className="flex-1 h-10 rounded-lg bg-card border border-border px-3 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
             />
             <button onClick={addCustomItem} className="h-10 px-4 rounded-lg gradient-gold text-primary-foreground text-sm font-medium">ОК</button>
             <button onClick={() => setShowAddForm(false)} className="h-10 px-3 rounded-lg bg-card border border-border text-muted-foreground text-sm">✕</button>
@@ -309,7 +331,12 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       </div>
 
       {/* Bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 py-4 space-y-3">
+      <div
+        className={cn(
+          "fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 py-4 space-y-3 transition-transform",
+          isEditingField && "translate-y-full pointer-events-none"
+        )}
+      >
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Итого:</span>
           <span className="text-2xl font-serif text-gold-gradient">{formatPrice(total)} ₽</span>

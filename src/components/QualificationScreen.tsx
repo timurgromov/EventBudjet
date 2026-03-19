@@ -180,7 +180,7 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
               onChange={(e) => { setVenueName(e.target.value); notifyChange({ venueName: e.target.value }); }}
               placeholder="Название площадки"
               className={cn(
-                "w-full h-12 rounded-lg bg-card border px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none",
+                "w-full h-12 rounded-lg bg-card border px-3 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none",
                 showVenueNameError
                   ? "border-destructive focus:border-destructive"
                   : "border-border focus:border-primary"
