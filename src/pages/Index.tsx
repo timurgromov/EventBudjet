@@ -60,11 +60,27 @@ const Index = () => {
   const [backendTotal, setBackendTotal] = useState<number | null>(null);
 
   const [syncError, setSyncError] = useState<string | null>(null);
+  const hasLeadRef = useRef(false);
   const syncInFlightRef = useRef(false);
   const pendingSyncRef = useRef<{
     estimateItems: Record<string, { checked: boolean; userPrice: string }>;
     customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>;
   } | null>(null);
+  const qualificationSyncInFlightRef = useRef(false);
+  const pendingQualificationRef = useRef<SavedData["qualification"] | null>(null);
+  const qualificationTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    hasLeadRef.current = hasLead;
+  }, [hasLead]);
+
+  useEffect(() => {
+    return () => {
+      if (qualificationTimerRef.current !== null) {
+        window.clearTimeout(qualificationTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -108,7 +124,7 @@ const Index = () => {
           date: progress.lead.wedding_date_exact ?? "",
           guests: progress.lead.guests_count ?? 0,
           venue: progress.lead.venue_status ?? "",
-          venueName: "",
+          venueName: progress.lead.venue_name ?? "",
           dateUndecided,
           dateSeason,
         });
@@ -167,6 +183,7 @@ const Index = () => {
       role: q.role,
       city: q.city,
       venue_status: q.venue || undefined,
+      venue_name: q.venue === "chosen" ? (q.venueName || null) : null,
       wedding_date_exact: q.dateUndecided ? null : (q.date || null),
       wedding_date_mode: q.dateUndecided ? "season" : "exact",
       season: hasSeason ? q.dateSeason : null,
@@ -174,6 +191,46 @@ const Index = () => {
       guests_count: q.guests,
       source: "telegram_mini_app",
     };
+  };
+
+  const runQualificationAutoSync = async () => {
+    if (qualificationSyncInFlightRef.current || !initData) return;
+    qualificationSyncInFlightRef.current = true;
+
+    try {
+      while (pendingQualificationRef.current) {
+        const payload = pendingQualificationRef.current;
+        pendingQualificationRef.current = null;
+
+        try {
+          setSyncError(null);
+          if (hasLeadRef.current) {
+            await updateLead(initData, buildLeadPayload(payload));
+          } else {
+            await createLead(initData, buildLeadPayload(payload));
+            hasLeadRef.current = true;
+            setHasLead(true);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Ошибка автосохранения профиля";
+          setSyncError(`Профиль не сохранён: ${message}`);
+        }
+      }
+    } finally {
+      qualificationSyncInFlightRef.current = false;
+    }
+  };
+
+  const scheduleQualificationSync = (payload: SavedData["qualification"]) => {
+    if (!initData) return;
+    pendingQualificationRef.current = payload;
+    if (qualificationTimerRef.current !== null) {
+      window.clearTimeout(qualificationTimerRef.current);
+    }
+    qualificationTimerRef.current = window.setTimeout(() => {
+      qualificationTimerRef.current = null;
+      void runQualificationAutoSync();
+    }, 800);
   };
 
   const syncExpensesToBackend = async (
@@ -307,6 +364,7 @@ const Index = () => {
           onFieldChange={(q) => {
             setSavedQualification(q);
             setGuests(q.guests);
+            scheduleQualificationSync(q);
           }}
           onNext={async (data) => {
             const q = {
@@ -326,10 +384,11 @@ const Index = () => {
                 throw new Error("Отсутствует Telegram initData");
               }
 
-              if (hasLead) {
+              if (hasLeadRef.current) {
                 await updateLead(initData, buildLeadPayload(q));
               } else {
                 await createLead(initData, buildLeadPayload(q));
+                hasLeadRef.current = true;
                 setHasLead(true);
               }
 

@@ -10,6 +10,7 @@ class LeadBase(BaseModel):
     role: str | None = None
     city: str | None = None
     venue_status: str | None = None
+    venue_name: str | None = None
     wedding_date_exact: date | None = None
     wedding_date_mode: str | None = None
     season: str | None = None

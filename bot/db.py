@@ -35,6 +35,7 @@ class LeadExpenseSnapshot:
 @dataclass
 class LeadSnapshot:
     city: str | None
+    venue_name: str | None
     wedding_date_exact: str | None
     season: str | None
     next_year_flag: bool
@@ -195,6 +196,7 @@ class BotRepository:
                     """
                     SELECT
                       city,
+                      venue_name,
                       wedding_date_exact::text AS wedding_date_exact,
                       season,
                       next_year_flag,
@@ -227,6 +229,7 @@ class BotRepository:
 
             return LeadSnapshot(
                 city=lead_row['city'],
+                venue_name=lead_row['venue_name'],
                 wedding_date_exact=lead_row['wedding_date_exact'],
                 season=lead_row['season'],
                 next_year_flag=bool(lead_row['next_year_flag']),

@@ -11,6 +11,7 @@ export interface Lead {
   role: string | null;
   city: string | null;
   venue_status: string | null;
+  venue_name: string | null;
   wedding_date_exact: string | null;
   wedding_date_mode: string | null;
   season: string | null;
@@ -53,6 +54,7 @@ export interface LeadPayload {
   role?: string;
   city?: string;
   venue_status?: string;
+  venue_name?: string | null;
   wedding_date_exact?: string | null;
   wedding_date_mode?: string;
   season?: string | null;

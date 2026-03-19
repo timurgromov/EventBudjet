@@ -20,6 +20,7 @@ class Lead(Base):
     role: Mapped[str | None] = mapped_column(String(50), nullable=True)
     city: Mapped[str | None] = mapped_column(String(255), nullable=True)
     venue_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    venue_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     wedding_date_exact: Mapped[date | None] = mapped_column(Date, nullable=True)
     wedding_date_mode: Mapped[str | None] = mapped_column(String(50), nullable=True)
     season: Mapped[str | None] = mapped_column(String(50), nullable=True)

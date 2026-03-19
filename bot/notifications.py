@@ -189,6 +189,8 @@ class AdminNotificationService:
         lines: list[str] = ['📋 Смета свадьбы', '']
         if snapshot.city:
             lines.append(f'Город: {snapshot.city}')
+        if snapshot.venue_name:
+            lines.append(f'Площадка: {snapshot.venue_name}')
         wedding_date = self._format_wedding_date(snapshot)
         if wedding_date:
             lines.append(f'Дата свадьбы: {wedding_date}')
@@ -221,6 +223,7 @@ PROFILE_FIELD_LABELS = {
     'role': 'Роль',
     'city': 'Город',
     'venue_status': 'Площадка',
+    'venue_name': 'Название площадки',
     'wedding_date_exact': 'Дата свадьбы',
     'wedding_date_mode': 'Формат даты',
     'season': 'Сезон',
