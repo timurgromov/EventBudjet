@@ -92,7 +92,11 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
   };
 
   const hasDate = dateUndecided ? !!dateSeason : !!date;
-  const isValid = role && city && hasDate && guests > 0;
+  const trimmedVenueName = venueName.trim();
+  const isVenueNameRequired = venue === "chosen";
+  const hasValidVenue = venue === "searching" || (venue === "chosen" && trimmedVenueName.length > 0);
+  const showVenueNameError = isVenueNameRequired && trimmedVenueName.length === 0;
+  const isValid = Boolean(role && city && hasDate && guests > 0 && hasValidVenue);
 
   return (
     <div className="min-h-screen flex flex-col px-5 py-8">
@@ -168,13 +172,25 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
           </button>
         </div>
         {venue === "chosen" && (
-          <input
-            type="text"
-            value={venueName}
-            onChange={(e) => { setVenueName(e.target.value); notifyChange({ venueName: e.target.value }); }}
-            placeholder="Название площадки"
-            className="w-full h-12 rounded-lg bg-card border border-border px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-          />
+          <>
+            <input
+              type="text"
+              value={venueName}
+              onChange={(e) => { setVenueName(e.target.value); notifyChange({ venueName: e.target.value }); }}
+              placeholder="Название площадки"
+              className={cn(
+                "w-full h-12 rounded-lg bg-card border px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none",
+                showVenueNameError
+                  ? "border-destructive focus:border-destructive"
+                  : "border-border focus:border-primary"
+              )}
+            />
+            {showVenueNameError && (
+              <p className="mt-2 text-sm text-destructive">
+                Укажи название площадки, чтобы рассчитать бюджет.
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -282,9 +298,9 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
       {/* CTA */}
       <div className="mt-auto animate-fade-in" style={{ animationDelay: "0.5s" }}>
         <Button
-          onClick={() => isValid && onNext({ role, city, date, guests, venue, venueName, dateUndecided, dateSeason })}
+          onClick={() => isValid && onNext({ role, city, date, guests, venue, venueName: trimmedVenueName, dateUndecided, dateSeason })}
           disabled={!isValid}
-          className="w-full h-14 text-base font-medium gradient-gold text-primary-foreground rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-full h-14 text-base font-medium gradient-gold text-primary-foreground rounded-xl disabled:opacity-40 disabled:cursor-not-allowed disabled:grayscale"
         >
           Рассчитать бюджет
           <ChevronRight className="w-5 h-5 ml-1" />
