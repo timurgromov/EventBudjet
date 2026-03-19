@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+import json
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -18,6 +20,9 @@ class PendingLeadEvent:
     event_type: str
     telegram_id: int
     username: str | None
+    first_name: str | None
+    last_name: str | None
+    event_payload: dict[str, Any] | None
 
 
 class BotRepository:
@@ -118,17 +123,30 @@ class BotRepository:
                       le.id,
                       le.lead_id,
                       le.event_type,
+                      le.event_payload,
                       u.telegram_id,
-                      u.username
+                      u.username,
+                      u.first_name,
+                      u.last_name
                     FROM lead_events le
                     JOIN leads l ON l.id = le.lead_id
                     JOIN users u ON u.id = l.user_id
-                    WHERE le.event_type IN ('profile_completed', 'budget_calculated')
+                    WHERE le.event_type IN (
+                      'miniapp_opened',
+                      'app_resumed',
+                      'profile_started',
+                      'profile_updated',
+                      'profile_completed',
+                      'expense_added',
+                      'expense_updated',
+                      'expense_removed',
+                      'budget_calculated'
+                    )
                       AND NOT EXISTS (
                         SELECT 1
                         FROM admin_notifications an
                         WHERE an.lead_id = le.lead_id
-                          AND an.notification_type = le.event_type
+                          AND an.notification_type = CONCAT('lead_event:', le.id)
                       )
                     ORDER BY le.id ASC
                     LIMIT :limit;
@@ -144,6 +162,19 @@ class BotRepository:
                     event_type=str(row['event_type']),
                     telegram_id=int(row['telegram_id']),
                     username=row['username'],
+                    first_name=row['first_name'],
+                    last_name=row['last_name'],
+                    event_payload=self._parse_json_payload(row['event_payload']),
                 )
                 for row in rows
             ]
+
+    @staticmethod
+    def _parse_json_payload(value: Any) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            return json.loads(value)
+        return dict(value)

@@ -35,9 +35,17 @@ class LeadService:
 
     def update_user_lead(self, lead: Lead, payload: LeadUpdate) -> Lead:
         data = payload.model_dump(exclude_unset=True)
+        changes = self._build_lead_changes(lead, data)
         updated = self.leads.update(lead=lead, data=data)
 
-        self.events.write_event(updated.id, EventType.PROFILE_UPDATED, {'updated_fields': sorted(list(data.keys()))})
+        self.events.write_event(
+            updated.id,
+            EventType.PROFILE_UPDATED,
+            {
+                'updated_fields': sorted(list(data.keys())),
+                'changes': changes,
+            },
+        )
         if self._is_profile_completed(updated) and not self.events.has_event(updated.id, EventType.PROFILE_COMPLETED):
             self.events.write_event(updated.id, EventType.PROFILE_COMPLETED, {'user_id': updated.user_id})
 
@@ -67,3 +75,27 @@ class LeadService:
         has_context = bool(lead.venue_status and lead.guests_count is not None)
         has_date_signal = bool(lead.wedding_date_exact or lead.wedding_date_mode or lead.season or lead.next_year_flag)
         return has_identity and has_context and has_date_signal
+
+    @staticmethod
+    def _build_lead_changes(lead: Lead, data: dict) -> list[dict[str, str | int | bool | None]]:
+        changes: list[dict[str, str | int | bool | None]] = []
+        for field, new_value in data.items():
+            old_value = getattr(lead, field)
+            if old_value == new_value:
+                continue
+            changes.append(
+                {
+                    'field': field,
+                    'old': LeadService._serialize_value(old_value),
+                    'new': LeadService._serialize_value(new_value),
+                }
+            )
+        return changes
+
+    @staticmethod
+    def _serialize_value(value: object) -> str | int | bool | None:
+        if value is None:
+            return None
+        if isinstance(value, (str, int, bool)):
+            return value
+        return str(value)

@@ -77,13 +77,22 @@ class ExpenseService:
             data['category_code'] = normalized['category_code']
             data['category_name'] = normalized['category_name']
 
+        before = {
+            'category_code': expense.category_code,
+            'category_name': expense.category_name,
+            'amount': expense.amount,
+        }
         updated = self.repo.update(expense, data)
         self.events.write_event(
             lead.id,
             EventType.EXPENSE_UPDATED,
             {
                 'expense_id': updated.id,
+                'category_code': updated.category_code,
+                'category_name': updated.category_name,
+                'amount': str(updated.amount),
                 'updated_fields': sorted(list(payload.model_fields_set)),
+                'changes': self._build_expense_changes(before, updated),
             },
         )
         self.db.commit()
@@ -124,3 +133,21 @@ class ExpenseService:
             return {'category_code': code, 'category_name': name}
 
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Invalid category data')
+
+    @staticmethod
+    def _build_expense_changes(before: dict[str, object], updated: Expense) -> list[dict[str, str | None]]:
+        changes: list[dict[str, str | None]] = []
+        fields = ('category_code', 'category_name', 'amount')
+        for field in fields:
+            old_value = before.get(field)
+            new_value = getattr(updated, field)
+            if old_value == new_value:
+                continue
+            changes.append(
+                {
+                    'field': field,
+                    'old': None if old_value is None else str(old_value),
+                    'new': None if new_value is None else str(new_value),
+                }
+            )
+        return changes
