@@ -65,10 +65,6 @@ class AdminNotificationService:
             self.repository.log_admin_notification(lead_id, notification_type, priority, status)
             return
 
-        if actor_telegram_id is not None and settings.bot_admin_chat_id == actor_telegram_id:
-            logger.info('skip_self_admin_notification type=%s lead_id=%s', notification_type, lead_id)
-            return
-
         try:
             await self.bot.send_message(chat_id=settings.bot_admin_chat_id, text=text)
             status = 'sent'
