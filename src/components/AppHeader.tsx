@@ -3,9 +3,10 @@ import { ArrowLeft } from "lucide-react";
 
 interface AppHeaderProps {
   onBack?: () => void;
+  onSiteClick?: () => void;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ onBack }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ onBack, onSiteClick }) => {
   return (
     <div className={`text-center pt-6 pb-3 px-5 relative ${onBack ? "pl-14 pr-14" : ""}`}>
       {onBack && (
@@ -23,6 +24,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onBack }) => {
           href="https://timurgromov.ru"
           target="_blank"
           rel="noopener noreferrer"
+          onClick={onSiteClick}
           className="underline underline-offset-2 hover:text-primary transition-colors"
         >
           Тимура Громова

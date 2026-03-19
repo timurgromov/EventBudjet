@@ -69,6 +69,18 @@ class LeadService:
         )
         self.db.commit()
 
+    def record_user_action(self, lead: Lead, action: str, source: str | None = None, href: str | None = None) -> None:
+        self.events.write_event(
+            lead.id,
+            EventType.UI_ACTION,
+            {
+                'action': action,
+                'source': source,
+                'href': href,
+            },
+        )
+        self.db.commit()
+
     @staticmethod
     def _is_profile_completed(lead: Lead) -> bool:
         has_identity = bool(lead.role and lead.city)

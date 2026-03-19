@@ -50,6 +50,12 @@ export interface LeadCalculateResponse {
   total_budget: string;
 }
 
+export interface LeadActionPayload {
+  action: string;
+  source?: string;
+  href?: string;
+}
+
 export interface LeadPayload {
   role?: string;
   city?: string;
@@ -140,4 +146,8 @@ export function deleteExpense(initData: string, expenseId: number): Promise<void
 
 export function calculateLead(initData: string): Promise<LeadCalculateResponse> {
   return request<LeadCalculateResponse>("/lead/calculate", { method: "POST" }, initData);
+}
+
+export function trackLeadAction(initData: string, payload: LeadActionPayload): Promise<void> {
+  return request<void>("/lead/events", { method: "POST", body: JSON.stringify(payload) }, initData);
 }

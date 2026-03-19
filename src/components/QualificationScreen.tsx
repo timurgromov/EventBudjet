@@ -20,6 +20,7 @@ interface QualificationData {
 
 interface QualificationScreenProps {
   onNext: (data: QualificationData) => void;
+  onFooterSiteClick?: () => void;
   savedData?: {
     role?: string;
     city?: string;
@@ -63,7 +64,7 @@ const seasons = [
   { value: "next_year", label: "В следующем году" },
 ];
 
-const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, savedData, onFieldChange }) => {
+const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, savedData, onFieldChange, onFooterSiteClick }) => {
   const [role, setRole] = useState(savedData?.role ?? "");
   const [city, setCity] = useState(savedData?.city ?? "");
   const [date, setDate] = useState<Date | undefined>(savedData?.date ? new Date(savedData.date) : undefined);
@@ -310,7 +311,13 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
       {/* Footer */}
       <div className="text-center py-4 text-[10px] text-muted-foreground/40 tracking-wide">
         © Тимур Громов •{" "}
-        <a href="https://timurgromov.ru" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-primary transition-colors">
+        <a
+          href="https://timurgromov.ru"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onFooterSiteClick}
+          className="underline underline-offset-2 hover:text-primary transition-colors"
+        >
           timurgromov.ru
         </a>
       </div>

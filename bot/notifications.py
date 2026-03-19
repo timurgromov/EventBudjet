@@ -142,7 +142,22 @@ class AdminNotificationService:
             count = payload.get('expenses_count')
             extra = f' ({count} статей)' if count is not None else ''
             return (f'• Пересчитал бюджет: {total}{extra}', 'high')
+        if event.event_type == 'ui_action':
+            return (self._format_ui_action(payload), 'low')
         return None
+
+    @staticmethod
+    def _format_ui_action(payload: dict[str, Any]) -> str:
+        action = str(payload.get('action') or '')
+        if action == 'copy_estimate':
+            return '• Нажал «Скопировать смету»'
+        if action == 'view_online_review':
+            return '• Нажал «Посмотреть онлайн-разбор»'
+        if action == 'open_site_header':
+            return '• Перешёл на timurgromov.ru из шапки'
+        if action == 'open_site_footer':
+            return '• Перешёл на timurgromov.ru из подвала'
+        return '• Совершил дополнительное действие в интерфейсе'
 
     @staticmethod
     def _format_actor(event: PendingLeadEvent) -> str:

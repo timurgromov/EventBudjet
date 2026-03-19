@@ -13,3 +13,4 @@ class EventType(str, Enum):
     EXPENSE_REMOVED = 'expense_removed'
     BUDGET_CALCULATED = 'budget_calculated'
     APP_RESUMED = 'app_resumed'
+    UI_ACTION = 'ui_action'

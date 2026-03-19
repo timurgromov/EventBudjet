@@ -47,6 +47,12 @@ class LeadCalculateResponse(BaseModel):
     total_budget: Decimal
 
 
+class LeadActionTrackRequest(BaseModel):
+    action: str
+    source: str | None = None
+    href: str | None = None
+
+
 class LeadProgressResponse(BaseModel):
     lead: LeadRead | None
     expenses: list[ExpenseRead]

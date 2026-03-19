@@ -165,7 +165,8 @@ class BotRepository:
                         'expense_added',
                         'expense_updated',
                         'expense_removed',
-                        'budget_calculated'
+                        'budget_calculated',
+                        'ui_action'
                       )
                         AND NOT EXISTS (
                           SELECT 1
@@ -202,7 +203,8 @@ class BotRepository:
                       'expense_added',
                       'expense_updated',
                       'expense_removed',
-                      'budget_calculated'
+                      'budget_calculated',
+                      'ui_action'
                     )
                       AND NOT EXISTS (
                         SELECT 1

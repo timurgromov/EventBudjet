@@ -5,7 +5,7 @@ from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.expense import ExpenseRead
-from app.schemas.lead import LeadCalculateResponse, LeadCreate, LeadProgressResponse, LeadRead, LeadUpdate
+from app.schemas.lead import LeadActionTrackRequest, LeadCalculateResponse, LeadCreate, LeadProgressResponse, LeadRead, LeadUpdate
 from app.services.calculation_service import CalculationService
 from app.services.expense_service import ExpenseService
 from app.services.lead_service import LeadService
@@ -62,6 +62,19 @@ def calculate_lead_budget(
 
     total = CalculationService(db).calculate_and_store_total(lead)
     return LeadCalculateResponse(lead_id=lead.id, total_budget=total)
+
+
+@router.post('/events', status_code=status.HTTP_204_NO_CONTENT)
+def track_lead_action(
+    payload: LeadActionTrackRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    lead = LeadService(db).get_user_lead(current_user.id)
+    if lead is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lead not found')
+
+    LeadService(db).record_user_action(lead, payload.action, payload.source, payload.href)
 
 
 @router.get('/progress', response_model=LeadProgressResponse)

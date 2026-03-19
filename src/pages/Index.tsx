@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import QualificationScreen from "@/components/QualificationScreen";
 import EstimateScreen from "@/components/EstimateScreen";
@@ -13,6 +13,7 @@ import {
   deleteExpense,
   getLeadProgress,
   listExpenses,
+  trackLeadAction,
   updateLead,
 } from "@/lib/api";
 import { defaultItems } from "@/components/expense-items-data";
@@ -172,6 +173,15 @@ const Index = () => {
 
     void bootstrap();
   }, [bootstrapTick, initData, isTelegram]);
+
+  const reportUiAction = useCallback((action: string, source: string, href?: string) => {
+    if (!initData || !hasLeadRef.current) {
+      return;
+    }
+    void trackLeadAction(initData, { action, source, href }).catch(() => {
+      // best-effort analytics event; do not block user flow
+    });
+  }, [initData]);
 
   const buildLeadPayload = (q: SavedData["qualification"]) => {
     if (!q) return {};
@@ -349,6 +359,7 @@ const Index = () => {
               }
             : undefined
         }
+        onSiteClick={() => reportUiAction("open_site_header", "app_header", "https://timurgromov.ru")}
       />
       {screen === "estimate" && (
         <ProfileProgress
@@ -361,6 +372,7 @@ const Index = () => {
       {screen === "qualification" ? (
         <QualificationScreen
           savedData={savedQualification}
+          onFooterSiteClick={() => reportUiAction("open_site_footer", "qualification_footer", "https://timurgromov.ru")}
           onFieldChange={(q) => {
             setSavedQualification(q);
             setGuests(q.guests);
@@ -415,6 +427,9 @@ const Index = () => {
           savedCustomItems={savedCustomItems}
           backendTotal={backendTotal}
           syncError={syncError}
+          onCopyEstimate={() => reportUiAction("copy_estimate", "estimate_copy_button")}
+          onOnlineReviewClick={() => reportUiAction("view_online_review", "estimate_webinar_button", "https://timurgromov.ru/#webinar")}
+          onFooterSiteClick={() => reportUiAction("open_site_footer", "estimate_footer", "https://timurgromov.ru")}
           onSave={(estimateItems, customItems) => {
             setSavedEstimate(estimateItems);
             setSavedCustomItems(customItems);

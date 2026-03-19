@@ -14,6 +14,9 @@ interface EstimateScreenProps {
   savedItems?: Record<string, { checked: boolean; userPrice: string }>;
   savedCustomItems?: Array<{ id: string; name: string; checked: boolean; userPrice: string }>;
   onSave?: (items: Record<string, { checked: boolean; userPrice: string }>, customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>) => void;
+  onCopyEstimate?: () => void;
+  onOnlineReviewClick?: () => void;
+  onFooterSiteClick?: () => void;
   backendTotal?: number | null;
   syncError?: string | null;
 }
@@ -115,6 +118,9 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   savedItems,
   savedCustomItems,
   onSave,
+  onCopyEstimate,
+  onOnlineReviewClick,
+  onFooterSiteClick,
   backendTotal = null,
   syncError = null,
 }) => {
@@ -336,6 +342,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
             lines.push(`\nРасчёт сделан в свадебном калькуляторе Тимура Громова`);
             lines.push(`Сайт: timurgromov.ru`);
             navigator.clipboard.writeText(lines.join("\n")).then(() => {
+              onCopyEstimate?.();
               toast("Смета скопирована");
             });
           }}
@@ -348,6 +355,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
           href="https://timurgromov.ru/#webinar"
           target="_blank"
           rel="noopener noreferrer"
+          onClick={onOnlineReviewClick}
           className="w-full h-14 rounded-xl gradient-gold text-primary-foreground font-medium flex flex-col items-center justify-center gap-0.5"
         >
           <span className="text-sm flex items-center gap-2">
@@ -360,7 +368,13 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
         {/* Footer */}
         <div className="text-center py-4 text-[10px] text-muted-foreground/40 tracking-wide">
           © Тимур Громов •{" "}
-          <a href="https://timurgromov.ru" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-primary transition-colors">
+          <a
+            href="https://timurgromov.ru"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onFooterSiteClick}
+            className="underline underline-offset-2 hover:text-primary transition-colors"
+          >
             timurgromov.ru
           </a>
         </div>
