@@ -275,7 +275,7 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
         <label className="block text-sm text-muted-foreground mb-3 font-medium">Количество гостей</label>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => { const g = Math.max(0, guests - 10); setGuests(g); notifyChange({ guests: g }); }}
+            onClick={() => { const g = Math.max(0, guests - 5); setGuests(g); notifyChange({ guests: g }); }}
             className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center text-foreground text-lg hover:border-primary/30 transition-colors"
           >
             −
@@ -287,7 +287,7 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
             className="flex-1 h-12 rounded-lg bg-card border border-border text-center text-xl font-serif text-foreground focus:outline-none focus:border-primary"
           />
           <button
-            onClick={() => { const g = guests + 10; setGuests(g); notifyChange({ guests: g }); }}
+            onClick={() => { const g = guests + 5; setGuests(g); notifyChange({ guests: g }); }}
             className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center text-foreground text-lg hover:border-primary/30 transition-colors"
           >
             +
