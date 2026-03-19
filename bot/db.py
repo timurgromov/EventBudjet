@@ -25,6 +25,24 @@ class PendingLeadEvent:
     event_payload: dict[str, Any] | None
 
 
+@dataclass
+class LeadExpenseSnapshot:
+    category_name: str
+    amount: str
+    created_at: str | None
+
+
+@dataclass
+class LeadSnapshot:
+    city: str | None
+    wedding_date_exact: str | None
+    season: str | None
+    next_year_flag: bool
+    guests_count: int | None
+    total_budget: str | None
+    expenses: list[LeadExpenseSnapshot]
+
+
 class BotRepository:
     def create_or_update_user(self, telegram_user: dict[str, Any]) -> tuple[int, int]:
         with SessionLocal.begin() as db:
@@ -169,6 +187,60 @@ class BotRepository:
                 )
                 for row in rows
             ]
+
+    def get_lead_snapshot(self, lead_id: int) -> LeadSnapshot | None:
+        with SessionLocal.begin() as db:
+            lead_row = db.execute(
+                text(
+                    """
+                    SELECT
+                      city,
+                      wedding_date_exact::text AS wedding_date_exact,
+                      season,
+                      next_year_flag,
+                      guests_count,
+                      total_budget::text AS total_budget
+                    FROM leads
+                    WHERE id = :lead_id
+                    LIMIT 1;
+                    """
+                ),
+                {'lead_id': lead_id},
+            ).mappings().one_or_none()
+            if lead_row is None:
+                return None
+
+            expense_rows = db.execute(
+                text(
+                    """
+                    SELECT
+                      category_name,
+                      amount::text AS amount,
+                      created_at::text AS created_at
+                    FROM expenses
+                    WHERE lead_id = :lead_id
+                    ORDER BY created_at ASC, id ASC;
+                    """
+                ),
+                {'lead_id': lead_id},
+            ).mappings().all()
+
+            return LeadSnapshot(
+                city=lead_row['city'],
+                wedding_date_exact=lead_row['wedding_date_exact'],
+                season=lead_row['season'],
+                next_year_flag=bool(lead_row['next_year_flag']),
+                guests_count=lead_row['guests_count'],
+                total_budget=lead_row['total_budget'],
+                expenses=[
+                    LeadExpenseSnapshot(
+                        category_name=row['category_name'],
+                        amount=row['amount'],
+                        created_at=row['created_at'],
+                    )
+                    for row in expense_rows
+                ],
+            )
 
     @staticmethod
     def _parse_json_payload(value: Any) -> dict[str, Any] | None:

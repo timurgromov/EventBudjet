@@ -7,7 +7,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
 
 from bot.config import settings
-from bot.db import BotRepository, PendingLeadEvent
+from bot.db import BotRepository, LeadSnapshot, PendingLeadEvent
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class AdminNotificationService:
     def _render_lead_event(self, event: PendingLeadEvent) -> tuple[str, str] | None:
         actor = self._format_actor(event)
         payload = event.event_payload or {}
+        snapshot = self.repository.get_lead_snapshot(event.lead_id)
 
         if event.event_type == 'miniapp_opened':
             return (f'{actor} открыл мини-приложение', 'low')
@@ -95,25 +96,43 @@ class AdminNotificationService:
         if event.event_type == 'profile_updated':
             details = self._format_changes(payload.get('changes'), PROFILE_FIELD_LABELS)
             suffix = f'\n{details}' if details else ''
+            snapshot_text = self._format_budget_snapshot(snapshot)
+            if snapshot_text:
+                suffix = f'{suffix}\n\n{snapshot_text}'
             return (f'{actor} изменил данные профиля{suffix}', 'medium')
         if event.event_type == 'expense_added':
             name = payload.get('category_name') or 'Новая статья'
             amount = self._format_amount(payload.get('amount'))
-            return (f'{actor} добавил расход: {name} — {amount}', 'medium')
+            suffix = self._format_budget_snapshot(snapshot)
+            text = f'{actor} добавил расход: {name} — {amount}'
+            if suffix:
+                text = f'{text}\n\n{suffix}'
+            return (text, 'medium')
         if event.event_type == 'expense_updated':
             name = payload.get('category_name') or 'Статья расходов'
             details = self._format_changes(payload.get('changes'), EXPENSE_FIELD_LABELS)
             suffix = f'\n{details}' if details else ''
+            snapshot_text = self._format_budget_snapshot(snapshot)
+            if snapshot_text:
+                suffix = f'{suffix}\n\n{snapshot_text}'
             return (f'{actor} изменил расход: {name}{suffix}', 'medium')
         if event.event_type == 'expense_removed':
             name = payload.get('category_name') or 'Статья расходов'
             amount = self._format_amount(payload.get('amount'))
-            return (f'{actor} удалил расход: {name} — {amount}', 'medium')
+            suffix = self._format_budget_snapshot(snapshot)
+            text = f'{actor} удалил расход: {name} — {amount}'
+            if suffix:
+                text = f'{text}\n\n{suffix}'
+            return (text, 'medium')
         if event.event_type == 'budget_calculated':
             total = self._format_amount(payload.get('total_budget'))
             count = payload.get('expenses_count')
             extra = f' ({count} статей)' if count is not None else ''
-            return (f'{actor} завершил расчёт бюджета: {total}{extra}', 'high')
+            suffix = self._format_budget_snapshot(snapshot)
+            text = f'{actor} завершил расчёт бюджета: {total}{extra}'
+            if suffix:
+                text = f'{text}\n\n{suffix}'
+            return (text, 'high')
         return None
 
     @staticmethod
@@ -162,6 +181,40 @@ class AdminNotificationService:
             return f'{integer}{"." + fraction if fraction != "00" else ""} ₽'
         except Exception:
             return str(value)
+
+    def _format_budget_snapshot(self, snapshot: LeadSnapshot | None) -> str:
+        if snapshot is None:
+            return ''
+
+        lines: list[str] = ['📋 Смета свадьбы', '']
+        if snapshot.city:
+            lines.append(f'Город: {snapshot.city}')
+        wedding_date = self._format_wedding_date(snapshot)
+        if wedding_date:
+            lines.append(f'Дата свадьбы: {wedding_date}')
+        if snapshot.guests_count is not None:
+            lines.append(f'Гостей: {snapshot.guests_count}')
+        lines.append('')
+
+        for expense in snapshot.expenses:
+            lines.append(f'{expense.category_name} — {self._format_amount(expense.amount)}')
+
+        total = self._format_amount(snapshot.total_budget)
+        lines.append('')
+        lines.append(f'Итого: {total}')
+        lines.append('')
+        lines.append('Расчёт сделан в свадебном калькуляторе Тимура Громова')
+        return '\n'.join(lines)
+
+    @staticmethod
+    def _format_wedding_date(snapshot: LeadSnapshot) -> str | None:
+        if snapshot.wedding_date_exact:
+            return snapshot.wedding_date_exact
+        if snapshot.next_year_flag:
+            return 'next_year'
+        if snapshot.season:
+            return snapshot.season
+        return None
 
 
 PROFILE_FIELD_LABELS = {
