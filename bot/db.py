@@ -147,6 +147,7 @@ class BotRepository:
                         FROM admin_notifications an
                         WHERE an.lead_id = le.lead_id
                           AND an.notification_type = CONCAT('lead_event:', le.id)
+                          AND an.status = 'sent'
                       )
                     ORDER BY le.id ASC
                     LIMIT :limit;

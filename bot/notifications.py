@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Any
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramRetryAfter
 
 from bot.config import settings
 from bot.db import BotRepository, PendingLeadEvent
@@ -61,6 +62,19 @@ class AdminNotificationService:
         try:
             await self.bot.send_message(chat_id=settings.bot_admin_chat_id, text=text)
             status = 'sent'
+        except TelegramRetryAfter as exc:
+            logger.warning(
+                'notification_rate_limited type=%s lead_id=%s retry_after=%s',
+                notification_type,
+                lead_id,
+                exc.retry_after,
+            )
+            await asyncio.sleep(exc.retry_after)
+            try:
+                await self.bot.send_message(chat_id=settings.bot_admin_chat_id, text=text)
+                status = 'sent'
+            except Exception:
+                logger.exception('notification_retry_failed type=%s lead_id=%s', notification_type, lead_id)
         except Exception:
             logger.exception('notification_send_failed type=%s lead_id=%s', notification_type, lead_id)
         finally:
