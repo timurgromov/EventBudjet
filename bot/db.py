@@ -23,6 +23,17 @@ class PendingLeadEvent:
     first_name: str | None
     last_name: str | None
     event_payload: dict[str, Any] | None
+    created_at: str | None
+
+
+@dataclass
+class PendingLeadEventBatch:
+    lead_id: int
+    telegram_id: int
+    username: str | None
+    first_name: str | None
+    last_name: str | None
+    events: list[PendingLeadEvent]
 
 
 @dataclass
@@ -133,21 +144,51 @@ class BotRepository:
                 },
             )
 
-    def list_pending_lead_events(self, limit: int = 100) -> list[PendingLeadEvent]:
+    def list_ready_lead_event_batches(self, delay_seconds: int, limit: int = 20) -> list[PendingLeadEventBatch]:
         with SessionLocal.begin() as db:
             rows = db.execute(
                 text(
                     """
+                    WITH candidate_leads AS (
+                      SELECT
+                        le.lead_id,
+                        MAX(le.created_at) AS last_event_at
+                      FROM lead_events le
+                      WHERE le.event_type IN (
+                        'miniapp_opened',
+                        'app_resumed',
+                        'profile_started',
+                        'profile_updated',
+                        'profile_completed',
+                        'expense_added',
+                        'expense_updated',
+                        'expense_removed',
+                        'budget_calculated'
+                      )
+                        AND NOT EXISTS (
+                          SELECT 1
+                          FROM admin_notifications an
+                          WHERE an.lead_id = le.lead_id
+                            AND an.notification_type = CONCAT('lead_event:', le.id)
+                            AND an.status = 'sent'
+                        )
+                      GROUP BY le.lead_id
+                      HAVING MAX(le.created_at) <= now() - make_interval(secs => :delay_seconds)
+                      ORDER BY MAX(le.created_at) ASC
+                      LIMIT :limit
+                    )
                     SELECT
                       le.id,
                       le.lead_id,
                       le.event_type,
                       le.event_payload,
+                      le.created_at::text AS created_at,
                       u.telegram_id,
                       u.username,
                       u.first_name,
                       u.last_name
                     FROM lead_events le
+                    JOIN candidate_leads cl ON cl.lead_id = le.lead_id
                     JOIN leads l ON l.id = le.lead_id
                     JOIN users u ON u.id = l.user_id
                     WHERE le.event_type IN (
@@ -168,15 +209,15 @@ class BotRepository:
                           AND an.notification_type = CONCAT('lead_event:', le.id)
                           AND an.status = 'sent'
                       )
-                    ORDER BY le.id ASC
-                    LIMIT :limit;
+                    ORDER BY le.lead_id ASC, le.id ASC;
                     """
                 ),
-                {'limit': limit},
+                {'limit': limit, 'delay_seconds': delay_seconds},
             ).mappings().all()
-
-            return [
-                PendingLeadEvent(
+            batches: list[PendingLeadEventBatch] = []
+            current: PendingLeadEventBatch | None = None
+            for row in rows:
+                event = PendingLeadEvent(
                     id=int(row['id']),
                     lead_id=int(row['lead_id']),
                     event_type=str(row['event_type']),
@@ -185,9 +226,21 @@ class BotRepository:
                     first_name=row['first_name'],
                     last_name=row['last_name'],
                     event_payload=self._parse_json_payload(row['event_payload']),
+                    created_at=row['created_at'],
                 )
-                for row in rows
-            ]
+                if current is None or current.lead_id != event.lead_id:
+                    current = PendingLeadEventBatch(
+                        lead_id=event.lead_id,
+                        telegram_id=event.telegram_id,
+                        username=event.username,
+                        first_name=event.first_name,
+                        last_name=event.last_name,
+                        events=[event],
+                    )
+                    batches.append(current)
+                    continue
+                current.events.append(event)
+            return batches
 
     def get_lead_snapshot(self, lead_id: int) -> LeadSnapshot | None:
         with SessionLocal.begin() as db:

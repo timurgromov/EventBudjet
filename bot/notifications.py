@@ -7,7 +7,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
 
 from bot.config import settings
-from bot.db import BotRepository, LeadSnapshot, PendingLeadEvent
+from bot.db import BotRepository, LeadSnapshot, PendingLeadEvent, PendingLeadEventBatch
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +21,19 @@ class AdminNotificationService:
         text = f'Пользователь запустил бота: @{username}' if username else f'Пользователь запустил бота (telegram_id={telegram_id})'
         await self._send_and_log(lead_id, 'bot_started', 'low', text, actor_telegram_id=telegram_id)
 
-    async def notify_lead_event(self, event: PendingLeadEvent) -> None:
-        rendered = self._render_lead_event(event)
+    async def notify_lead_event_batch(self, batch: PendingLeadEventBatch) -> None:
+        rendered = self._render_lead_event_batch(batch)
         if rendered is None:
             return
         text, priority = rendered
 
         await self._send_and_log(
-            event.lead_id,
-            event.event_type,
+            batch.lead_id,
+            'lead_event_batch',
             priority,
             text,
-            notification_key=f'lead_event:{event.id}',
-            actor_telegram_id=event.telegram_id,
+            notification_keys=[f'lead_event:{event.id}' for event in batch.events],
+            actor_telegram_id=batch.telegram_id,
         )
 
     async def _send_and_log(
@@ -43,20 +43,23 @@ class AdminNotificationService:
         priority: str,
         text: str,
         notification_key: str | None = None,
+        notification_keys: list[str] | None = None,
         actor_telegram_id: int | None = None,
     ) -> None:
         status = 'failed'
-        log_key = notification_key or notification_type
+        log_keys = notification_keys or ([notification_key] if notification_key else [notification_type])
 
         if settings.bot_dry_run:
             logger.info('bot_dry_run_notification type=%s lead_id=%s text=%s', notification_type, lead_id, text)
             status = 'sent'
-            self.repository.log_admin_notification(lead_id, log_key, priority, status)
+            for log_key in log_keys:
+                self.repository.log_admin_notification(lead_id, log_key, priority, status)
             return
 
         if settings.bot_admin_chat_id is None:
             logger.warning('admin_chat_id_missing type=%s lead_id=%s', notification_type, lead_id)
-            self.repository.log_admin_notification(lead_id, log_key, priority, status)
+            for log_key in log_keys:
+                self.repository.log_admin_notification(lead_id, log_key, priority, status)
             return
 
         try:
@@ -78,61 +81,70 @@ class AdminNotificationService:
         except Exception:
             logger.exception('notification_send_failed type=%s lead_id=%s', notification_type, lead_id)
         finally:
-            self.repository.log_admin_notification(lead_id, log_key, priority, status)
+            for log_key in log_keys:
+                self.repository.log_admin_notification(lead_id, log_key, priority, status)
 
-    def _render_lead_event(self, event: PendingLeadEvent) -> tuple[str, str] | None:
-        actor = self._format_actor(event)
+    def _render_lead_event_batch(self, batch: PendingLeadEventBatch) -> tuple[str, str] | None:
+        if not batch.events:
+            return None
+        actor = self._format_actor(batch.events[0])
+        snapshot = self.repository.get_lead_snapshot(batch.lead_id)
+        lines = [f'{actor} завершил сессию в приложении.', '']
+        changes: list[str] = []
+        priority = 'medium'
+        for event in batch.events:
+            rendered = self._render_event_summary_line(event)
+            if rendered is None:
+                continue
+            line, line_priority = rendered
+            changes.append(line)
+            if line_priority == 'high':
+                priority = 'high'
+        if not changes:
+            return None
+        lines.append('Что изменил:')
+        lines.extend(changes)
+        snapshot_text = self._format_budget_snapshot(snapshot)
+        if snapshot_text:
+            lines.extend(['', snapshot_text])
+        return ('\n'.join(lines), priority)
+
+    def _render_event_summary_line(self, event: PendingLeadEvent) -> tuple[str, str] | None:
         payload = event.event_payload or {}
-        snapshot = self.repository.get_lead_snapshot(event.lead_id)
-
         if event.event_type == 'miniapp_opened':
-            return (f'{actor} открыл мини-приложение', 'low')
+            return ('• Открыл мини-приложение', 'low')
         if event.event_type == 'app_resumed':
-            return (f'{actor} вернулся в мини-приложение', 'low')
+            return ('• Вернулся в мини-приложение', 'low')
         if event.event_type == 'profile_started':
-            return (f'{actor} начал заполнять профиль', 'medium')
+            return ('• Начал заполнять профиль', 'medium')
         if event.event_type == 'profile_completed':
-            return (f'{actor} заполнил профиль', 'high')
+            return ('• Заполнил профиль', 'high')
         if event.event_type == 'profile_updated':
             details = self._format_changes(payload.get('changes'), PROFILE_FIELD_LABELS)
-            suffix = f'\n{details}' if details else ''
-            snapshot_text = self._format_budget_snapshot(snapshot)
-            if snapshot_text:
-                suffix = f'{suffix}\n\n{snapshot_text}'
-            return (f'{actor} изменил данные профиля{suffix}', 'medium')
+            if details:
+                details = details.replace('\n', '\n  ')
+                return (f'• Обновил профиль\n  {details}', 'medium')
+            return ('• Обновил профиль', 'medium')
         if event.event_type == 'expense_added':
             name = payload.get('category_name') or 'Новая статья'
             amount = self._format_amount(payload.get('amount'))
-            suffix = self._format_budget_snapshot(snapshot)
-            text = f'{actor} добавил расход: {name} — {amount}'
-            if suffix:
-                text = f'{text}\n\n{suffix}'
-            return (text, 'medium')
+            return (f'• Добавил расход: {name} — {amount}', 'medium')
         if event.event_type == 'expense_updated':
             name = payload.get('category_name') or 'Статья расходов'
             details = self._format_changes(payload.get('changes'), EXPENSE_FIELD_LABELS)
-            suffix = f'\n{details}' if details else ''
-            snapshot_text = self._format_budget_snapshot(snapshot)
-            if snapshot_text:
-                suffix = f'{suffix}\n\n{snapshot_text}'
-            return (f'{actor} изменил расход: {name}{suffix}', 'medium')
+            if details:
+                details = details.replace('\n', '\n  ')
+                return (f'• Изменил расход: {name}\n  {details}', 'medium')
+            return (f'• Изменил расход: {name}', 'medium')
         if event.event_type == 'expense_removed':
             name = payload.get('category_name') or 'Статья расходов'
             amount = self._format_amount(payload.get('amount'))
-            suffix = self._format_budget_snapshot(snapshot)
-            text = f'{actor} удалил расход: {name} — {amount}'
-            if suffix:
-                text = f'{text}\n\n{suffix}'
-            return (text, 'medium')
+            return (f'• Удалил расход: {name} — {amount}', 'medium')
         if event.event_type == 'budget_calculated':
             total = self._format_amount(payload.get('total_budget'))
             count = payload.get('expenses_count')
             extra = f' ({count} статей)' if count is not None else ''
-            suffix = self._format_budget_snapshot(snapshot)
-            text = f'{actor} завершил расчёт бюджета: {total}{extra}'
-            if suffix:
-                text = f'{text}\n\n{suffix}'
-            return (text, 'high')
+            return (f'• Пересчитал бюджет: {total}{extra}', 'high')
         return None
 
     @staticmethod
@@ -254,7 +266,12 @@ async def run_lead_event_notifier(
 
 
 async def process_pending_events_once(service: AdminNotificationService, repository: BotRepository) -> int:
-    pending = repository.list_pending_lead_events(limit=100)
-    for event in pending:
-        await service.notify_lead_event(event)
-    return len(pending)
+    batches = repository.list_ready_lead_event_batches(
+        delay_seconds=settings.bot_event_batch_delay_seconds,
+        limit=20,
+    )
+    processed = 0
+    for batch in batches:
+        await service.notify_lead_event_batch(batch)
+        processed += len(batch.events)
+    return processed
