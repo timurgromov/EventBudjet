@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { ChevronDown, Plus, Play, X, HelpCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -148,6 +148,8 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [isEditingField, setIsEditingField] = useState(false);
+  const bottomBarRef = useRef<HTMLDivElement | null>(null);
+  const [bottomBarHeight, setBottomBarHeight] = useState(300);
 
   const triggerSave = useCallback((currentItems: ExpenseItem[]) => {
     if (!onSave) return;
@@ -224,8 +226,28 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     }, 120);
   };
 
+  useEffect(() => {
+    const element = bottomBarRef.current;
+    if (!element) return;
+
+    const updateHeight = () => {
+      setBottomBarHeight(element.getBoundingClientRect().height);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [backendTotal, syncError, isEditingField]);
+
+  const screenPaddingBottom = isEditingField
+    ? "calc(env(safe-area-inset-bottom, 0px) + 6rem)"
+    : `calc(env(safe-area-inset-bottom, 0px) + ${bottomBarHeight}px + 1.5rem)`;
+
   return (
-    <div className={cn("min-h-screen flex flex-col", isEditingField ? "pb-24" : "pb-64")}>
+    <div className="min-h-screen flex flex-col" style={{ paddingBottom: screenPaddingBottom }}>
       {/* Subtitle */}
       <p className="text-sm text-foreground/80 text-center px-4 pt-1 pb-1">Рассчитайте бюджет вашего торжества</p>
 
@@ -332,8 +354,9 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
 
       {/* Bottom bar */}
       <div
+        ref={bottomBarRef}
         className={cn(
-          "fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 py-4 space-y-3 transition-transform",
+          "fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] space-y-3 transition-transform",
           isEditingField && "translate-y-full pointer-events-none"
         )}
       >
