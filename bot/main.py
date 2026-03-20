@@ -5,7 +5,7 @@ from pathlib import Path
 from aiogram import Bot, Dispatcher, Router
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
+from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
 from bot.config import settings
 from bot.db import BotRepository
@@ -17,6 +17,17 @@ logger = logging.getLogger(__name__)
 router = Router()
 repository = BotRepository()
 READY_FILE = Path('/tmp/bot_ready')
+START_MESSAGE_IMAGE = Path(__file__).resolve().parent / 'assets' / 'start-message.jpg'
+START_MESSAGE_TEXT = (
+    'Привет!\n'
+    'Этот бот поможет вам понять свадебный бюджет без хаоса и бесконечных таблиц.\n\n'
+    'Здесь вы сможете:\n'
+    '— посчитать примерную смету\n'
+    '— посмотреть, что влияет на стоимость\n'
+    '— переслать расчёт близким\n'
+    '— открыть онлайн-разбор по пошаговой подготовке к свадьбе\n\n'
+    'Нажмите кнопку ниже, чтобы начать.'
+)
 
 
 def build_start_keyboard() -> InlineKeyboardMarkup:
@@ -52,10 +63,16 @@ async def start_handler(message: Message) -> None:
     lead_id = repository.get_or_create_lead_for_user(user_id)
     repository.create_lead_event(lead_id, 'bot_started')
 
-    await message.answer(
-        'Нажмите кнопку ниже, чтобы открыть свадебный калькулятор и начать планирование бюджета.',
-        reply_markup=build_start_keyboard(),
-    )
+    if START_MESSAGE_IMAGE.exists():
+        await message.answer_photo(
+            photo=FSInputFile(START_MESSAGE_IMAGE),
+            caption=START_MESSAGE_TEXT,
+            reply_markup=build_start_keyboard(),
+        )
+        return
+
+    logger.warning('start_message_image_missing path=%s', START_MESSAGE_IMAGE)
+    await message.answer(START_MESSAGE_TEXT, reply_markup=build_start_keyboard())
 
 async def main() -> None:
     READY_FILE.unlink(missing_ok=True)
