@@ -48,7 +48,7 @@ const TelegramProfile: React.FC<TelegramProfileProps> = ({ user }) => {
             className="object-cover"
           />
         ) : null}
-        <AvatarFallback className="bg-[#F2B35B] text-white text-[13px] font-semibold">
+        <AvatarFallback className="border border-[#D8B26A]/30 bg-[#16131C] text-[#D8B26A] text-[12px] font-semibold tracking-[0.08em] shadow-[0_0_18px_rgba(216,178,106,0.12)]">
           {avatarInitials}
         </AvatarFallback>
       </Avatar>
