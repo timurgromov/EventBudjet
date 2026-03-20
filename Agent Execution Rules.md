@@ -17,6 +17,11 @@ The agent must follow these rules without deviation.
   - execution order
   - implementation steps
 
+- `DEPLOY_WORKFLOW.md` defines:
+  - delivery order
+  - GitHub to VPS deployment flow
+  - обязательный порядок проверки после выкладки
+
 The agent must not contradict these documents.
 
 ---
@@ -181,9 +186,21 @@ Before completing a task:
 
 - One task = one commit
 - After each completed task change, the agent must immediately:
+  - verify the change locally when applicable
   - commit the result
   - push the commit to remote
+- For any code/config/infra change that affects the running project, the agent must then:
+  - deploy the latest pushed commit to VPS
+  - verify VPS state via logs/health checks
+- The required order is:
+  - local change
+  - local verification
+  - commit
+  - push to GitHub
+  - deploy to VPS
+  - verify VPS after deploy
 - Do not leave finished changes only in local working tree unless the user explicitly requests that
+- Do not stop after `git push` if the task is expected to be live on VPS
 - Commit messages:
   - `feat: ...`
   - `fix: ...`
@@ -223,6 +240,8 @@ A task is complete only if:
 - No side effects introduced
 - Changes are committed
 - Changes are pushed
+- VPS is updated when the task affects deployed code
+- Post-deploy verification is completed when VPS deploy was required
 
 ---
 
