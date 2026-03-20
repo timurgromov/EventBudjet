@@ -1,5 +1,6 @@
 services:
   frontend:
+    restart: unless-stopped
     image: node:20-alpine
     working_dir: /app
     command: sh -c "npm install --no-package-lock && npm run dev -- --host 0.0.0.0 --port ${FRONTEND_PORT:-5173}"
@@ -21,6 +22,7 @@ services:
       start_period: 30s
 
   backend:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -47,6 +49,7 @@ services:
       start_period: 15s
 
   bot:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: bot/Dockerfile
@@ -76,6 +79,7 @@ services:
       start_period: 10s
 
   postgres:
+    restart: unless-stopped
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-wedding_calculator}
@@ -93,6 +97,7 @@ services:
       start_period: 10s
 
   nginx:
+    restart: unless-stopped
     image: nginx:1.27-alpine
     depends_on:
       frontend:
