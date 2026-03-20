@@ -364,11 +364,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
           <span className="text-sm text-muted-foreground">Итого:</span>
           <span className="text-2xl font-serif text-gold-gradient">{formatPrice(total)} ₽</span>
         </div>
-        {backendTotal !== null && (
-          <div className="text-xs text-muted-foreground">
-            Сохранённый расчёт в базе: {formatPrice(backendTotal)} ₽
-          </div>
-        )}
         {syncError && <div className="text-xs text-destructive">{syncError}</div>}
         <button
           onClick={() => {
