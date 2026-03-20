@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     bot_dry_run: bool = True
     bot_event_poll_interval_seconds: int = 10
     bot_event_batch_delay_seconds: int = 90
+    bot_startup_retry_seconds: int = 5
 
     database_url: str = 'postgresql+psycopg://postgres:postgres@postgres:5432/wedding_calculator'
 

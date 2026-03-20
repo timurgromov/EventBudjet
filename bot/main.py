@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher, Router
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 repository = BotRepository()
+READY_FILE = Path('/tmp/bot_ready')
 
 
 def build_start_keyboard() -> InlineKeyboardMarkup:
@@ -56,17 +58,33 @@ async def start_handler(message: Message) -> None:
     )
 
 async def main() -> None:
-    Path('/tmp/bot_ready').write_text('ready')
+    READY_FILE.unlink(missing_ok=True)
     bot = Bot(token=settings.telegram_bot_token)
     notification_service = AdminNotificationService(bot=bot, repository=repository)
 
     if settings.bot_dry_run:
+        READY_FILE.write_text('ready')
         logger.info('bot_running_in_dry_mode')
         while True:
             processed = await process_pending_events_once(notification_service, repository)
             if processed:
                 logger.info('bot_dry_run_processed_events=%s', processed)
             await asyncio.sleep(60)
+
+    while True:
+        try:
+            me = await bot.get_me()
+            READY_FILE.write_text('ready')
+            logger.info('telegram_connection_ready bot_username=%s bot_id=%s', me.username, me.id)
+            break
+        except TelegramNetworkError as exc:
+            READY_FILE.unlink(missing_ok=True)
+            logger.warning(
+                'telegram_connection_not_ready retry_in_seconds=%s error=%s',
+                settings.bot_startup_retry_seconds,
+                exc,
+            )
+            await asyncio.sleep(settings.bot_startup_retry_seconds)
 
     dp = Dispatcher()
     dp.include_router(router)
@@ -76,6 +94,7 @@ async def main() -> None:
     try:
         await dp.start_polling(bot)
     finally:
+        READY_FILE.unlink(missing_ok=True)
         stop_event.set()
         notifier_task.cancel()
         await bot.session.close()
