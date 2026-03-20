@@ -18,6 +18,13 @@ ssh -o IdentitiesOnly=yes -i ~/.ssh/cloudru.key user1@185.50.203.2
 
 - Project dir: `/home/user1/EventBudjet`
 
+## Дополнительные handoff документы
+
+- env template: [.env.example](./.env.example)
+- secrets map: [docs/SECRETS_INVENTORY.md](./docs/SECRETS_INVENTORY.md)
+- migration checklist: [docs/MIGRATION_CHECKLIST.md](./docs/MIGRATION_CHECKLIST.md)
+- backup/restore: [docs/BACKUP_RESTORE.md](./docs/BACKUP_RESTORE.md)
+
 ## Управление сервисами на VPS
 
 `user1` работает с Docker через `sudo`.
