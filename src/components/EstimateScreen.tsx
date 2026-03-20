@@ -31,6 +31,8 @@ interface ExpenseItem {
   isCustom?: boolean;
 }
 
+type AddFormPosition = "after-photo" | "bottom" | null;
+
 const formatPrice = (price: number): string => price.toLocaleString("ru-RU");
 
 const ROLE_LABELS: Record<string, string> = {
@@ -145,7 +147,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     return [...base, ...custom];
   });
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [addFormPosition, setAddFormPosition] = useState<AddFormPosition>(null);
   const [newName, setNewName] = useState("");
   const [isEditingField, setIsEditingField] = useState(false);
   const bottomBarRef = useRef<HTMLDivElement | null>(null);
@@ -199,7 +201,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       return next;
     });
     setNewName("");
-    setShowAddForm(false);
+    setAddFormPosition(null);
   };
 
   const removeItem = (id: string) => {
@@ -224,6 +226,46 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
         setIsEditingField(false);
       }
     }, 120);
+  };
+
+  const renderCustomExpenseAction = (position: Exclude<AddFormPosition, null>) => {
+    if (addFormPosition === position) {
+      return (
+        <div className="flex gap-2 p-2">
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addCustomItem()}
+            onFocus={(e) => focusField(e.currentTarget)}
+            onBlur={blurField}
+            placeholder="Название расхода..."
+            autoFocus
+            className="flex-1 h-10 rounded-lg bg-card border border-border px-3 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+          />
+          <button onClick={addCustomItem} className="h-10 px-4 rounded-lg gradient-gold text-primary-foreground text-sm font-medium">ОК</button>
+          <button
+            onClick={() => {
+              setNewName("");
+              setAddFormPosition(null);
+            }}
+            className="h-10 px-3 rounded-lg bg-card border border-border text-muted-foreground text-sm"
+          >
+            ✕
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => setAddFormPosition(position)}
+        className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors text-sm"
+      >
+        <Plus className="w-4 h-4" />
+        Добавить свой расход
+      </button>
+    );
   };
 
   useEffect(() => {
@@ -253,110 +295,86 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
 
       {/* Items */}
       <div className="px-4 py-3 space-y-2">
-        <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
-          <div className="space-y-1">
-            <p className="text-sm text-foreground">Нет нужной категории?</p>
-            <p className="text-xs text-muted-foreground">Добавьте свой расход и включите его в смету.</p>
-          </div>
-
-          {showAddForm ? (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addCustomItem()}
-                onFocus={(e) => focusField(e.currentTarget)}
-                onBlur={blurField}
-                placeholder="Название расхода..."
-                autoFocus
-                className="flex-1 h-10 rounded-lg bg-background border border-border px-3 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-              />
-              <button onClick={addCustomItem} className="h-10 px-4 rounded-lg gradient-gold text-primary-foreground text-sm font-medium">ОК</button>
-              <button onClick={() => setShowAddForm(false)} className="h-10 px-3 rounded-lg bg-background border border-border text-muted-foreground text-sm">✕</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Добавить свой расход
-            </button>
-          )}
-        </div>
-
         {items.map((item, i) => {
           const calcPrice = item.getPrice(guests);
           const isExpanded = expandedId === item.id;
           const hasInfo = !!item.info;
 
           return (
-            <div
-              key={item.id}
-              className="rounded-xl border border-border bg-card overflow-hidden animate-fade-in"
-              style={{ animationDelay: `${i * 0.03}s` }}
-            >
-              <div className="flex items-center gap-3 p-3">
-                <button
-                  onClick={() => updateItem(item.id, { checked: !item.checked })}
-                  className={cn(
-                    "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                    item.checked ? "bg-primary border-primary" : "border-muted-foreground/30"
-                  )}
-                >
-                  {item.checked && (
-                    <svg className="w-3 h-3 text-primary-foreground" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                  className="flex-1 text-left flex items-center gap-1 min-w-0"
-                >
-                  <span className={cn("text-sm truncate", item.checked ? "text-foreground" : "text-muted-foreground")}>
-                    {item.name}
-                  </span>
-                  {hasInfo && (
-                    <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground flex-shrink-0 transition-transform", isExpanded && "rotate-180")} />
-                  )}
-                </button>
-
-                {hasInfo && (
+            <React.Fragment key={item.id}>
+              <div
+                className="rounded-xl border border-border bg-card overflow-hidden animate-fade-in"
+                style={{ animationDelay: `${i * 0.03}s` }}
+              >
+                <div className="flex items-center gap-3 p-3">
                   <button
-                    className="flex-shrink-0 text-muted-foreground/50 hover:text-primary transition-colors"
-                    onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : item.id); }}
+                    onClick={() => updateItem(item.id, { checked: !item.checked })}
+                    className={cn(
+                      "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      item.checked ? "bg-primary border-primary" : "border-muted-foreground/30"
+                    )}
                   >
-                    <HelpCircle className="w-4 h-4" />
+                    {item.checked && (
+                      <svg className="w-3 h-3 text-primary-foreground" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
                   </button>
-                )}
 
-                <div className="flex-shrink-0 w-28">
-                  <input
-                    type="text"
-                    value={item.userPrice}
-                    onChange={(e) => updateItem(item.id, { userPrice: e.target.value })}
-                    onFocus={(e) => focusField(e.currentTarget)}
-                    onBlur={blurField}
-                    placeholder={calcPrice !== null ? `от ${formatPrice(calcPrice)}` : item.isCustom ? "введите сумму" : "—"}
-                    inputMode="numeric"
-                    className="w-full text-right text-base md:text-sm bg-transparent border-b border-border/50 py-1 px-1 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary transition-colors"
-                  />
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                    className="flex-1 text-left flex items-center gap-1 min-w-0"
+                  >
+                    <span className={cn("text-sm truncate", item.checked ? "text-foreground" : "text-muted-foreground")}>
+                      {item.name}
+                    </span>
+                    {hasInfo && (
+                      <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground flex-shrink-0 transition-transform", isExpanded && "rotate-180")} />
+                    )}
+                  </button>
+
+                  {hasInfo && (
+                    <button
+                      className="flex-shrink-0 text-muted-foreground/50 hover:text-primary transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : item.id); }}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  <div className="flex-shrink-0 w-28">
+                    <input
+                      type="text"
+                      value={item.userPrice}
+                      onChange={(e) => updateItem(item.id, { userPrice: e.target.value })}
+                      onFocus={(e) => focusField(e.currentTarget)}
+                      onBlur={blurField}
+                      placeholder={calcPrice !== null ? `от ${formatPrice(calcPrice)}` : item.isCustom ? "введите сумму" : "—"}
+                      inputMode="numeric"
+                      className="w-full text-right text-base md:text-sm bg-transparent border-b border-border/50 py-1 px-1 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+
+                  {item.isCustom && (
+                    <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-destructive">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
-                {item.isCustom && (
-                  <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-destructive">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                {isExpanded && item.info && <InfoBlock info={item.info} />}
               </div>
 
-              {isExpanded && item.info && <InfoBlock info={item.info} />}
-            </div>
+              {item.id === "photo" && (
+                <div className="animate-fade-in" style={{ animationDelay: `${(i + 1) * 0.03}s` }}>
+                  {renderCustomExpenseAction("after-photo")}
+                </div>
+              )}
+            </React.Fragment>
           );
         })}
+
+        {renderCustomExpenseAction("bottom")}
       </div>
 
       {/* Bottom bar */}
