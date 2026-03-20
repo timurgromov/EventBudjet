@@ -180,6 +180,10 @@ Before completing a task:
 ## 15. Commit Rules
 
 - One task = one commit
+- After each completed task change, the agent must immediately:
+  - commit the result
+  - push the commit to remote
+- Do not leave finished changes only in local working tree unless the user explicitly requests that
 - Commit messages:
   - `feat: ...`
   - `fix: ...`
@@ -218,6 +222,7 @@ A task is complete only if:
 - Code works
 - No side effects introduced
 - Changes are committed
+- Changes are pushed
 
 ---
 
