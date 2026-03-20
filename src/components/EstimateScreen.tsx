@@ -253,6 +253,39 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
 
       {/* Items */}
       <div className="px-4 py-3 space-y-2">
+        <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
+          <div className="space-y-1">
+            <p className="text-sm text-foreground">Нет нужной категории?</p>
+            <p className="text-xs text-muted-foreground">Добавьте свой расход и включите его в смету.</p>
+          </div>
+
+          {showAddForm ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCustomItem()}
+                onFocus={(e) => focusField(e.currentTarget)}
+                onBlur={blurField}
+                placeholder="Название расхода..."
+                autoFocus
+                className="flex-1 h-10 rounded-lg bg-background border border-border px-3 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+              />
+              <button onClick={addCustomItem} className="h-10 px-4 rounded-lg gradient-gold text-primary-foreground text-sm font-medium">ОК</button>
+              <button onClick={() => setShowAddForm(false)} className="h-10 px-3 rounded-lg bg-background border border-border text-muted-foreground text-sm">✕</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить свой расход
+            </button>
+          )}
+        </div>
+
         {items.map((item, i) => {
           const calcPrice = item.getPrice(guests);
           const isExpanded = expandedId === item.id;
@@ -324,32 +357,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
             </div>
           );
         })}
-
-        {showAddForm ? (
-          <div className="flex gap-2 p-2">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustomItem()}
-              onFocus={(e) => focusField(e.currentTarget)}
-              onBlur={blurField}
-              placeholder="Название расхода..."
-              autoFocus
-              className="flex-1 h-10 rounded-lg bg-card border border-border px-3 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-            />
-            <button onClick={addCustomItem} className="h-10 px-4 rounded-lg gradient-gold text-primary-foreground text-sm font-medium">ОК</button>
-            <button onClick={() => setShowAddForm(false)} className="h-10 px-3 rounded-lg bg-card border border-border text-muted-foreground text-sm">✕</button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-border text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Добавить свой расход
-          </button>
-        )}
       </div>
 
       {/* Bottom bar */}
