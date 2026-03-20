@@ -149,7 +149,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addFormPosition, setAddFormPosition] = useState<AddFormPosition>(null);
   const [newName, setNewName] = useState("");
-  const [isEditingField, setIsEditingField] = useState(false);
   const bottomBarRef = useRef<HTMLDivElement | null>(null);
   const [bottomBarHeight, setBottomBarHeight] = useState(300);
 
@@ -196,7 +195,14 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       isCustom: true,
     };
     setItems((prev) => {
-      const next = [...prev, newItem];
+      const next = [...prev];
+      if (addFormPosition === "after-photo") {
+        const photoIndex = next.findIndex((item) => item.id === "photo");
+        const insertIndex = photoIndex === -1 ? next.length : photoIndex + 1;
+        next.splice(insertIndex, 0, newItem);
+      } else {
+        next.push(newItem);
+      }
       triggerSave(next);
       return next;
     });
@@ -213,19 +219,9 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   };
 
   const focusField = (input: HTMLInputElement) => {
-    setIsEditingField(true);
     window.setTimeout(() => {
       input.scrollIntoView({ block: "center", behavior: "smooth" });
     }, 250);
-  };
-
-  const blurField = () => {
-    window.setTimeout(() => {
-      const active = document.activeElement;
-      if (!(active instanceof HTMLInputElement)) {
-        setIsEditingField(false);
-      }
-    }, 120);
   };
 
   const renderCustomExpenseAction = (position: Exclude<AddFormPosition, null>) => {
@@ -238,7 +234,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addCustomItem()}
             onFocus={(e) => focusField(e.currentTarget)}
-            onBlur={blurField}
             placeholder="Название расхода..."
             autoFocus
             className="flex-1 h-10 rounded-lg bg-card border border-border px-3 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
@@ -282,11 +277,9 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [backendTotal, syncError, isEditingField]);
+  }, [backendTotal, syncError]);
 
-  const screenPaddingBottom = isEditingField
-    ? "calc(env(safe-area-inset-bottom, 0px) + 6rem)"
-    : `calc(env(safe-area-inset-bottom, 0px) + ${bottomBarHeight}px + 1.5rem)`;
+  const screenPaddingBottom = `calc(env(safe-area-inset-bottom, 0px) + ${bottomBarHeight}px + 1.5rem)`;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ paddingBottom: screenPaddingBottom }}>
@@ -348,7 +341,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
                       value={item.userPrice}
                       onChange={(e) => updateItem(item.id, { userPrice: e.target.value })}
                       onFocus={(e) => focusField(e.currentTarget)}
-                      onBlur={blurField}
                       placeholder={calcPrice !== null ? `от ${formatPrice(calcPrice)}` : item.isCustom ? "введите сумму" : "—"}
                       inputMode="numeric"
                       className="w-full text-right text-base md:text-sm bg-transparent border-b border-border/50 py-1 px-1 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary transition-colors"
@@ -380,10 +372,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       {/* Bottom bar */}
       <div
         ref={bottomBarRef}
-        className={cn(
-          "fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] space-y-3 transition-transform",
-          isEditingField && "translate-y-full pointer-events-none"
-        )}
+        className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] space-y-3"
       >
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Итого:</span>
