@@ -12,8 +12,8 @@ const TelegramProfile: React.FC<TelegramProfileProps> = ({ user }) => {
       ? `@${user.username}`
       : user.first_name
     : "Гость";
-  const avatarLetter = user?.first_name?.slice(0, 1).toUpperCase() ?? "👤";
-  const avatarSrc = user?.photo_url || (user?.username ? `https://t.me/i/userpic/320/${user.username}.jpg` : null);
+  const avatarSrc = user?.photo_url ?? null;
+  const fallbackAvatarSrc = "/fox-logo.png";
 
   useEffect(() => {
     setAvatarFailed(false);
@@ -30,9 +30,11 @@ const TelegramProfile: React.FC<TelegramProfileProps> = ({ user }) => {
           onError={() => setAvatarFailed(true)}
         />
       ) : (
-        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-          <span className="text-sm">{avatarLetter}</span>
-        </div>
+        <img
+          src={fallbackAvatarSrc}
+          alt="Логотип Wedding Calculator"
+          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        />
       )}
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
