@@ -6,19 +6,26 @@ interface TelegramProfileProps {
   user: TelegramUser | null;
 }
 
+function isTelegramPlaceholderPhoto(url: string | undefined): boolean {
+  if (!url) return true;
+  return /\/i\/userpic\/|\/userpic\//i.test(url);
+}
+
 const TelegramProfile: React.FC<TelegramProfileProps> = ({ user }) => {
   const displayName = user
     ? user.username
       ? `@${user.username}`
       : user.first_name
     : "Гость";
+  const photoUrl = user?.photo_url?.trim();
+  const showTelegramPhoto = Boolean(photoUrl) && !isTelegramPlaceholderPhoto(photoUrl);
 
   return (
     <div className="flex items-center gap-2.5 px-5 py-3 bg-card/50 border-b border-border">
       <Avatar className="h-8 w-8 flex-shrink-0">
-        {user?.photo_url ? (
+        {showTelegramPhoto ? (
           <AvatarImage
-            src={user.photo_url}
+            src={photoUrl}
             alt={displayName}
             referrerPolicy="no-referrer"
             className="object-cover"
@@ -34,7 +41,7 @@ const TelegramProfile: React.FC<TelegramProfileProps> = ({ user }) => {
       </Avatar>
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
-        <p className="text-[11px] text-muted-foreground">Ваши расчёты сохраняются автоматически · v20260321c</p>
+        <p className="text-[11px] text-muted-foreground">Ваши расчёты сохраняются автоматически</p>
       </div>
     </div>
   );
