@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.exceptions import TelegramNetworkError
@@ -30,13 +31,21 @@ START_MESSAGE_TEXT = (
 )
 
 
+def build_mini_app_url() -> str:
+    parsed = urlparse(settings.mini_app_url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    # Force Telegram WebView cache busting per day to pick up fresh frontend bundle.
+    query["app_v"] = "20260321"
+    return urlunparse(parsed._replace(query=urlencode(query)))
+
+
 def build_start_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text='Открыть свадебный калькулятор',
-                    web_app=WebAppInfo(url=settings.mini_app_url),
+                    web_app=WebAppInfo(url=build_mini_app_url()),
                 )
             ]
         ]
