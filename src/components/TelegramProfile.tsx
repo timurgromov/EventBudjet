@@ -34,7 +34,7 @@ const TelegramProfile: React.FC<TelegramProfileProps> = ({ user }) => {
       </Avatar>
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
-        <p className="text-[11px] text-muted-foreground">Ваши расчёты сохраняются автоматически</p>
+        <p className="text-[11px] text-muted-foreground">Ваши расчёты сохраняются автоматически · v20260321c</p>
       </div>
     </div>
   );
