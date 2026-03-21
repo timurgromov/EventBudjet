@@ -19,6 +19,8 @@ router = Router()
 repository = BotRepository()
 READY_FILE = Path('/tmp/bot_ready')
 START_MESSAGE_IMAGE = Path(__file__).resolve().parent / 'assets' / 'start-message.jpg'
+START_MESSAGE_SEND_RETRIES = 3
+START_MESSAGE_RETRY_DELAY_SECONDS = 2
 START_MESSAGE_TEXT = (
     'Привет!\n'
     'Этот бот поможет вам понять свадебный бюджет без хаоса и бесконечных таблиц.\n\n'
@@ -52,6 +54,37 @@ def build_start_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+async def send_start_message_with_retry(message: Message) -> None:
+    last_error: Exception | None = None
+    for attempt in range(1, START_MESSAGE_SEND_RETRIES + 1):
+        try:
+            if START_MESSAGE_IMAGE.exists():
+                await message.answer_photo(
+                    photo=FSInputFile(START_MESSAGE_IMAGE),
+                    caption=START_MESSAGE_TEXT,
+                    reply_markup=build_start_keyboard(),
+                )
+                return
+
+            logger.warning('start_message_image_missing path=%s', START_MESSAGE_IMAGE)
+            await message.answer(START_MESSAGE_TEXT, reply_markup=build_start_keyboard())
+            return
+        except TelegramNetworkError as exc:
+            last_error = exc
+            logger.warning(
+                'start_message_send_retry attempt=%s/%s delay_seconds=%s error=%s',
+                attempt,
+                START_MESSAGE_SEND_RETRIES,
+                START_MESSAGE_RETRY_DELAY_SECONDS,
+                exc,
+            )
+            if attempt < START_MESSAGE_SEND_RETRIES:
+                await asyncio.sleep(START_MESSAGE_RETRY_DELAY_SECONDS)
+
+    if last_error is not None:
+        raise last_error
+
+
 @router.message(CommandStart())
 async def start_handler(message: Message) -> None:
     if message.from_user is None:
@@ -72,16 +105,7 @@ async def start_handler(message: Message) -> None:
     lead_id = repository.get_or_create_lead_for_user(user_id)
     repository.create_lead_event(lead_id, 'bot_started')
 
-    if START_MESSAGE_IMAGE.exists():
-        await message.answer_photo(
-            photo=FSInputFile(START_MESSAGE_IMAGE),
-            caption=START_MESSAGE_TEXT,
-            reply_markup=build_start_keyboard(),
-        )
-        return
-
-    logger.warning('start_message_image_missing path=%s', START_MESSAGE_IMAGE)
-    await message.answer(START_MESSAGE_TEXT, reply_markup=build_start_keyboard())
+    await send_start_message_with_retry(message)
 
 async def main() -> None:
     READY_FILE.unlink(missing_ok=True)
