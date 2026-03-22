@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from aiogram import Bot, Dispatcher, Router
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import CommandStart
 from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
@@ -109,7 +110,12 @@ async def start_handler(message: Message) -> None:
 
 async def main() -> None:
     READY_FILE.unlink(missing_ok=True)
-    bot = Bot(token=settings.telegram_bot_token)
+    session: AiohttpSession | None = None
+    if settings.bot_telegram_proxy_url:
+        session = AiohttpSession(proxy=settings.bot_telegram_proxy_url)
+        logger.info('telegram_proxy_enabled proxy_url=%s', settings.bot_telegram_proxy_url)
+
+    bot = Bot(token=settings.telegram_bot_token, session=session)
     notification_service = AdminNotificationService(bot=bot, repository=repository)
 
     if settings.bot_dry_run:
