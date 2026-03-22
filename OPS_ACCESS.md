@@ -14,6 +14,17 @@
 ssh -o IdentitiesOnly=yes -i ~/.ssh/cloudru.key user1@185.50.203.2
 ```
 
+## Дополнительный VPS для Telegram SOCKS5
+
+- Provider: `is*hosting`
+- Location: `Netherlands`
+- VPS public IP: `38.180.158.190`
+- SSH user: `root`
+- SSH auth: password (хранится вне git)
+- Назначение: только исходящий SOCKS5 для Telegram API, чтобы бот на Cloud.ru не терял связь с `api.telegram.org`
+- Сервис: `danted`, порт `1080`
+- Ограничение доступа: к SOCKS5 допускается только Cloud.ru VPS IP `185.50.203.2`
+
 ## Путь проекта на VPS
 
 - Project dir: `/home/user1/EventBudjet`
@@ -49,6 +60,26 @@ sudo docker compose logs --tail=200 bot
 cd /home/user1/EventBudjet
 sudo docker compose up -d bot
 ```
+
+## Telegram через SOCKS5 (текущая prod-схема)
+
+- Бот использует прокси через env-переменную `BOT_TELEGRAM_PROXY_URL`.
+- Значение задается в `/home/user1/EventBudjet/.env` на Cloud.ru VPS.
+- В коде прокси подхватывается в `bot/main.py` через `AiohttpSession(proxy=...)`.
+- Если прокси недоступен, бот может стартовать с ошибками сети Telegram.
+
+Проверка, что прокси активен:
+
+```bash
+cd /home/user1/EventBudjet
+sudo docker compose logs --tail=100 bot
+```
+
+В логах должно быть:
+
+- `telegram_proxy_enabled`
+- `telegram_connection_ready`
+- `Run polling`
 
 ## Рабочая схема дальше
 

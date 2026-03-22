@@ -24,10 +24,12 @@
 | `ADMIN_API_TOKEN` | `backend` admin API | `/home/user1/EventBudjet/.env` на VPS | Сгенерировать новый случайный токен и заменить в `.env` |
 | `BOT_ADMIN_CHAT_ID` | `bot` admin notifications | `/home/user1/EventBudjet/.env` на VPS | Определяется по целевому Telegram чату/группе |
 | `MINI_APP_URL` | `bot` start button | `/home/user1/EventBudjet/.env` на VPS | Обновить при смене домена mini app |
+| `BOT_TELEGRAM_PROXY_URL` | `bot` Telegram API transport | `/home/user1/EventBudjet/.env` на Cloud.ru VPS | Формат: `socks5://<user>:<password>@<host>:<port>`, обновить при ротации прокси |
 | `POSTGRES_DB` | `postgres`, `backend`, `bot` | `/home/user1/EventBudjet/.env` на VPS | Меняется только при явной смене БД |
 | `POSTGRES_USER` | `postgres`, `backend`, `bot` | `/home/user1/EventBudjet/.env` на VPS | Меняется только при явной ротации |
 | `POSTGRES_PASSWORD` | `postgres`, `backend`, `bot` | `/home/user1/EventBudjet/.env` на VPS | Ротация пароля в `.env` и перезапуск сервисов |
 | `~/.ssh/cloudru.key` | SSH доступ на текущий VPS | Только на локальной машине владельца | Не хранить в репозитории; при утрате выдать новый ключ |
+| SSH пароль/ключ NL VPS (`38.180.158.190`) | Админ-доступ к SOCKS5-хосту | Только у владельца (внешний менеджер паролей) | При утечке: ротация SSH-пароля/ключей и hardening входа |
 | TLS certs for `calcul.timurgromov.ru` | `nginx` HTTPS | `/etc/letsencrypt/live/calcul.timurgromov.ru/` на VPS | Выпустить заново certbot/Let’s Encrypt при переносе |
 
 ## Обязательные env для проекта
@@ -43,6 +45,14 @@
 - `ADMIN_API_TOKEN`
 - `BOT_ADMIN_CHAT_ID`
 - `MINI_APP_URL`
+- `BOT_TELEGRAM_PROXY_URL`
+
+## Текущая сеть Telegram (prod)
+
+- Бот работает на Cloud.ru VPS (`185.50.203.2`), но Telegram API вызывает через SOCKS5 на NL VPS (`38.180.158.190:1080`).
+- На NL VPS поднят `danted`.
+- Доступ к SOCKS5 ограничен IP источника `185.50.203.2`.
+- В git не хранить логин/пароль SOCKS5; хранить только в `.env` на Cloud.ru VPS.
 
 ## Быстрая ротация Telegram bot token
 
