@@ -175,6 +175,10 @@ const AdminLeadDetailPage = () => {
                   <div className="shrink-0 font-medium text-slate-950">{formatAdminMoney(expense.amount)}</div>
                 </div>
               ))}
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm">
+                <div className="font-semibold text-white">Итого</div>
+                <div className="shrink-0 text-base font-semibold text-white">{formatAdminMoney(lead.total_budget)}</div>
+              </div>
             </div>
           )}
         </section>
