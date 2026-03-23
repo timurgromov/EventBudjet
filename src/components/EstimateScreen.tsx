@@ -227,7 +227,18 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
 
   const focusField = (input: HTMLInputElement) => {
     window.setTimeout(() => {
-      input.scrollIntoView({ block: "center", behavior: "smooth" });
+      const rect = input.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const visibleHeight = viewport?.height ?? window.innerHeight;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      const targetTop = viewportTop + visibleHeight * 0.28;
+      const absoluteTop = window.scrollY + rect.top;
+      const nextScrollTop = Math.max(0, absoluteTop - targetTop);
+
+      window.scrollTo({
+        top: nextScrollTop,
+        behavior: "smooth",
+      });
     }, 250);
   };
 
