@@ -3,7 +3,20 @@ import { useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { getAdminLead } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { formatAdminDate, formatAdminDateTime, formatAdminMoney, formatLeadName } from "./admin-format";
+import {
+  formatAdminDate,
+  formatAdminDateTime,
+  formatAdminMoney,
+  formatCityLabel,
+  formatDateModeLabel,
+  formatLeadName,
+  formatLeadStatusLabel,
+  formatProfileFieldLabel,
+  formatSeasonLabel,
+  formatSourceLabel,
+  formatVenueValue,
+  getLeadRoleLabel,
+} from "./admin-format";
 
 interface AdminOutletContext {
   adminToken: string;
@@ -31,7 +44,7 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
     const changes = Array.isArray(p.changes) ? p.changes : [];
     if (changes.length > 0) {
       const changedFields = changes
-        .map((change) => (change && typeof change === "object" && "field" in change ? asString(change.field) : null))
+        .map((change) => (change && typeof change === "object" && "field" in change ? formatProfileFieldLabel(asString(change.field)) : null))
         .filter((field): field is string => Boolean(field));
       if (changedFields.length > 0) return `Обновлён расход: ${changedFields.join(", ")}`;
     }
@@ -44,7 +57,8 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
 
   if (eventType === "profile_updated") {
     const fields = Array.isArray(p.updated_fields) ? p.updated_fields.filter((x) => typeof x === "string") : [];
-    return fields.length > 0 ? `Обновлён профиль: ${fields.join(", ")}` : "Обновлён профиль";
+    const translatedFields = fields.map((field) => formatProfileFieldLabel(field));
+    return translatedFields.length > 0 ? `Обновлён профиль: ${translatedFields.join(", ")}` : "Обновлён профиль";
   }
 
   if (eventType === "budget_calculated") {
@@ -58,8 +72,12 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
   if (eventType === "miniapp_opened") return "Открыл Mini App";
   if (eventType === "app_resumed") return "Вернулся в приложение";
   if (eventType === "ui_action") {
-    if (action || source) return `UI действие: ${action ?? "—"}${source ? ` (${source})` : ""}`;
-    return "UI действие";
+    if (action === "copy_estimate") return "Нажал «Скопировать смету»";
+    if (action === "view_online_review") return "Нажал «Посмотреть онлайн-разбор»";
+    if (action === "open_site_header") return "Перешёл на сайт из шапки";
+    if (action === "open_site_footer") return "Перешёл на сайт из подвала";
+    if (action || source) return `Дополнительное действие: ${action ?? source ?? "—"}`;
+    return "Дополнительное действие";
   }
 
   return eventType;
@@ -132,13 +150,15 @@ const AdminLeadDetailPage = () => {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 text-lg font-semibold text-slate-950">Профиль</div>
           <div className="grid gap-3 text-sm text-slate-700 md:grid-cols-2">
-            <div><span className="text-slate-500">Роль:</span> {lead.role ?? "—"}</div>
-            <div><span className="text-slate-500">Город:</span> {lead.city ?? "—"}</div>
+            <div><span className="text-slate-500">Роль:</span> {getLeadRoleLabel(lead.role)}</div>
+            <div><span className="text-slate-500">Город:</span> {formatCityLabel(lead.city)}</div>
             <div><span className="text-slate-500">Дата свадьбы:</span> {formatAdminDate(lead.wedding_date_exact)}</div>
-            <div><span className="text-slate-500">Сезон:</span> {lead.season ?? "—"}</div>
+            <div><span className="text-slate-500">Сезон:</span> {formatSeasonLabel(lead.season)}</div>
             <div><span className="text-slate-500">Гостей:</span> {lead.guests_count ?? "—"}</div>
-            <div><span className="text-slate-500">Статус:</span> {lead.lead_status ?? "—"}</div>
-            <div><span className="text-slate-500">Площадка:</span> {lead.venue_name ?? lead.venue_status ?? "—"}</div>
+            <div><span className="text-slate-500">Статус:</span> {formatLeadStatusLabel(lead.lead_status)}</div>
+            <div><span className="text-slate-500">Площадка:</span> {formatVenueValue(lead.venue_status, lead.venue_name)}</div>
+            <div><span className="text-slate-500">Источник:</span> {formatSourceLabel(lead.source)}</div>
+            <div><span className="text-slate-500">Формат даты:</span> {formatDateModeLabel(lead.wedding_date_mode)}</div>
             <div><span className="text-slate-500">Последняя активность:</span> {formatAdminDateTime(user.last_seen_at)}</div>
           </div>
         </section>
@@ -172,7 +192,7 @@ const AdminLeadDetailPage = () => {
                   <div className="text-sm font-semibold text-slate-950">{formatEventSummary(event.event_type, event.event_payload)}</div>
                   <div className="text-xs text-slate-500">{formatAdminDateTime(event.created_at)}</div>
                 </div>
-                <div className="mt-1 text-xs text-slate-500">тип: {event.event_type}</div>
+                <div className="mt-1 text-xs text-slate-500">технический тип: {event.event_type}</div>
                 <details className="mt-2">
                   <summary className="cursor-pointer text-xs text-slate-500">Показать payload</summary>
                   <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">{JSON.stringify(event.event_payload ?? {}, null, 2)}</pre>

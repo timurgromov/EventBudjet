@@ -19,6 +19,62 @@ export const formatAdminMoney = (value?: string | null): string => {
   return `${Math.round(amount).toLocaleString("ru-RU")} ₽`;
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  bride: "Невеста",
+  groom: "Жених",
+  mother: "Мама",
+  pro: "Свадебный специалист",
+};
+
+const CITY_LABELS: Record<string, string> = {
+  moscow: "Москва",
+  "москва": "Москва",
+  mo: "МО",
+  "московская область": "МО",
+  region: "Другой регион",
+};
+
+const SEASON_LABELS: Record<string, string> = {
+  spring: "Весна",
+  summer: "Лето",
+  autumn: "Осень",
+  winter: "Зима",
+  next_year: "В следующем году",
+};
+
+const LEAD_STATUS_LABELS: Record<string, string> = {
+  draft: "Черновик",
+  active: "Активный",
+  archived: "Архив",
+};
+
+const VENUE_STATUS_LABELS: Record<string, string> = {
+  chosen: "Уже выбрали",
+  searching: "Пока выбирают",
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  telegram_mini_app: "Telegram Mini App",
+};
+
+const DATE_MODE_LABELS: Record<string, string> = {
+  exact: "Точная дата",
+  season: "Сезон",
+};
+
+const PROFILE_FIELD_LABELS: Record<string, string> = {
+  role: "роль",
+  city: "город",
+  venue_status: "площадка",
+  venue_name: "название площадки",
+  wedding_date_exact: "дата свадьбы",
+  wedding_date_mode: "формат даты",
+  season: "сезон",
+  next_year_flag: "следующий год",
+  guests_count: "гости",
+  source: "источник",
+};
+
 export const formatLeadName = (name?: string | null, username?: string | null): string => {
   if (name && username) return `${name} (@${username})`;
   if (name) return name;
@@ -28,7 +84,7 @@ export const formatLeadName = (name?: string | null, username?: string | null): 
 
 export const formatLeadDateSignal = (weddingDateExact?: string | null, season?: string | null): string => {
   if (weddingDateExact) return formatAdminDate(weddingDateExact);
-  if (season) return season;
+  if (season) return formatSeasonLabel(season);
   return "—";
 };
 
@@ -64,11 +120,59 @@ export const getLeadPriorityLabel = (city?: string | null, role?: string | null)
 
 export const getLeadRoleLabel = (role?: string | null): string => {
   const normalizedRole = normalizeValue(role);
-  if (normalizedRole === "bride" || normalizedRole === "невеста") return "невеста";
-  if (normalizedRole === "groom" || normalizedRole === "жених") return "жених";
-  if (LOW_PRIORITY_ROLE_VALUES.has(normalizedRole)) return "специалист";
+  if (ROLE_LABELS[normalizedRole]) return ROLE_LABELS[normalizedRole];
+  if (normalizedRole === "невеста") return "Невеста";
+  if (normalizedRole === "жених") return "Жених";
+  if (LOW_PRIORITY_ROLE_VALUES.has(normalizedRole)) return "Свадебный специалист";
   if (typeof role === "string" && role.trim()) return role;
   return "—";
+};
+
+export const formatCityLabel = (city?: string | null): string => {
+  const normalizedCity = normalizeValue(city);
+  if (CITY_LABELS[normalizedCity]) return CITY_LABELS[normalizedCity];
+  if (typeof city === "string" && city.trim()) return city;
+  return "—";
+};
+
+export const formatSeasonLabel = (season?: string | null): string => {
+  const normalizedSeason = normalizeValue(season);
+  if (SEASON_LABELS[normalizedSeason]) return SEASON_LABELS[normalizedSeason];
+  if (typeof season === "string" && season.trim()) return season;
+  return "—";
+};
+
+export const formatLeadStatusLabel = (status?: string | null): string => {
+  const normalizedStatus = normalizeValue(status);
+  if (LEAD_STATUS_LABELS[normalizedStatus]) return LEAD_STATUS_LABELS[normalizedStatus];
+  if (typeof status === "string" && status.trim()) return status;
+  return "—";
+};
+
+export const formatVenueValue = (status?: string | null, name?: string | null): string => {
+  if (typeof name === "string" && name.trim()) return name;
+  const normalizedStatus = normalizeValue(status);
+  if (VENUE_STATUS_LABELS[normalizedStatus]) return VENUE_STATUS_LABELS[normalizedStatus];
+  return "—";
+};
+
+export const formatSourceLabel = (source?: string | null): string => {
+  const normalizedSource = normalizeValue(source);
+  if (SOURCE_LABELS[normalizedSource]) return SOURCE_LABELS[normalizedSource];
+  if (typeof source === "string" && source.trim()) return source;
+  return "—";
+};
+
+export const formatDateModeLabel = (mode?: string | null): string => {
+  const normalizedMode = normalizeValue(mode);
+  if (DATE_MODE_LABELS[normalizedMode]) return DATE_MODE_LABELS[normalizedMode];
+  if (typeof mode === "string" && mode.trim()) return mode;
+  return "—";
+};
+
+export const formatProfileFieldLabel = (field?: string | null): string => {
+  const normalizedField = normalizeValue(field);
+  return PROFILE_FIELD_LABELS[normalizedField] ?? (field || "поле");
 };
 
 export const isMoscowPriorityCity = (city?: string | null): boolean => {
