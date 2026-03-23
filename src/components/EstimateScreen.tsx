@@ -150,7 +150,9 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   const [addFormPosition, setAddFormPosition] = useState<AddFormPosition>(null);
   const [newName, setNewName] = useState("");
   const bottomBarRef = useRef<HTMLDivElement | null>(null);
+  const editingBarRef = useRef<HTMLDivElement | null>(null);
   const [bottomBarHeight, setBottomBarHeight] = useState(300);
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
 
   const triggerSave = useCallback((currentItems: ExpenseItem[]) => {
     if (!onSave) return;
@@ -224,6 +226,19 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     }, 250);
   };
 
+  const beginPriceEditing = (input: HTMLInputElement) => {
+    setIsEditingPrice(true);
+    focusField(input);
+  };
+
+  const finishPriceEditing = () => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+    setIsEditingPrice(false);
+  };
+
   const renderCustomExpenseAction = (position: Exclude<AddFormPosition, null>) => {
     if (addFormPosition === position) {
       return (
@@ -264,7 +279,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   };
 
   useEffect(() => {
-    const element = bottomBarRef.current;
+    const element = isEditingPrice ? editingBarRef.current : bottomBarRef.current;
     if (!element) return;
 
     const updateHeight = () => {
@@ -277,7 +292,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [backendTotal, syncError]);
+  }, [backendTotal, isEditingPrice, syncError]);
 
   const screenPaddingBottom = `calc(env(safe-area-inset-bottom, 0px) + ${bottomBarHeight}px + 1.5rem)`;
 
@@ -340,7 +355,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
                       type="text"
                       value={item.userPrice}
                       onChange={(e) => updateItem(item.id, { userPrice: e.target.value })}
-                      onFocus={(e) => focusField(e.currentTarget)}
+                      onFocus={(e) => beginPriceEditing(e.currentTarget)}
                       placeholder={calcPrice !== null ? `от ${formatPrice(calcPrice)}` : item.isCustom ? "введите сумму" : "—"}
                       inputMode="numeric"
                       className="w-full text-right text-base md:text-sm bg-transparent border-b border-border/50 py-1 px-1 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary transition-colors"
@@ -370,74 +385,88 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       </div>
 
       {/* Bottom bar */}
-      <div
-        ref={bottomBarRef}
-        className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] space-y-3"
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Итого:</span>
-          <span className="text-2xl font-serif text-gold-gradient">{formatPrice(total)} ₽</span>
+      {isEditingPrice ? (
+        <div
+          ref={editingBarRef}
+          className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
+        >
+          <button
+            onClick={finishPriceEditing}
+            className="w-full h-12 rounded-xl gradient-gold text-primary-foreground font-medium text-sm"
+          >
+            Окей
+          </button>
         </div>
-        {syncError && <div className="text-xs text-destructive">{syncError}</div>}
-        <button
-          onClick={() => {
-            const lines: string[] = ["📋 Смета свадьбы\n"];
-            const roleLabel = formatRoleLabel(role);
-            const cityLabel = formatCityLabel(city);
-            const weddingDateLabel = formatWeddingDateLabel(weddingDate);
-            if (roleLabel) lines.push(`Кто: ${roleLabel}`);
-            if (cityLabel) lines.push(`Город: ${cityLabel}`);
-            lines.push(`Площадка: ${formatVenueLabel(venue, venueName)}`);
-            if (weddingDateLabel) lines.push(`Дата свадьбы: ${weddingDateLabel}`);
-            lines.push(`Гостей: ${guests}\n`);
-            items.forEach((item) => {
-              if (!item.checked) return;
-              const userVal = item.userPrice ? parseInt(item.userPrice.replace(/\D/g, "")) : 0;
-              const calcPrice = item.getPrice(guests);
-              const price = userVal || calcPrice || 0;
-              lines.push(`${item.name} — ${price > 0 ? formatPrice(price) + " ₽" : "не указано"}`);
-            });
-            lines.push(`\nИтого: ${formatPrice(total)} ₽`);
-            lines.push(`\nРасчёт сделан в свадебном калькуляторе Тимура Громова`);
-            lines.push(`Сайт: timurgromov.ru`);
-            navigator.clipboard.writeText(lines.join("\n")).then(() => {
-              onCopyEstimate?.();
-              toast("Смета скопирована");
-            });
-          }}
-          className="w-full h-11 rounded-xl border border-border bg-card text-foreground font-medium flex items-center justify-center gap-2 text-sm hover:bg-secondary transition-colors"
+      ) : (
+        <div
+          ref={bottomBarRef}
+          className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] space-y-3"
         >
-          <Copy className="w-4 h-4" />
-          Скопировать смету
-        </button>
-        <a
-          href="https://timurgromov.ru/#webinar"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={onOnlineReviewClick}
-          className="w-full h-14 rounded-xl gradient-gold text-primary-foreground font-medium flex flex-col items-center justify-center gap-0.5"
-        >
-          <span className="text-sm flex items-center gap-2">
-            <Play className="w-4 h-4" />
-            Посмотреть онлайн-разбор
-          </span>
-          <span className="text-[11px] opacity-80">Пошаговый план организации свадьбы</span>
-        </a>
-
-        {/* Footer */}
-        <div className="text-center py-4 text-[10px] text-muted-foreground/40 tracking-wide">
-          © Тимур Громов •{" "}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Итого:</span>
+            <span className="text-2xl font-serif text-gold-gradient">{formatPrice(total)} ₽</span>
+          </div>
+          {syncError && <div className="text-xs text-destructive">{syncError}</div>}
+          <button
+            onClick={() => {
+              const lines: string[] = ["📋 Смета свадьбы\n"];
+              const roleLabel = formatRoleLabel(role);
+              const cityLabel = formatCityLabel(city);
+              const weddingDateLabel = formatWeddingDateLabel(weddingDate);
+              if (roleLabel) lines.push(`Кто: ${roleLabel}`);
+              if (cityLabel) lines.push(`Город: ${cityLabel}`);
+              lines.push(`Площадка: ${formatVenueLabel(venue, venueName)}`);
+              if (weddingDateLabel) lines.push(`Дата свадьбы: ${weddingDateLabel}`);
+              lines.push(`Гостей: ${guests}\n`);
+              items.forEach((item) => {
+                if (!item.checked) return;
+                const userVal = item.userPrice ? parseInt(item.userPrice.replace(/\D/g, "")) : 0;
+                const calcPrice = item.getPrice(guests);
+                const price = userVal || calcPrice || 0;
+                lines.push(`${item.name} — ${price > 0 ? formatPrice(price) + " ₽" : "не указано"}`);
+              });
+              lines.push(`\nИтого: ${formatPrice(total)} ₽`);
+              lines.push(`\nРасчёт сделан в свадебном калькуляторе Тимура Громова`);
+              lines.push(`Сайт: timurgromov.ru`);
+              navigator.clipboard.writeText(lines.join("\n")).then(() => {
+                onCopyEstimate?.();
+                toast("Смета скопирована");
+              });
+            }}
+            className="w-full h-11 rounded-xl border border-border bg-card text-foreground font-medium flex items-center justify-center gap-2 text-sm hover:bg-secondary transition-colors"
+          >
+            <Copy className="w-4 h-4" />
+            Скопировать смету
+          </button>
           <a
-            href="https://timurgromov.ru"
+            href="https://timurgromov.ru/#webinar"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={onFooterSiteClick}
-            className="underline underline-offset-2 hover:text-primary transition-colors"
+            onClick={onOnlineReviewClick}
+            className="w-full h-14 rounded-xl gradient-gold text-primary-foreground font-medium flex flex-col items-center justify-center gap-0.5"
           >
-            timurgromov.ru
+            <span className="text-sm flex items-center gap-2">
+              <Play className="w-4 h-4" />
+              Посмотреть онлайн-разбор
+            </span>
+            <span className="text-[11px] opacity-80">Пошаговый план организации свадьбы</span>
           </a>
+
+          {/* Footer */}
+          <div className="text-center py-4 text-[10px] text-muted-foreground/40 tracking-wide">
+            © Тимур Громов •{" "}
+            <a
+              href="https://timurgromov.ru"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onFooterSiteClick}
+              className="underline underline-offset-2 hover:text-primary transition-colors"
+            >
+              timurgromov.ru
+            </a>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
