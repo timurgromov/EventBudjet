@@ -19,7 +19,6 @@ import {
 import { formatDateOnly, parseDateOnly } from "@/lib/date";
 import { defaultItems } from "@/components/expense-items-data";
 import { useTelegramContext } from "@/hooks/useTelegramUser";
-import { cn } from "@/lib/utils";
 
 interface SavedData {
   screen: "qualification" | "estimate";
@@ -72,8 +71,6 @@ const Index = () => {
   const qualificationSyncInFlightRef = useRef(false);
   const pendingQualificationRef = useRef<SavedData["qualification"] | null>(null);
   const qualificationTimerRef = useRef<number | null>(null);
-  const screenTransitionTimerRef = useRef<number | null>(null);
-  const [screenTransitionPhase, setScreenTransitionPhase] = useState<"entered" | "entering" | "exiting">("entered");
 
   useEffect(() => {
     hasLeadRef.current = hasLead;
@@ -84,46 +81,8 @@ const Index = () => {
       if (qualificationTimerRef.current !== null) {
         window.clearTimeout(qualificationTimerRef.current);
       }
-      if (screenTransitionTimerRef.current !== null) {
-        window.clearTimeout(screenTransitionTimerRef.current);
-      }
     };
   }, []);
-
-  const transitionToScreen = useCallback(
-    (nextScreen: "qualification" | "estimate", options?: { animate?: boolean; scrollTop?: boolean }) => {
-      const animate = options?.animate ?? true;
-      const scrollTop = options?.scrollTop ?? true;
-
-      if (screenTransitionTimerRef.current !== null) {
-        window.clearTimeout(screenTransitionTimerRef.current);
-        screenTransitionTimerRef.current = null;
-      }
-
-      if (!animate) {
-        setScreen(nextScreen);
-        setScreenTransitionPhase("entered");
-        if (scrollTop) {
-          window.scrollTo(0, 0);
-        }
-        return;
-      }
-
-      setScreenTransitionPhase("exiting");
-      screenTransitionTimerRef.current = window.setTimeout(() => {
-        setScreen(nextScreen);
-        if (scrollTop) {
-          window.scrollTo(0, 0);
-        }
-        setScreenTransitionPhase("entering");
-        window.requestAnimationFrame(() => {
-          setScreenTransitionPhase("entered");
-        });
-        screenTransitionTimerRef.current = null;
-      }, 140);
-    },
-    [],
-  );
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -146,7 +105,7 @@ const Index = () => {
           setSavedEstimate({});
           setSavedCustomItems([]);
           setGuests(0);
-          transitionToScreen("qualification", { animate: false });
+          setScreen("qualification");
           setBackendTotal(null);
           setBootLoading(false);
           return;
@@ -203,7 +162,8 @@ const Index = () => {
           (progress.lead.guests_count ?? 0) > 0,
         );
         const hasProgressData = hasProfileData || progress.expenses.length > 0 || progress.total_budget !== null;
-        transitionToScreen(hasProgressData ? "estimate" : "qualification", { animate: false });
+        setScreen(hasProgressData ? "estimate" : "qualification");
+        window.scrollTo(0, 0);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Не удалось загрузить данные";
         setBootError(message);
@@ -213,7 +173,7 @@ const Index = () => {
     };
 
     void bootstrap();
-  }, [bootstrapTick, initData, isTelegram, transitionToScreen]);
+  }, [bootstrapTick, initData, isTelegram]);
 
   const reportUiAction = useCallback((action: string, source: string, href?: string) => {
     if (!initData || !hasLeadRef.current) {
@@ -410,7 +370,7 @@ const Index = () => {
         onBack={
           screen === "estimate"
             ? () => {
-                transitionToScreen("qualification");
+                setScreen("qualification");
               }
             : undefined
         }
@@ -420,88 +380,80 @@ const Index = () => {
         <ProfileProgress
           qualification={savedQualification}
           onFill={() => {
-            transitionToScreen("qualification");
+            setScreen("qualification");
           }}
         />
       )}
-      <div
-        className={cn(
-          "transition-all duration-200 ease-out will-change-transform",
-          screenTransitionPhase === "exiting" && "opacity-0 translate-y-2",
-          screenTransitionPhase === "entering" && "opacity-0 translate-y-1",
-          screenTransitionPhase === "entered" && "opacity-100 translate-y-0",
-        )}
-      >
-        {screen === "qualification" ? (
-          <QualificationScreen
-            savedData={savedQualification}
-            onFooterSiteClick={() => reportUiAction("open_site_footer", "qualification_footer", "https://timurgromov.ru")}
-            onFieldChange={(q) => {
-              setSavedQualification(q);
-              setGuests(q.guests);
-              scheduleQualificationSync(q);
-            }}
-            onNext={async (data) => {
-              const q = {
-                role: data.role,
-                city: data.city,
-                date: formatDateOnly(data.date),
-                guests: data.guests,
-                venue: data.venue ?? "",
-                venueName: data.venueName ?? "",
-                dateUndecided: data.dateUndecided ?? false,
-                dateSeason: data.dateSeason ?? "",
-              };
+      {screen === "qualification" ? (
+        <QualificationScreen
+          savedData={savedQualification}
+          onFooterSiteClick={() => reportUiAction("open_site_footer", "qualification_footer", "https://timurgromov.ru")}
+          onFieldChange={(q) => {
+            setSavedQualification(q);
+            setGuests(q.guests);
+            scheduleQualificationSync(q);
+          }}
+          onNext={async (data) => {
+            const q = {
+              role: data.role,
+              city: data.city,
+              date: formatDateOnly(data.date),
+              guests: data.guests,
+              venue: data.venue ?? "",
+              venueName: data.venueName ?? "",
+              dateUndecided: data.dateUndecided ?? false,
+              dateSeason: data.dateSeason ?? "",
+            };
 
-              try {
-                setSyncError(null);
-                if (!initData) {
-                  throw new Error("Отсутствует Telegram initData");
-                }
-
-                cancelPendingQualificationSync();
-
-                if (hasLeadRef.current) {
-                  await updateLead(initData, buildLeadPayload(q));
-                } else {
-                  await createLead(initData, buildLeadPayload(q));
-                  hasLeadRef.current = true;
-                  setHasLead(true);
-                }
-
-                setGuests(data.guests);
-                setSavedQualification(q);
-                transitionToScreen("estimate");
-              } catch (error) {
-                const message = error instanceof Error ? error.message : "Ошибка сохранения профиля";
-                setSyncError(message);
-                toast.error(`Профиль не сохранён: ${message}`);
+            try {
+              setSyncError(null);
+              if (!initData) {
+                throw new Error("Отсутствует Telegram initData");
               }
-            }}
-          />
-        ) : (
-          <EstimateScreen
-            guests={guests}
-            role={savedQualification?.role}
-            city={savedQualification?.city}
-            weddingDate={formattedWeddingDate}
-            venue={savedQualification?.venue}
-            venueName={savedQualification?.venueName}
-            savedItems={savedEstimate}
-            savedCustomItems={savedCustomItems}
-            backendTotal={backendTotal}
-            syncError={syncError}
-            onCopyEstimate={() => reportUiAction("copy_estimate", "estimate_copy_button")}
-            onOnlineReviewClick={() => reportUiAction("view_online_review", "estimate_webinar_button", "https://timurgromov.ru/#webinar")}
-            onFooterSiteClick={() => reportUiAction("open_site_footer", "estimate_footer", "https://timurgromov.ru")}
-            onSave={(estimateItems, customItems) => {
-              setSavedEstimate(estimateItems);
-              setSavedCustomItems(customItems);
-              scheduleAutoSync(estimateItems, customItems);
-            }}
-          />
-        )}
-      </div>
+
+              cancelPendingQualificationSync();
+
+              if (hasLeadRef.current) {
+                await updateLead(initData, buildLeadPayload(q));
+              } else {
+                await createLead(initData, buildLeadPayload(q));
+                hasLeadRef.current = true;
+                setHasLead(true);
+              }
+
+              setGuests(data.guests);
+              setSavedQualification(q);
+              setScreen("estimate");
+              window.scrollTo(0, 0);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Ошибка сохранения профиля";
+              setSyncError(message);
+              toast.error(`Профиль не сохранён: ${message}`);
+            }
+          }}
+        />
+      ) : (
+        <EstimateScreen
+          guests={guests}
+          role={savedQualification?.role}
+          city={savedQualification?.city}
+          weddingDate={formattedWeddingDate}
+          venue={savedQualification?.venue}
+          venueName={savedQualification?.venueName}
+          savedItems={savedEstimate}
+          savedCustomItems={savedCustomItems}
+          backendTotal={backendTotal}
+          syncError={syncError}
+          onCopyEstimate={() => reportUiAction("copy_estimate", "estimate_copy_button")}
+          onOnlineReviewClick={() => reportUiAction("view_online_review", "estimate_webinar_button", "https://timurgromov.ru/#webinar")}
+          onFooterSiteClick={() => reportUiAction("open_site_footer", "estimate_footer", "https://timurgromov.ru")}
+          onSave={(estimateItems, customItems) => {
+            setSavedEstimate(estimateItems);
+            setSavedCustomItems(customItems);
+            scheduleAutoSync(estimateItems, customItems);
+          }}
+        />
+      )}
     </div>
   );
 };
