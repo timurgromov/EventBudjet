@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import {
   formatAdminDateTime,
   formatAdminMoney,
+  formatCityLabel,
   formatLeadDateSignal,
   formatLeadName,
+  formatLeadStatusLabel,
   getHotLevelLabel,
   getLeadHotScore,
   getLeadPriorityLabel,
@@ -45,14 +47,14 @@ const LeadRow = ({ lead }: { lead: AdminLeadListItem }) => {
       <div className="mt-1 text-xs text-slate-500">lead #{lead.lead_id}</div>
     </div>
     <div className="text-sm text-slate-700">
-      <div>{lead.city ?? "—"}</div>
+      <div>{formatCityLabel(lead.city)}</div>
       <div className="mt-1 text-xs text-slate-500">{getLeadRoleLabel(lead.role)}</div>
       <div className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700">{getLeadPriorityLabel(lead.city, lead.role)}</div>
     </div>
     <div className="text-sm text-slate-700">{formatLeadDateSignal(lead.wedding_date_exact, lead.season)}</div>
     <div className="text-sm text-slate-700">
       <div>{lead.guests_count ?? "—"} гостей</div>
-      <div className="mt-1 text-xs text-slate-500">{lead.lead_status ?? "—"}</div>
+      <div className="mt-1 text-xs text-slate-500">{formatLeadStatusLabel(lead.lead_status)}</div>
     </div>
     <div className="text-sm text-slate-700">
       <div className="font-medium text-slate-950">{formatAdminMoney(lead.total_budget)}</div>
@@ -153,13 +155,25 @@ const AdminLeadsPage = () => {
           />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant={activeFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setActiveFilter("all")}>
+          <Button
+            size="sm"
+            className={activeFilter === "all" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
+            onClick={() => setActiveFilter("all")}
+          >
             Все
           </Button>
-          <Button variant={activeFilter === "moscow" ? "default" : "outline"} size="sm" onClick={() => setActiveFilter("moscow")}>
+          <Button
+            size="sm"
+            className={activeFilter === "moscow" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
+            onClick={() => setActiveFilter("moscow")}
+          >
             Москва+МО
           </Button>
-          <Button variant={activeFilter === "specialists" ? "default" : "outline"} size="sm" onClick={() => setActiveFilter("specialists")}>
+          <Button
+            size="sm"
+            className={activeFilter === "specialists" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
+            onClick={() => setActiveFilter("specialists")}
+          >
             Специалисты
           </Button>
         </div>
@@ -192,7 +206,7 @@ const AdminLeadsPage = () => {
                 >
                   <div className="truncate text-sm font-semibold text-slate-950">{formatLeadName(lead.name, lead.username)}</div>
                   <div className="mt-1 text-xs text-slate-600">
-                    {lead.city ?? "—"} • {getLeadRoleLabel(lead.role)} • {formatAdminDateTime(lead.last_seen_at)}
+                    {formatCityLabel(lead.city)} • {getLeadRoleLabel(lead.role)} • {formatAdminDateTime(lead.last_seen_at)}
                   </div>
                   <div className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                     {getHotLevelLabel(hotScore)} • score {hotScore}
