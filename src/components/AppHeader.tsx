@@ -4,10 +4,9 @@ import { ArrowLeft } from "lucide-react";
 interface AppHeaderProps {
   onBack?: () => void;
   onSiteClick?: () => void;
-  compactTitle?: boolean;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ onBack, onSiteClick, compactTitle = false }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ onBack, onSiteClick }) => {
   return (
     <div className={`text-center pt-6 pb-3 px-5 relative ${onBack ? "pl-14 pr-14" : ""}`}>
       {onBack && (
@@ -18,9 +17,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onBack, onSiteClick, compactTitle
           <ArrowLeft className="w-5 h-5" />
         </button>
       )}
-      <h1 className={compactTitle ? "text-[1.7rem] leading-none font-serif text-gold-gradient whitespace-nowrap" : "text-3xl font-serif text-gold-gradient"}>
-        Свадебный калькулятор
-      </h1>
+      <h1 className="text-3xl font-serif text-gold-gradient">Свадебный калькулятор</h1>
       <p className="text-[11px] text-muted-foreground/60 mt-1 italic tracking-wide">
         От{" "}
         <a
