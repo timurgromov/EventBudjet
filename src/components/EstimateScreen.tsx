@@ -151,6 +151,8 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
   const [newName, setNewName] = useState("");
   const bottomBarRef = useRef<HTMLDivElement | null>(null);
   const editingBarRef = useRef<HTMLDivElement | null>(null);
+  const priceInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const pendingPriceFocusIdRef = useRef<string | null>(null);
   const [bottomBarHeight, setBottomBarHeight] = useState(300);
   const [isEditingPrice, setIsEditingPrice] = useState(false);
 
@@ -187,8 +189,9 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
 
   const addCustomItem = () => {
     if (!newName.trim()) return;
+    const newItemId = `custom-${Date.now()}`;
     const newItem: ExpenseItem = {
-      id: `custom-${Date.now()}`,
+      id: newItemId,
       name: newName.trim(),
       info: null,
       getPrice: () => null,
@@ -208,8 +211,10 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       triggerSave(next);
       return next;
     });
+    pendingPriceFocusIdRef.current = newItemId;
     setNewName("");
     setAddFormPosition(null);
+    setIsEditingPrice(true);
   };
 
   const removeItem = (id: string) => {
@@ -238,6 +243,20 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     }
     setIsEditingPrice(false);
   };
+
+  useEffect(() => {
+    const pendingId = pendingPriceFocusIdRef.current;
+    if (!pendingId) return;
+
+    const input = priceInputRefs.current[pendingId];
+    if (!input) return;
+
+    pendingPriceFocusIdRef.current = null;
+    window.setTimeout(() => {
+      input.focus();
+      focusField(input);
+    }, 0);
+  }, [items]);
 
   const renderCustomExpenseAction = (position: Exclude<AddFormPosition, null>) => {
     if (addFormPosition === position) {
@@ -352,6 +371,9 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
 
                   <div className="flex-shrink-0 w-28">
                     <input
+                      ref={(node) => {
+                        priceInputRefs.current[item.id] = node;
+                      }}
                       type="text"
                       value={item.userPrice}
                       onChange={(e) => updateItem(item.id, { userPrice: e.target.value })}
@@ -385,17 +407,21 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
       </div>
 
       {/* Bottom bar */}
-      {isEditingPrice ? (
+      {isEditingPrice || addFormPosition !== null ? (
         <div
           ref={editingBarRef}
           className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
         >
-          <button
-            onClick={finishPriceEditing}
-            className="w-full h-12 rounded-xl gradient-gold text-primary-foreground font-medium text-sm"
-          >
-            Готово
-          </button>
+          {isEditingPrice ? (
+            <button
+              onClick={finishPriceEditing}
+              className="w-full h-12 rounded-xl gradient-gold text-primary-foreground font-medium text-sm"
+            >
+              Готово
+            </button>
+          ) : (
+            <div className="h-12" />
+          )}
         </div>
       ) : (
         <div
