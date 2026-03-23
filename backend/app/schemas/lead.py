@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.schemas.expense import ExpenseRead
 
@@ -21,6 +21,28 @@ class LeadBase(BaseModel):
     utm_medium: str | None = None
     utm_campaign: str | None = None
     partner_code: str | None = None
+
+    @field_validator('wedding_date_exact', mode='before')
+    @classmethod
+    def normalize_wedding_date_exact(cls, value: object) -> object:
+        if value is None or value == '':
+            return None
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return None
+            try:
+                return date.fromisoformat(raw)
+            except ValueError:
+                pass
+            try:
+                normalized = raw.replace('Z', '+00:00')
+                return datetime.fromisoformat(normalized).date()
+            except ValueError:
+                return value
+        return value
 
 
 class LeadCreate(LeadBase):
