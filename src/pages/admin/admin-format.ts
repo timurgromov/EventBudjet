@@ -65,3 +65,50 @@ export const getLeadRoleLabel = (role?: string | null): string => {
   if (LOW_PRIORITY_ROLE_VALUES.has(normalizedRole)) return "специалист";
   return role ?? "—";
 };
+
+export const isMoscowPriorityCity = (city?: string | null): boolean => {
+  const normalizedCity = normalizeValue(city);
+  return MOSCOW_CITY_VALUES.has(normalizedCity) || MOSCOW_REGION_VALUES.has(normalizedCity);
+};
+
+export const isLowPrioritySpecialist = (role?: string | null): boolean => {
+  const normalizedRole = normalizeValue(role);
+  return LOW_PRIORITY_ROLE_VALUES.has(normalizedRole);
+};
+
+export const getLeadHotScore = (params: {
+  city?: string | null;
+  role?: string | null;
+  lastSeenAt?: string | null;
+  weddingDateExact?: string | null;
+  guestsCount?: number | null;
+  totalBudget?: string | null;
+  leadStatus?: string | null;
+}): number => {
+  const { city, role, lastSeenAt, weddingDateExact, guestsCount, totalBudget, leadStatus } = params;
+
+  let score = getLeadPriorityScore(city, role);
+
+  const lastSeenMs = lastSeenAt ? Date.parse(lastSeenAt) : Number.NaN;
+  if (Number.isFinite(lastSeenMs)) {
+    const ageHours = (Date.now() - lastSeenMs) / (1000 * 60 * 60);
+    if (ageHours <= 24) score += 30;
+    else if (ageHours <= 72) score += 15;
+  }
+
+  if (weddingDateExact) score += 20;
+  if (typeof guestsCount === "number" && guestsCount > 0) score += 10;
+
+  const budget = totalBudget ? Number.parseFloat(totalBudget) : Number.NaN;
+  if (Number.isFinite(budget) && budget > 0) score += 20;
+
+  if (normalizeValue(leadStatus) === "draft") score -= 10;
+
+  return score;
+};
+
+export const getHotLevelLabel = (score: number): string => {
+  if (score >= 120) return "Горячий";
+  if (score >= 70) return "Тёплый";
+  return "Обычный";
+};
