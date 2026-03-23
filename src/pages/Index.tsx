@@ -73,7 +73,8 @@ const Index = () => {
   const pendingQualificationRef = useRef<SavedData["qualification"] | null>(null);
   const qualificationTimerRef = useRef<number | null>(null);
   const screenTransitionTimerRef = useRef<number | null>(null);
-  const [screenTransitionPhase, setScreenTransitionPhase] = useState<"entered" | "entering" | "exiting">("entered");
+  const [previousScreen, setPreviousScreen] = useState<"qualification" | "estimate" | null>(null);
+  const [isScreenTransitioning, setIsScreenTransitioning] = useState(false);
 
   useEffect(() => {
     hasLeadRef.current = hasLead;
@@ -102,27 +103,29 @@ const Index = () => {
 
       if (!animate) {
         setScreen(nextScreen);
-        setScreenTransitionPhase("entered");
+        setPreviousScreen(null);
+        setIsScreenTransitioning(false);
         if (scrollTop) {
           window.scrollTo(0, 0);
         }
         return;
       }
 
-      setScreenTransitionPhase("exiting");
-      screenTransitionTimerRef.current = window.setTimeout(() => {
-        setScreen(nextScreen);
-        if (scrollTop) {
-          window.scrollTo(0, 0);
-        }
-        setScreenTransitionPhase("entering");
-        window.requestAnimationFrame(() => {
-          setScreenTransitionPhase("entered");
-        });
-        screenTransitionTimerRef.current = null;
-      }, 140);
+      setPreviousScreen(screen);
+      setScreen(nextScreen);
+      if (scrollTop) {
+        window.scrollTo(0, 0);
+      }
+      setIsScreenTransitioning(true);
+      window.requestAnimationFrame(() => {
+        screenTransitionTimerRef.current = window.setTimeout(() => {
+          setPreviousScreen(null);
+          setIsScreenTransitioning(false);
+          screenTransitionTimerRef.current = null;
+        }, 200);
+      });
     },
-    [],
+    [screen],
   );
 
   useEffect(() => {
@@ -407,6 +410,7 @@ const Index = () => {
     <div className="max-w-md mx-auto min-h-screen bg-background">
       <TelegramProfile user={user} />
       <AppHeader
+        compactTitle={screen === "estimate"}
         onBack={
           screen === "estimate"
             ? () => {
@@ -424,15 +428,56 @@ const Index = () => {
           }}
         />
       )}
-      <div
-        className={cn(
-          "transition-all duration-200 ease-out will-change-transform",
-          screenTransitionPhase === "exiting" && "opacity-0 translate-y-2",
-          screenTransitionPhase === "entering" && "opacity-0 translate-y-1",
-          screenTransitionPhase === "entered" && "opacity-100 translate-y-0",
+      <div className="relative">
+        {previousScreen && previousScreen !== screen && (
+          <div
+            className={cn(
+              "absolute inset-0 z-10 transition-all duration-200 ease-out will-change-transform pointer-events-none",
+              isScreenTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0",
+            )}
+          >
+            {previousScreen === "qualification" ? (
+              <QualificationScreen
+                savedData={savedQualification}
+                onFooterSiteClick={() => reportUiAction("open_site_footer", "qualification_footer", "https://timurgromov.ru")}
+                onFieldChange={(q) => {
+                  setSavedQualification(q);
+                  setGuests(q.guests);
+                  scheduleQualificationSync(q);
+                }}
+                onNext={async () => undefined}
+              />
+            ) : (
+              <EstimateScreen
+                guests={guests}
+                role={savedQualification?.role}
+                city={savedQualification?.city}
+                weddingDate={formattedWeddingDate}
+                venue={savedQualification?.venue}
+                venueName={savedQualification?.venueName}
+                savedItems={savedEstimate}
+                savedCustomItems={savedCustomItems}
+                backendTotal={backendTotal}
+                syncError={syncError}
+                onCopyEstimate={() => reportUiAction("copy_estimate", "estimate_copy_button")}
+                onOnlineReviewClick={() => reportUiAction("view_online_review", "estimate_webinar_button", "https://timurgromov.ru/#webinar")}
+                onFooterSiteClick={() => reportUiAction("open_site_footer", "estimate_footer", "https://timurgromov.ru")}
+                onSave={(estimateItems, customItems) => {
+                  setSavedEstimate(estimateItems);
+                  setSavedCustomItems(customItems);
+                  scheduleAutoSync(estimateItems, customItems);
+                }}
+              />
+            )}
+          </div>
         )}
-      >
-        {screen === "qualification" ? (
+        <div
+          className={cn(
+            "relative z-20 transition-all duration-200 ease-out will-change-transform",
+            isScreenTransitioning ? "opacity-100 translate-y-0" : "opacity-100 translate-y-0",
+          )}
+        >
+          {screen === "qualification" ? (
           <QualificationScreen
             savedData={savedQualification}
             onFooterSiteClick={() => reportUiAction("open_site_footer", "qualification_footer", "https://timurgromov.ru")}
@@ -479,7 +524,7 @@ const Index = () => {
               }
             }}
           />
-        ) : (
+          ) : (
           <EstimateScreen
             guests={guests}
             role={savedQualification?.role}
@@ -500,7 +545,8 @@ const Index = () => {
               scheduleAutoSync(estimateItems, customItems);
             }}
           />
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
