@@ -244,6 +244,14 @@ const Index = () => {
     }, 800);
   };
 
+  const cancelPendingQualificationSync = () => {
+    pendingQualificationRef.current = null;
+    if (qualificationTimerRef.current !== null) {
+      window.clearTimeout(qualificationTimerRef.current);
+      qualificationTimerRef.current = null;
+    }
+  };
+
   const syncExpensesToBackend = async (
     estimateItems: Record<string, { checked: boolean; userPrice: string }>,
     customItems: Array<{ id: string; name: string; checked: boolean; userPrice: string }>,
@@ -402,6 +410,8 @@ const Index = () => {
               if (!initData) {
                 throw new Error("Отсутствует Telegram initData");
               }
+
+              cancelPendingQualificationSync();
 
               if (hasLeadRef.current) {
                 await updateLead(initData, buildLeadPayload(q));

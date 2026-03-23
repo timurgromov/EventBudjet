@@ -1,4 +1,6 @@
 import * as React from "react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 
@@ -11,7 +13,12 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      locale={ru}
       className={cn("p-3", className)}
+      formatters={{
+        formatCaption: (month) => format(month, "LLLL yyyy", { locale: ru }),
+        formatWeekdayName: (weekday) => format(weekday, "EE", { locale: ru }),
+      }}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",

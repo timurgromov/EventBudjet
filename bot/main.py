@@ -38,7 +38,7 @@ def build_mini_app_url() -> str:
     parsed = urlparse(settings.mini_app_url)
     query = dict(parse_qsl(parsed.query, keep_blank_values=True))
     # Force Telegram WebView cache busting per day to pick up fresh frontend bundle.
-    query["app_v"] = "20260323a"
+    query["app_v"] = "20260323b"
     return urlunparse(parsed._replace(query=urlencode(query)))
 
 

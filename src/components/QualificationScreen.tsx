@@ -69,6 +69,7 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
   const [role, setRole] = useState(savedData?.role ?? "");
   const [city, setCity] = useState(savedData?.city ?? "");
   const [date, setDate] = useState<Date | undefined>(parseDateOnly(savedData?.date));
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [guests, setGuests] = useState<number>(savedData?.guests ?? 0);
   const [venue, setVenue] = useState(savedData?.venue ?? "");
   const [venueName, setVenueName] = useState(savedData?.venueName ?? "");
@@ -201,7 +202,7 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
         <label className="block text-sm text-muted-foreground mb-3 font-medium">Дата свадьбы</label>
 
         {!dateUndecided && (
-          <Popover>
+          <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -218,7 +219,14 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={(d) => { setDate(d); notifyChange({ date: d }); }}
+                onSelect={(d) => {
+                  setDate(d);
+                  notifyChange({ date: d });
+                  if (d) {
+                    setIsDatePickerOpen(false);
+                  }
+                }}
+                locale={ru}
                 initialFocus
                 className="p-3 pointer-events-auto"
                 disabled={(d) => d < new Date()}
