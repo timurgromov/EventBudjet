@@ -394,7 +394,7 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
             onClick={finishPriceEditing}
             className="w-full h-12 rounded-xl gradient-gold text-primary-foreground font-medium text-sm"
           >
-            Окей
+            Готово
           </button>
         </div>
       ) : (
