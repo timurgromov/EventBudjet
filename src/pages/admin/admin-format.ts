@@ -31,3 +31,37 @@ export const formatLeadDateSignal = (weddingDateExact?: string | null, season?: 
   if (season) return season;
   return "—";
 };
+
+const normalizeValue = (value?: string | null): string => (value ?? "").trim().toLowerCase();
+
+const MOSCOW_CITY_VALUES = new Set(["москва", "moscow"]);
+const MOSCOW_REGION_VALUES = new Set(["мо", "московская область", "moscow region"]);
+const LOW_PRIORITY_ROLE_VALUES = new Set(["pro", "specialist", "специалист", "свадебный специалист"]);
+
+export const getLeadPriorityScore = (city?: string | null, role?: string | null): number => {
+  const normalizedCity = normalizeValue(city);
+  const normalizedRole = normalizeValue(role);
+
+  let score = 0;
+  if (MOSCOW_CITY_VALUES.has(normalizedCity)) score += 100;
+  if (MOSCOW_REGION_VALUES.has(normalizedCity)) score += 80;
+  if (LOW_PRIORITY_ROLE_VALUES.has(normalizedRole)) score -= 70;
+  return score;
+};
+
+export const getLeadPriorityLabel = (city?: string | null, role?: string | null): string => {
+  const normalizedCity = normalizeValue(city);
+  const normalizedRole = normalizeValue(role);
+  if (MOSCOW_CITY_VALUES.has(normalizedCity)) return "приоритет: Москва";
+  if (MOSCOW_REGION_VALUES.has(normalizedCity)) return "приоритет: МО";
+  if (LOW_PRIORITY_ROLE_VALUES.has(normalizedRole)) return "низкий: специалист";
+  return "обычный";
+};
+
+export const getLeadRoleLabel = (role?: string | null): string => {
+  const normalizedRole = normalizeValue(role);
+  if (normalizedRole === "bride" || normalizedRole === "невеста") return "невеста";
+  if (normalizedRole === "groom" || normalizedRole === "жених") return "жених";
+  if (LOW_PRIORITY_ROLE_VALUES.has(normalizedRole)) return "специалист";
+  return role ?? "—";
+};

@@ -1,16 +1,75 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { getAdminLead } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { formatAdminDate, formatAdminDateTime, formatAdminMoney, formatLeadName } from "./admin-format";
 
 interface AdminOutletContext {
   adminToken: string;
 }
 
+const asString = (value: unknown): string | null => {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return null;
+};
+
+const formatEventSummary = (eventType: string, payload: Record<string, unknown> | null): string => {
+  const p = payload ?? {};
+  const amount = asString(p.amount);
+  const categoryName = asString(p.category_name);
+  const totalBudget = asString(p.total_budget);
+  const action = asString(p.action);
+  const source = asString(p.source);
+
+  if (eventType === "expense_added") {
+    return `Добавлен расход${categoryName ? `: ${categoryName}` : ""}${amount ? ` — ${formatAdminMoney(amount)}` : ""}`;
+  }
+
+  if (eventType === "expense_updated") {
+    const changes = Array.isArray(p.changes) ? p.changes : [];
+    if (changes.length > 0) {
+      const changedFields = changes
+        .map((change) => (change && typeof change === "object" && "field" in change ? asString(change.field) : null))
+        .filter((field): field is string => Boolean(field));
+      if (changedFields.length > 0) return `Обновлён расход: ${changedFields.join(", ")}`;
+    }
+    return "Обновлён расход";
+  }
+
+  if (eventType === "expense_removed") {
+    return `Удалён расход${categoryName ? `: ${categoryName}` : ""}${amount ? ` — ${formatAdminMoney(amount)}` : ""}`;
+  }
+
+  if (eventType === "profile_updated") {
+    const fields = Array.isArray(p.updated_fields) ? p.updated_fields.filter((x) => typeof x === "string") : [];
+    return fields.length > 0 ? `Обновлён профиль: ${fields.join(", ")}` : "Обновлён профиль";
+  }
+
+  if (eventType === "budget_calculated") {
+    return `Пересчитан бюджет${totalBudget ? `: ${formatAdminMoney(totalBudget)}` : ""}`;
+  }
+
+  if (eventType === "profile_completed") return "Профиль заполнен";
+  if (eventType === "profile_started") return "Начато заполнение профиля";
+  if (eventType === "lead_created") return "Создан лид";
+  if (eventType === "bot_started") return "Старт из бота";
+  if (eventType === "miniapp_opened") return "Открыл Mini App";
+  if (eventType === "app_resumed") return "Вернулся в приложение";
+  if (eventType === "ui_action") {
+    if (action || source) return `UI действие: ${action ?? "—"}${source ? ` (${source})` : ""}`;
+    return "UI действие";
+  }
+
+  return eventType;
+};
+
 const AdminLeadDetailPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
   const params = useParams();
   const leadId = Number(params.leadId);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["admin-lead-detail", adminToken, leadId],
@@ -32,6 +91,16 @@ const AdminLeadDetailPage = () => {
 
   const { lead, user, expenses, recent_events: recentEvents } = query.data;
 
+  const handleCopy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatus(`${label} скопирован`);
+    } catch {
+      setCopyStatus("Не удалось скопировать");
+    }
+    setTimeout(() => setCopyStatus(null), 1800);
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -40,6 +109,17 @@ const AdminLeadDetailPage = () => {
             <Link to="/admin/leads" className="text-sm text-slate-500 underline underline-offset-4">Назад к лидам</Link>
             <h2 className="mt-2 text-2xl font-serif text-slate-950">{formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}</h2>
             <div className="mt-1 text-sm text-slate-600">lead #{lead.id} • telegram_id {user.telegram_id}</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {user.username ? (
+                <Button variant="outline" size="sm" onClick={() => handleCopy(`@${user.username}`, "Username")}>
+                  Копировать @username
+                </Button>
+              ) : null}
+              <Button variant="outline" size="sm" onClick={() => handleCopy(String(user.telegram_id), "Telegram ID")}>
+                Копировать telegram_id
+              </Button>
+            </div>
+            {copyStatus ? <div className="mt-2 text-xs text-emerald-700">{copyStatus}</div> : null}
           </div>
           <div className="rounded-xl bg-slate-50 px-4 py-3 text-right">
             <div className="text-xs uppercase tracking-[0.14em] text-slate-500">Итоговый бюджет</div>
@@ -82,17 +162,25 @@ const AdminLeadDetailPage = () => {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 text-lg font-semibold text-slate-950">Последние события</div>
-        <div className="space-y-3">
-          {recentEvents.map((event) => (
-            <div key={event.id} className="rounded-xl border border-slate-200 p-4">
-              <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                <div className="text-sm font-medium text-slate-950">{event.event_type}</div>
-                <div className="text-xs text-slate-500">{formatAdminDateTime(event.created_at)}</div>
+        {recentEvents.length === 0 ? (
+          <div className="text-sm text-slate-600">Событий пока нет.</div>
+        ) : (
+          <div className="space-y-3">
+            {recentEvents.map((event) => (
+              <div key={event.id} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                  <div className="text-sm font-semibold text-slate-950">{formatEventSummary(event.event_type, event.event_payload)}</div>
+                  <div className="text-xs text-slate-500">{formatAdminDateTime(event.created_at)}</div>
+                </div>
+                <div className="mt-1 text-xs text-slate-500">тип: {event.event_type}</div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs text-slate-500">Показать payload</summary>
+                  <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">{JSON.stringify(event.event_payload ?? {}, null, 2)}</pre>
+                </details>
               </div>
-              <pre className="mt-3 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">{JSON.stringify(event.event_payload ?? {}, null, 2)}</pre>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
