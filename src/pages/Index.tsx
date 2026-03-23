@@ -16,6 +16,7 @@ import {
   trackLeadAction,
   updateLead,
 } from "@/lib/api";
+import { formatDateOnly, parseDateOnly } from "@/lib/date";
 import { defaultItems } from "@/components/expense-items-data";
 import { useTelegramContext } from "@/hooks/useTelegramUser";
 
@@ -327,7 +328,13 @@ const Index = () => {
       return savedQualification.dateSeason || "Не определена";
     }
     if (!savedQualification.date) return undefined;
-    return new Date(savedQualification.date).toLocaleDateString("ru-RU");
+
+    const parsed = parseDateOnly(savedQualification.date);
+    if (!parsed) {
+      return savedQualification.date;
+    }
+
+    return parsed.toLocaleDateString("ru-RU");
   }, [savedQualification]);
 
   if (bootLoading) {
@@ -382,7 +389,7 @@ const Index = () => {
             const q = {
               role: data.role,
               city: data.city,
-              date: data.date?.toISOString() ?? "",
+              date: formatDateOnly(data.date),
               guests: data.guests,
               venue: data.venue ?? "",
               venueName: data.venueName ?? "",

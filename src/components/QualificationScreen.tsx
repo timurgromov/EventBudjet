@@ -5,6 +5,7 @@ import { CalendarIcon, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatDateOnly, parseDateOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 interface QualificationData {
@@ -67,7 +68,7 @@ const seasons = [
 const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, savedData, onFieldChange, onFooterSiteClick }) => {
   const [role, setRole] = useState(savedData?.role ?? "");
   const [city, setCity] = useState(savedData?.city ?? "");
-  const [date, setDate] = useState<Date | undefined>(savedData?.date ? new Date(savedData.date) : undefined);
+  const [date, setDate] = useState<Date | undefined>(parseDateOnly(savedData?.date));
   const [guests, setGuests] = useState<number>(savedData?.guests ?? 0);
   const [venue, setVenue] = useState(savedData?.venue ?? "");
   const [venueName, setVenueName] = useState(savedData?.venueName ?? "");
@@ -87,7 +88,7 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
     const du = updates.dateUndecided ?? dateUndecided;
     const ds = updates.dateSeason ?? dateSeason;
     onFieldChange?.({
-      role: r, city: c, date: d?.toISOString() ?? "", guests: g,
+      role: r, city: c, date: formatDateOnly(d), guests: g,
       venue: v, venueName: vn, dateUndecided: du, dateSeason: ds,
     });
   };
