@@ -75,18 +75,6 @@ const AdminLeadsPage = () => {
     enabled: adminToken.trim().length > 0,
   });
 
-  if (!adminToken.trim()) {
-    return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть список лидов.</div>;
-  }
-
-  if (query.isLoading) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">Загружаю лиды...</div>;
-  }
-
-  if (query.isError) {
-    return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700">{query.error instanceof Error ? query.error.message : "Не удалось загрузить лиды"}</div>;
-  }
-
   const leads = query.data?.leads ?? [];
   const normalizedSearch = search.trim().toLowerCase();
 
@@ -138,6 +126,18 @@ const AdminLeadsPage = () => {
   const hotLeads = visibleLeads.slice(0, 5);
 
   const filterTitle = activeFilter === "moscow" ? "Москва + МО" : activeFilter === "specialists" ? "Специалисты" : "Все";
+
+  if (!adminToken.trim()) {
+    return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть список лидов.</div>;
+  }
+
+  if (query.isLoading) {
+    return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600">Загружаю лиды...</div>;
+  }
+
+  if (query.isError) {
+    return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700">{query.error instanceof Error ? query.error.message : "Не удалось загрузить лиды"}</div>;
+  }
 
   return (
     <div className="space-y-4">
