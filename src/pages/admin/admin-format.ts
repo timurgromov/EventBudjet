@@ -32,7 +32,11 @@ export const formatLeadDateSignal = (weddingDateExact?: string | null, season?: 
   return "—";
 };
 
-const normalizeValue = (value?: string | null): string => (value ?? "").trim().toLowerCase();
+const normalizeValue = (value: unknown): string => {
+  if (typeof value === "string") return value.trim().toLowerCase();
+  if (typeof value === "number" || typeof value === "boolean") return String(value).trim().toLowerCase();
+  return "";
+};
 
 const MOSCOW_CITY_VALUES = new Set(["москва", "moscow"]);
 const MOSCOW_REGION_VALUES = new Set(["мо", "московская область", "moscow region"]);
@@ -63,7 +67,8 @@ export const getLeadRoleLabel = (role?: string | null): string => {
   if (normalizedRole === "bride" || normalizedRole === "невеста") return "невеста";
   if (normalizedRole === "groom" || normalizedRole === "жених") return "жених";
   if (LOW_PRIORITY_ROLE_VALUES.has(normalizedRole)) return "специалист";
-  return role ?? "—";
+  if (typeof role === "string" && role.trim()) return role;
+  return "—";
 };
 
 export const isMoscowPriorityCity = (city?: string | null): boolean => {
@@ -82,7 +87,7 @@ export const getLeadHotScore = (params: {
   lastSeenAt?: string | null;
   weddingDateExact?: string | null;
   guestsCount?: number | null;
-  totalBudget?: string | null;
+  totalBudget?: string | number | null;
   leadStatus?: string | null;
 }): number => {
   const { city, role, lastSeenAt, weddingDateExact, guestsCount, totalBudget, leadStatus } = params;
@@ -99,7 +104,7 @@ export const getLeadHotScore = (params: {
   if (weddingDateExact) score += 20;
   if (typeof guestsCount === "number" && guestsCount > 0) score += 10;
 
-  const budget = totalBudget ? Number.parseFloat(totalBudget) : Number.NaN;
+  const budget = typeof totalBudget === "number" ? totalBudget : totalBudget ? Number.parseFloat(totalBudget) : Number.NaN;
   if (Number.isFinite(budget) && budget > 0) score += 20;
 
   if (normalizeValue(leadStatus) === "draft") score -= 10;
