@@ -77,40 +77,6 @@ export interface ExpensePayload {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
-function normalizeErrorDetail(detail: unknown): string {
-  if (typeof detail === "string" && detail.trim()) {
-    return detail;
-  }
-
-  if (Array.isArray(detail)) {
-    const messages = detail
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const message = "msg" in item ? item.msg : undefined;
-        const location = "loc" in item && Array.isArray(item.loc) ? item.loc.join(".") : undefined;
-        if (typeof message === "string" && message) {
-          return location ? `${location}: ${message}` : message;
-        }
-        return null;
-      })
-      .filter((value): value is string => Boolean(value));
-
-    if (messages.length > 0) {
-      return messages.join("; ");
-    }
-  }
-
-  if (detail && typeof detail === "object") {
-    try {
-      return JSON.stringify(detail);
-    } catch {
-      return "Request failed";
-    }
-  }
-
-  return "Request failed";
-}
-
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -130,9 +96,9 @@ async function request<T>(
   if (!response.ok) {
     let detail = "Request failed";
     try {
-      const body = (await response.json()) as { detail?: unknown };
-      if (body && typeof body === "object" && "detail" in body) {
-        detail = normalizeErrorDetail(body.detail);
+      const body = (await response.json()) as { detail?: string };
+      if (body.detail) {
+        detail = body.detail;
       }
     } catch {
       // ignore parse errors and keep generic message
