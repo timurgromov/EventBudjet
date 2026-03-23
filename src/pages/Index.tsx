@@ -42,6 +42,23 @@ const parseMoney = (raw: string): number => {
   return Number.parseInt(cleaned, 10);
 };
 
+const formatDateForApi = (value: Date | undefined): string => {
+  if (!value) return "";
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateForDisplay = (value: string): Date => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return new Date(value);
+  }
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day));
+};
+
 const itemById = new Map(defaultItems.map((item) => [item.id, item]));
 
 const Index = () => {
@@ -327,7 +344,11 @@ const Index = () => {
       return savedQualification.dateSeason || "Не определена";
     }
     if (!savedQualification.date) return undefined;
-    return new Date(savedQualification.date).toLocaleDateString("ru-RU");
+    const parsed = parseDateForDisplay(savedQualification.date);
+    if (Number.isNaN(parsed.getTime())) {
+      return savedQualification.date;
+    }
+    return parsed.toLocaleDateString("ru-RU");
   }, [savedQualification]);
 
   if (bootLoading) {
@@ -382,7 +403,7 @@ const Index = () => {
             const q = {
               role: data.role,
               city: data.city,
-              date: data.date?.toISOString() ?? "",
+              date: formatDateForApi(data.date),
               guests: data.guests,
               venue: data.venue ?? "",
               venueName: data.venueName ?? "",

@@ -65,9 +65,28 @@ const seasons = [
 ];
 
 const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, savedData, onFieldChange, onFooterSiteClick }) => {
+  const formatDateForApi = (value: Date | undefined): string => {
+    if (!value) return "";
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseSavedDate = (value?: string): Date | undefined => {
+    if (!value) return undefined;
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    }
+    const [, year, month, day] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  };
+
   const [role, setRole] = useState(savedData?.role ?? "");
   const [city, setCity] = useState(savedData?.city ?? "");
-  const [date, setDate] = useState<Date | undefined>(savedData?.date ? new Date(savedData.date) : undefined);
+  const [date, setDate] = useState<Date | undefined>(parseSavedDate(savedData?.date));
   const [guests, setGuests] = useState<number>(savedData?.guests ?? 0);
   const [venue, setVenue] = useState(savedData?.venue ?? "");
   const [venueName, setVenueName] = useState(savedData?.venueName ?? "");
@@ -80,14 +99,14 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
   }>) => {
     const r = updates.role ?? role;
     const c = updates.city ?? city;
-    const d = updates.date !== undefined ? updates.date : date;
+    const d = Object.prototype.hasOwnProperty.call(updates, "date") ? updates.date : date;
     const g = updates.guests ?? guests;
     const v = updates.venue ?? venue;
     const vn = updates.venueName ?? venueName;
     const du = updates.dateUndecided ?? dateUndecided;
     const ds = updates.dateSeason ?? dateSeason;
     onFieldChange?.({
-      role: r, city: c, date: d?.toISOString() ?? "", guests: g,
+      role: r, city: c, date: formatDateForApi(d), guests: g,
       venue: v, venueName: vn, dateUndecided: du, dateSeason: ds,
     });
   };
