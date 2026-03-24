@@ -1,8 +1,16 @@
+import json
+import logging
+from urllib import error as urllib_error
+from urllib import request as urllib_request
+
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.models.enums import NotificationStatus
 from app.models.user import User
 from app.repositories.admin_repository import AdminRepository
 from app.schemas.admin import (
+    AdminDirectMessageResponse,
     AdminLeadDetailResponse,
     AdminLeadEventRead,
     AdminLeadEventsResponse,
@@ -14,6 +22,8 @@ from app.schemas.admin import (
 )
 from app.schemas.expense import ExpenseRead
 from app.schemas.lead import LeadRead
+
+logger = logging.getLogger(__name__)
 
 
 class AdminService:
@@ -97,3 +107,64 @@ class AdminService:
             for notification, user in rows
         ]
         return AdminNotificationsResponse(notifications=notifications)
+
+    def send_direct_message(self, lead_id: int, text: str) -> AdminDirectMessageResponse | None:
+        pair = self.repo.get_lead_with_user(lead_id)
+        if pair is None:
+            return None
+
+        lead, user = pair
+        status = NotificationStatus.FAILED
+
+        if not settings.telegram_bot_token or settings.telegram_bot_token == 'test_bot_token':
+            logger.warning('telegram_bot_token_not_configured_for_direct_message lead_id=%s', lead_id)
+        else:
+            try:
+                url = f'https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage'
+                payload = json.dumps({'chat_id': int(user.telegram_id), 'text': text}).encode('utf-8')
+                req = urllib_request.Request(
+                    url=url,
+                    data=payload,
+                    headers={'Content-Type': 'application/json'},
+                    method='POST',
+                )
+                with urllib_request.urlopen(req, timeout=10) as response:
+                    body_raw = response.read().decode('utf-8')
+                body = json.loads(body_raw)
+                if isinstance(body, dict) and body.get('ok') is True:
+                    status = NotificationStatus.SENT
+                else:
+                    logger.warning(
+                        'telegram_direct_message_rejected lead_id=%s telegram_id=%s response=%s',
+                        lead_id,
+                        user.telegram_id,
+                        body_raw,
+                    )
+            except (urllib_error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                logger.exception(
+                    'telegram_direct_message_failed lead_id=%s telegram_id=%s error=%s',
+                    lead_id,
+                    user.telegram_id,
+                    exc,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception(
+                    'telegram_direct_message_unexpected_error lead_id=%s telegram_id=%s error=%s',
+                    lead_id,
+                    user.telegram_id,
+                    exc,
+                )
+
+        self.repo.create_notification_log(
+            lead_id=lead.id,
+            notification_type='direct_message',
+            priority='manual',
+            status=status,
+        )
+        self.repo.db.commit()
+
+        return AdminDirectMessageResponse(
+            lead_id=lead.id,
+            telegram_id=user.telegram_id,
+            status=status.value,
+        )

@@ -109,6 +109,12 @@ export interface AdminNotificationsResponse {
   notifications: AdminNotificationsRead[];
 }
 
+export interface AdminDirectMessageResponse {
+  lead_id: number;
+  telegram_id: number;
+  status: "sent" | "failed" | string;
+}
+
 export interface LeadActionPayload {
   action: string;
   source?: string;
@@ -283,4 +289,15 @@ export function getAdminLead(adminToken: string, leadId: number): Promise<AdminL
 
 export function listAdminNotifications(adminToken: string): Promise<AdminNotificationsResponse> {
   return adminRequest<AdminNotificationsResponse>("/admin/notifications", adminToken);
+}
+
+export function sendAdminMessageToLead(
+  adminToken: string,
+  leadId: number,
+  text: string,
+): Promise<AdminDirectMessageResponse> {
+  return adminRequest<AdminDirectMessageResponse>(`/admin/leads/${leadId}/send-message`, adminToken, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
 }

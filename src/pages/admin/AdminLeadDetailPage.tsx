@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
-import { getAdminLead } from "@/lib/api";
+import { getAdminLead, sendAdminMessageToLead } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   formatAdminDate,
   formatAdminDateTime,
@@ -88,11 +89,28 @@ const AdminLeadDetailPage = () => {
   const params = useParams();
   const leadId = Number(params.leadId);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [directMessageText, setDirectMessageText] = useState("");
+  const [directMessageStatus, setDirectMessageStatus] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["admin-lead-detail", adminToken, leadId],
     queryFn: () => getAdminLead(adminToken, leadId),
     enabled: adminToken.trim().length > 0 && Number.isFinite(leadId),
+  });
+
+  const directMessageMutation = useMutation({
+    mutationFn: async (text: string) => sendAdminMessageToLead(adminToken, leadId, text),
+    onSuccess: (result) => {
+      if (result.status === "sent") {
+        setDirectMessageStatus("Сообщение отправлено пользователю в Telegram.");
+        setDirectMessageText("");
+      } else {
+        setDirectMessageStatus("Отправка не удалась. Проверь, запускал ли пользователь бота.");
+      }
+    },
+    onError: (error) => {
+      setDirectMessageStatus(error instanceof Error ? `Ошибка: ${error.message}` : "Ошибка отправки сообщения.");
+    },
   });
 
   if (!adminToken.trim()) {
@@ -117,6 +135,13 @@ const AdminLeadDetailPage = () => {
       setCopyStatus("Не удалось скопировать");
     }
     setTimeout(() => setCopyStatus(null), 1800);
+  };
+
+  const handleDirectMessageSend = () => {
+    const normalized = directMessageText.trim();
+    if (!normalized) return;
+    setDirectMessageStatus(null);
+    directMessageMutation.mutate(normalized);
   };
 
   return (
@@ -155,6 +180,30 @@ const AdminLeadDetailPage = () => {
           </div>
         </div>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 text-lg font-semibold text-slate-950">Сообщение пользователю</div>
+        <div className="mb-2 text-sm text-slate-600">
+          Отправка персонального сообщения в бот пользователю {formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}.
+        </div>
+        <Textarea
+          value={directMessageText}
+          onChange={(e) => setDirectMessageText(e.target.value)}
+          placeholder="Введите сообщение для пользователя..."
+          className="min-h-[110px] bg-white"
+        />
+        <div className="mt-3 flex items-center gap-3">
+          <Button
+            onClick={handleDirectMessageSend}
+            disabled={!directMessageText.trim() || directMessageMutation.isPending}
+          >
+            {directMessageMutation.isPending ? "Отправляю..." : "Отправить сообщение"}
+          </Button>
+          {directMessageStatus ? (
+            <div className="text-sm text-slate-600">{directMessageStatus}</div>
+          ) : null}
+        </div>
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

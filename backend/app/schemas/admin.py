@@ -72,3 +72,13 @@ class AdminNotificationRead(BaseModel):
 
 class AdminNotificationsResponse(BaseModel):
     notifications: list[AdminNotificationRead]
+
+
+class AdminDirectMessageRequest(BaseModel):
+    text: str
+
+
+class AdminDirectMessageResponse(BaseModel):
+    lead_id: int
+    telegram_id: int
+    status: str

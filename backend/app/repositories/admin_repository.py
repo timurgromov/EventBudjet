@@ -2,6 +2,7 @@ from sqlalchemy import Select, desc, select
 from sqlalchemy.orm import Session
 
 from app.models.admin_notification import AdminNotification
+from app.models.enums import NotificationStatus
 from app.models.expense import Expense
 from app.models.lead import Lead
 from app.models.lead_event import LeadEvent
@@ -51,3 +52,24 @@ class AdminRepository:
             .limit(limit)
         )
         return list(self.db.execute(stmt).all())
+
+    def create_notification_log(
+        self,
+        lead_id: int,
+        notification_type: str,
+        priority: str | None,
+        status: NotificationStatus,
+    ) -> AdminNotification:
+        notification = AdminNotification(
+            lead_id=lead_id,
+            notification_type=notification_type,
+            priority=priority,
+            status=status,
+            sent_at=None,
+        )
+        if status == NotificationStatus.SENT:
+            from datetime import datetime, timezone
+
+            notification.sent_at = datetime.now(timezone.utc)
+        self.db.add(notification)
+        return notification

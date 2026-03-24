@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.core.auth import require_admin_access
 from app.core.database import get_db
 from app.schemas.admin import (
+    AdminDirectMessageRequest,
+    AdminDirectMessageResponse,
     AdminLeadDetailResponse,
     AdminLeadEventsResponse,
     AdminLeadListResponse,
@@ -38,3 +40,18 @@ def get_admin_lead_events(lead_id: int, db: Session = Depends(get_db)) -> AdminL
 @router.get('/notifications', response_model=AdminNotificationsResponse)
 def list_admin_notifications(db: Session = Depends(get_db)) -> AdminNotificationsResponse:
     return AdminService(db).list_notifications()
+
+
+@router.post('/leads/{lead_id}/send-message', response_model=AdminDirectMessageResponse)
+def send_admin_message_to_lead(
+    lead_id: int,
+    payload: AdminDirectMessageRequest,
+    db: Session = Depends(get_db),
+) -> AdminDirectMessageResponse:
+    if not payload.text.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Message text must not be empty')
+
+    result = AdminService(db).send_direct_message(lead_id=lead_id, text=payload.text.strip())
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lead not found')
+    return result
