@@ -129,11 +129,21 @@ const AdminLeadDetailPage = () => {
             <div className="mt-1 text-sm text-slate-600">lead #{lead.id} • telegram_id {user.telegram_id}</div>
             <div className="mt-3 flex flex-wrap gap-2">
               {user.username ? (
-                <Button variant="outline" size="sm" onClick={() => handleCopy(`@${user.username}`, "Username")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  onClick={() => handleCopy(`@${user.username}`, "Username")}
+                >
                   Копировать @username
                 </Button>
               ) : null}
-              <Button variant="outline" size="sm" onClick={() => handleCopy(String(user.telegram_id), "Telegram ID")}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                onClick={() => handleCopy(String(user.telegram_id), "Telegram ID")}
+              >
                 Копировать telegram_id
               </Button>
             </div>

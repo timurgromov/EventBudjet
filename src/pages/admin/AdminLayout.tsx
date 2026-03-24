@@ -53,7 +53,13 @@ const AdminLayout = () => {
                   className="bg-white"
                 />
                 <Button onClick={handleSave} className="md:min-w-28">Сохранить</Button>
-                <Button variant="outline" onClick={handleReset} className="md:min-w-28">Сбросить</Button>
+                <Button
+                  variant="outline"
+                  onClick={handleReset}
+                  className="md:min-w-28 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Сбросить
+                </Button>
               </div>
             </div>
           </div>
