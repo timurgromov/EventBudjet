@@ -10,6 +10,7 @@ from app.models.enums import NotificationStatus
 from app.models.user import User
 from app.repositories.admin_repository import AdminRepository
 from app.schemas.admin import (
+    AdminLeadActionResponse,
     AdminDirectMessageResponse,
     AdminLeadDetailResponse,
     AdminLeadEventRead,
@@ -168,3 +169,24 @@ class AdminService:
             telegram_id=user.telegram_id,
             status=status.value,
         )
+
+    def reset_lead(self, lead_id: int) -> AdminLeadActionResponse | None:
+        pair = self.repo.get_lead_with_user(lead_id)
+        if pair is None:
+            return None
+
+        lead, _ = pair
+        self.repo.reset_lead_data(lead)
+        self.repo.db.commit()
+        return AdminLeadActionResponse(lead_id=lead.id, status='reset')
+
+    def delete_lead(self, lead_id: int) -> AdminLeadActionResponse | None:
+        pair = self.repo.get_lead_with_user(lead_id)
+        if pair is None:
+            return None
+
+        lead, _ = pair
+        deleted_lead_id = lead.id
+        self.repo.delete_lead(lead)
+        self.repo.db.commit()
+        return AdminLeadActionResponse(lead_id=deleted_lead_id, status='deleted')

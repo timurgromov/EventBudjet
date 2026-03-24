@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import require_admin_access
 from app.core.database import get_db
 from app.schemas.admin import (
+    AdminLeadActionResponse,
     AdminDirectMessageRequest,
     AdminDirectMessageResponse,
     AdminLeadDetailResponse,
@@ -52,6 +53,28 @@ def send_admin_message_to_lead(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Message text must not be empty')
 
     result = AdminService(db).send_direct_message(lead_id=lead_id, text=payload.text.strip())
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lead not found')
+    return result
+
+
+@router.post('/leads/{lead_id}/reset', response_model=AdminLeadActionResponse)
+def reset_admin_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+) -> AdminLeadActionResponse:
+    result = AdminService(db).reset_lead(lead_id=lead_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lead not found')
+    return result
+
+
+@router.delete('/leads/{lead_id}', response_model=AdminLeadActionResponse)
+def delete_admin_lead(
+    lead_id: int,
+    db: Session = Depends(get_db),
+) -> AdminLeadActionResponse:
+    result = AdminService(db).delete_lead(lead_id=lead_id)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lead not found')
     return result

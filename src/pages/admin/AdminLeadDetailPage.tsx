@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useOutletContext, useParams } from "react-router-dom";
-import { getAdminLead, sendAdminMessageToLead } from "@/lib/api";
+import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { deleteAdminLead, getAdminLead, resetAdminLead, sendAdminMessageToLead } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -87,10 +87,12 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
 const AdminLeadDetailPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
   const params = useParams();
+  const navigate = useNavigate();
   const leadId = Number(params.leadId);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [directMessageText, setDirectMessageText] = useState("");
   const [directMessageStatus, setDirectMessageStatus] = useState<string | null>(null);
+  const [dangerStatus, setDangerStatus] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["admin-lead-detail", adminToken, leadId],
@@ -110,6 +112,27 @@ const AdminLeadDetailPage = () => {
     },
     onError: (error) => {
       setDirectMessageStatus(error instanceof Error ? `Ошибка: ${error.message}` : "Ошибка отправки сообщения.");
+    },
+  });
+
+  const resetLeadMutation = useMutation({
+    mutationFn: async () => resetAdminLead(adminToken, leadId),
+    onSuccess: async () => {
+      setDangerStatus("Данные лида сброшены. Пользователь пройдёт путь заново.");
+      await query.refetch();
+    },
+    onError: (error) => {
+      setDangerStatus(error instanceof Error ? `Ошибка сброса: ${error.message}` : "Ошибка сброса.");
+    },
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async () => deleteAdminLead(adminToken, leadId),
+    onSuccess: () => {
+      navigate("/admin/leads");
+    },
+    onError: (error) => {
+      setDangerStatus(error instanceof Error ? `Ошибка удаления: ${error.message}` : "Ошибка удаления.");
     },
   });
 
@@ -142,6 +165,23 @@ const AdminLeadDetailPage = () => {
     if (!normalized) return;
     setDirectMessageStatus(null);
     directMessageMutation.mutate(normalized);
+  };
+
+  const handleResetLead = () => {
+    if (!window.confirm("Сбросить профиль и смету этого лида?")) {
+      return;
+    }
+    setDangerStatus(null);
+    resetLeadMutation.mutate();
+  };
+
+  const handleDeleteLead = () => {
+    const confirmation = window.prompt('Для удаления введите DELETE');
+    if (confirmation !== "DELETE") {
+      return;
+    }
+    setDangerStatus(null);
+    deleteLeadMutation.mutate();
   };
 
   return (
@@ -202,6 +242,30 @@ const AdminLeadDetailPage = () => {
           {directMessageStatus ? (
             <div className="text-sm text-slate-600">{directMessageStatus}</div>
           ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
+        <div className="mb-2 text-lg font-semibold text-slate-950">Управление лидом</div>
+        <div className="text-sm text-slate-600">
+          Сброс полезен для ретеста. Удаление окончательно уберёт лид из админки.
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button
+            onClick={handleResetLead}
+            disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
+            className="bg-[#E6BF3A] text-black hover:bg-[#d4af34]"
+          >
+            {resetLeadMutation.isPending ? "Сбрасываю..." : "Сбросить данные"}
+          </Button>
+          <Button
+            onClick={handleDeleteLead}
+            disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
+            variant="destructive"
+          >
+            {deleteLeadMutation.isPending ? "Удаляю..." : "Удалить лид"}
+          </Button>
+          {dangerStatus ? <div className="text-sm text-slate-700">{dangerStatus}</div> : null}
         </div>
       </section>
 

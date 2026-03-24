@@ -115,6 +115,11 @@ export interface AdminDirectMessageResponse {
   status: "sent" | "failed" | string;
 }
 
+export interface AdminLeadActionResponse {
+  lead_id: number;
+  status: "reset" | "deleted" | string;
+}
+
 export interface LeadActionPayload {
   action: string;
   source?: string;
@@ -299,5 +304,17 @@ export function sendAdminMessageToLead(
   return adminRequest<AdminDirectMessageResponse>(`/admin/leads/${leadId}/send-message`, adminToken, {
     method: "POST",
     body: JSON.stringify({ text }),
+  });
+}
+
+export function resetAdminLead(adminToken: string, leadId: number): Promise<AdminLeadActionResponse> {
+  return adminRequest<AdminLeadActionResponse>(`/admin/leads/${leadId}/reset`, adminToken, {
+    method: "POST",
+  });
+}
+
+export function deleteAdminLead(adminToken: string, leadId: number): Promise<AdminLeadActionResponse> {
+  return adminRequest<AdminLeadActionResponse>(`/admin/leads/${leadId}`, adminToken, {
+    method: "DELETE",
   });
 }

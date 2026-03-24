@@ -82,3 +82,8 @@ class AdminDirectMessageResponse(BaseModel):
     lead_id: int
     telegram_id: int
     status: str
+
+
+class AdminLeadActionResponse(BaseModel):
+    lead_id: int
+    status: str

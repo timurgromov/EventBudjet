@@ -73,3 +73,36 @@ class AdminRepository:
             notification.sent_at = datetime.now(timezone.utc)
         self.db.add(notification)
         return notification
+
+    def reset_lead_data(self, lead: Lead) -> Lead:
+        lead.role = None
+        lead.city = None
+        lead.venue_status = None
+        lead.venue_name = None
+        lead.wedding_date_exact = None
+        lead.wedding_date_mode = None
+        lead.season = None
+        lead.next_year_flag = False
+        lead.guests_count = None
+        lead.total_budget = None
+        lead.source = None
+        lead.utm_source = None
+        lead.utm_medium = None
+        lead.utm_campaign = None
+        lead.partner_code = None
+
+        for expense in list(lead.expenses):
+            self.db.delete(expense)
+        for event in list(lead.events):
+            self.db.delete(event)
+        for notification in list(lead.admin_notifications):
+            self.db.delete(notification)
+        for message in list(lead.scheduled_messages):
+            self.db.delete(message)
+
+        self.db.flush()
+        return lead
+
+    def delete_lead(self, lead: Lead) -> None:
+        self.db.delete(lead)
+        self.db.flush()
