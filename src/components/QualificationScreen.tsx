@@ -100,6 +100,15 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
   const hasValidVenue = venue === "searching" || (venue === "chosen" && trimmedVenueName.length > 0);
   const showVenueNameError = isVenueNameRequired && trimmedVenueName.length === 0;
   const isValid = Boolean(role && city && hasDate && guests > 0 && hasValidVenue);
+  const guestsInputValue = guests > 0 ? String(guests) : "";
+
+  const parseGuestsInput = (raw: string): number => {
+    const digitsOnly = raw.replace(/\D/g, "");
+    if (!digitsOnly) return 0;
+    const normalized = digitsOnly.replace(/^0+/, "");
+    if (!normalized) return 0;
+    return Number.parseInt(normalized, 10);
+  };
 
   return (
     <div className="min-h-screen flex flex-col px-5 py-8">
@@ -291,9 +300,15 @@ const QualificationScreen: React.FC<QualificationScreenProps> = ({ onNext, saved
             −
           </button>
           <input
-            type="number"
-            value={guests}
-            onChange={(e) => { const g = Math.max(0, parseInt(e.target.value) || 0); setGuests(g); notifyChange({ guests: g }); }}
+            type="text"
+            inputMode="numeric"
+            value={guestsInputValue}
+            onChange={(e) => {
+              const g = parseGuestsInput(e.target.value);
+              setGuests(g);
+              notifyChange({ guests: g });
+            }}
+            placeholder="0"
             className="flex-1 h-12 rounded-lg bg-card border border-border text-center text-xl font-serif text-foreground focus:outline-none focus:border-primary"
           />
           <button
