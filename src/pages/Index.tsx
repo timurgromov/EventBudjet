@@ -44,6 +44,8 @@ const parseMoney = (raw: string): number => {
 };
 
 const itemById = new Map(defaultItems.map((item) => [item.id, item]));
+const FALLBACK_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? "gromov_wedding_bot";
+const TELEGRAM_STARTAPP_URL = `https://t.me/${FALLBACK_BOT_USERNAME}?startapp=calc`;
 
 const Index = () => {
   const { user, initData, isTelegram } = useTelegramContext();
@@ -345,8 +347,32 @@ const Index = () => {
     return parsed.toLocaleDateString("ru-RU");
   }, [savedQualification]);
 
+  const missingTelegramContext = !isTelegram || !initData;
+
   if (bootLoading) {
     return <div className="max-w-md mx-auto min-h-screen bg-background p-6 text-sm text-muted-foreground">Загрузка...</div>;
+  }
+
+  if (missingTelegramContext) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen bg-background p-6 space-y-4">
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          <div className="text-lg font-semibold text-foreground">Откройте калькулятор внутри Telegram</div>
+          <p className="text-sm text-muted-foreground">
+            Приложение запущено вне Telegram Mini App. Нажмите кнопку ниже, чтобы открыть его корректно.
+          </p>
+          <a
+            href={TELEGRAM_STARTAPP_URL}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#E6BF3A] px-4 text-sm font-medium text-black"
+          >
+            Открыть в Telegram
+          </a>
+          <div className="text-xs text-muted-foreground break-all">
+            Если кнопка не сработала, откройте ссылку вручную: {TELEGRAM_STARTAPP_URL}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (bootError) {
