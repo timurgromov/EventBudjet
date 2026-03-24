@@ -80,7 +80,7 @@ const AdminLeadsPage = () => {
   const leads = query.data?.leads ?? [];
   const normalizedSearch = search.trim().toLowerCase();
 
-  const visibleLeads = useMemo(() => {
+  const filteredLeads = useMemo(() => {
     const bySearch = normalizedSearch
       ? leads.filter((lead) => {
           const haystack = `${lead.name ?? ""} ${lead.username ?? ""} ${lead.city ?? ""} ${lead.role ?? ""} ${lead.lead_id}`.toLowerCase();
@@ -94,38 +94,51 @@ const AdminLeadsPage = () => {
       return true;
     });
 
-    return [...filtered].sort((a, b) => {
-      const scoreDiff =
-        getLeadHotScore({
-          city: b.city,
-          role: b.role,
-          lastSeenAt: b.last_seen_at,
-          weddingDateExact: b.wedding_date_exact,
-          guestsCount: b.guests_count,
-          totalBudget: b.total_budget,
-          leadStatus: b.lead_status,
-        }) -
-        getLeadHotScore({
-          city: a.city,
-          role: a.role,
-          lastSeenAt: a.last_seen_at,
-          weddingDateExact: a.wedding_date_exact,
-          guestsCount: a.guests_count,
-          totalBudget: a.total_budget,
-          leadStatus: a.lead_status,
-        });
-      if (scoreDiff !== 0) return scoreDiff;
+    return filtered;
+  }, [activeFilter, leads, normalizedSearch]);
 
+  const visibleLeads = useMemo(() => {
+    return [...filteredLeads].sort((a, b) => {
       const aTs = a.last_seen_at ? Date.parse(a.last_seen_at) : 0;
       const bTs = b.last_seen_at ? Date.parse(b.last_seen_at) : 0;
       if (aTs !== bTs) return bTs - aTs;
-
       return b.lead_id - a.lead_id;
     });
-  }, [activeFilter, leads, normalizedSearch]);
+  }, [filteredLeads]);
 
-  const moscowHighPriority = visibleLeads.filter((lead) => getLeadPriorityScore(lead.city, lead.role) >= 80).length;
-  const hotLeads = visibleLeads.slice(0, 5);
+  const moscowHighPriority = filteredLeads.filter((lead) => getLeadPriorityScore(lead.city, lead.role) >= 80).length;
+
+  const hotLeads = useMemo(() => {
+    return [...filteredLeads]
+      .sort((a, b) => {
+        const scoreDiff =
+          getLeadHotScore({
+            city: b.city,
+            role: b.role,
+            lastSeenAt: b.last_seen_at,
+            weddingDateExact: b.wedding_date_exact,
+            guestsCount: b.guests_count,
+            totalBudget: b.total_budget,
+            leadStatus: b.lead_status,
+          }) -
+          getLeadHotScore({
+            city: a.city,
+            role: a.role,
+            lastSeenAt: a.last_seen_at,
+            weddingDateExact: a.wedding_date_exact,
+            guestsCount: a.guests_count,
+            totalBudget: a.total_budget,
+            leadStatus: a.lead_status,
+          });
+        if (scoreDiff !== 0) return scoreDiff;
+
+        const aTs = a.last_seen_at ? Date.parse(a.last_seen_at) : 0;
+        const bTs = b.last_seen_at ? Date.parse(b.last_seen_at) : 0;
+        if (aTs !== bTs) return bTs - aTs;
+        return b.lead_id - a.lead_id;
+      })
+      .slice(0, 5);
+  }, [filteredLeads]);
 
   const filterTitle = activeFilter === "moscow" ? "Москва + МО" : activeFilter === "specialists" ? "Специалисты" : "Все";
 
