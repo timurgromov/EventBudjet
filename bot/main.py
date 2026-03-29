@@ -107,6 +107,14 @@ async def start_handler(message: Message) -> None:
     repository.create_lead_event(lead_id, 'bot_started')
 
     await send_start_message_with_retry(message)
+    repository.create_lead_event(
+        lead_id,
+        'bot_message_sent',
+        {
+            'text': START_MESSAGE_TEXT,
+            'source': 'start',
+        },
+    )
 
 
 @router.message()

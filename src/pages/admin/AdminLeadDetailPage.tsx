@@ -72,6 +72,9 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
   if (eventType === "admin_message_sent") {
     return `Исходящее сообщение${messageText ? `: ${messageText}` : ""}`;
   }
+  if (eventType === "bot_message_sent") {
+    return `Сообщение бота${messageText ? `: ${messageText}` : ""}`;
+  }
 
   if (eventType === "profile_completed") return "Профиль заполнен";
   if (eventType === "profile_started") return "Начато заполнение профиля";
@@ -149,7 +152,9 @@ const AdminLeadDetailPage = () => {
     () =>
       [...recentEvents]
         .reverse()
-        .filter((event) => ["user_message", "admin_message_sent", "bot_started", "miniapp_opened", "app_resumed"].includes(event.event_type)),
+        .filter((event) =>
+          ["user_message", "admin_message_sent", "bot_message_sent", "bot_started", "miniapp_opened", "app_resumed"].includes(event.event_type),
+        ),
     [recentEvents],
   );
 
@@ -313,21 +318,24 @@ const AdminLeadDetailPage = () => {
             conversationEvents.map((event) => {
               const isOutgoing = event.event_type === "admin_message_sent";
               const isIncoming = event.event_type === "user_message";
+              const isBotMessage = event.event_type === "bot_message_sent";
               const text = asString(event.event_payload?.text);
 
               return (
                 <div key={event.id} className={isOutgoing ? "flex justify-end" : "flex justify-start"}>
                   <div
-                    className={isOutgoing
+                    className={isOutgoing || isBotMessage
                       ? "max-w-[88%] rounded-2xl rounded-br-md bg-[#E6BF3A] px-3 py-2 text-sm text-black"
                       : isIncoming
                         ? "max-w-[88%] rounded-2xl rounded-bl-md bg-white border border-slate-200 px-3 py-2 text-sm text-slate-900"
                         : "max-w-[92%] rounded-xl bg-slate-200 px-3 py-2 text-xs text-slate-700"}
                   >
                     <div className="whitespace-pre-wrap break-words">
-                      {isIncoming || isOutgoing ? (text || "Сообщение без текста") : formatEventSummary(event.event_type, event.event_payload)}
+                      {isIncoming || isOutgoing || isBotMessage
+                        ? (text || "Сообщение без текста")
+                        : formatEventSummary(event.event_type, event.event_payload)}
                     </div>
-                    <div className={isOutgoing ? "mt-1 text-[11px] text-black/70" : "mt-1 text-[11px] text-slate-500"}>
+                    <div className={isOutgoing || isBotMessage ? "mt-1 text-[11px] text-black/70" : "mt-1 text-[11px] text-slate-500"}>
                       {formatAdminDateTime(event.created_at)}
                     </div>
                   </div>
