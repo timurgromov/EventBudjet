@@ -144,6 +144,15 @@ const AdminLeadDetailPage = () => {
     },
   });
 
+  const recentEvents = query.data?.recent_events ?? [];
+  const conversationEvents = useMemo(
+    () =>
+      [...recentEvents]
+        .reverse()
+        .filter((event) => ["user_message", "admin_message_sent", "bot_started", "miniapp_opened", "app_resumed"].includes(event.event_type)),
+    [recentEvents],
+  );
+
   if (!adminToken.trim()) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть карточку лида.</div>;
   }
@@ -156,14 +165,7 @@ const AdminLeadDetailPage = () => {
     return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700">{query.error instanceof Error ? query.error.message : "Не удалось загрузить карточку лида"}</div>;
   }
 
-  const { lead, user, expenses, recent_events: recentEvents } = query.data;
-  const conversationEvents = useMemo(
-    () =>
-      [...recentEvents]
-        .reverse()
-        .filter((event) => ["user_message", "admin_message_sent", "bot_started", "miniapp_opened", "app_resumed"].includes(event.event_type)),
-    [recentEvents],
-  );
+  const { lead, user, expenses } = query.data;
 
   const handleCopy = async (text: string, label: string) => {
     try {
