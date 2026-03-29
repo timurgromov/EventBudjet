@@ -106,3 +106,55 @@ class AdminRepository:
     def delete_lead(self, lead: Lead) -> None:
         self.db.delete(lead)
         self.db.flush()
+
+    def get_bot_contact_state_map(self, lead_ids: list[int]) -> dict[int, str]:
+        if not lead_ids:
+            return {}
+
+        rows = self.db.execute(
+            select(LeadEvent.lead_id, LeadEvent.event_type, LeadEvent.event_payload, LeadEvent.created_at)
+            .where(LeadEvent.lead_id.in_(lead_ids))
+            .where(
+                LeadEvent.event_type.in_(
+                    [
+                        'admin_message_sent',
+                        'user_message',
+                        'bot_message_sent',
+                        'bot_started',
+                        'miniapp_opened',
+                        'app_resumed',
+                    ]
+                )
+            )
+            .order_by(LeadEvent.lead_id.asc(), LeadEvent.created_at.desc(), LeadEvent.id.desc())
+        ).all()
+
+        blocked_at: dict[int, object] = {}
+        active_at: dict[int, object] = {}
+
+        for lead_id, event_type, event_payload, created_at in rows:
+            payload = event_payload or {}
+            if event_type == 'admin_message_sent':
+                status = str(payload.get('status') or '')
+                blocked = bool(payload.get('blocked') is True)
+                if blocked and lead_id not in blocked_at:
+                    blocked_at[lead_id] = created_at
+                if status == 'sent' and lead_id not in active_at:
+                    active_at[lead_id] = created_at
+                continue
+
+            if lead_id not in active_at:
+                active_at[lead_id] = created_at
+
+        result: dict[int, str] = {}
+        for lead_id in lead_ids:
+            b_at = blocked_at.get(lead_id)
+            a_at = active_at.get(lead_id)
+            if b_at is not None and (a_at is None or b_at > a_at):
+                result[lead_id] = 'blocked'
+            elif a_at is not None:
+                result[lead_id] = 'active'
+            else:
+                result[lead_id] = 'unknown'
+
+        return result

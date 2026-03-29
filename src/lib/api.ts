@@ -63,6 +63,7 @@ export interface AdminLeadListItem {
   lead_status: string | null;
   last_seen_at: string | null;
   source: string | null;
+  bot_contact_state: "active" | "blocked" | "unknown" | string | null;
 }
 
 export interface AdminLeadListResponse {

@@ -39,6 +39,7 @@ class AdminService:
 
     def list_leads(self) -> AdminLeadListResponse:
         rows = self.repo.list_leads()
+        state_map = self.repo.get_bot_contact_state_map([lead.id for lead, _ in rows])
         leads = [
             AdminLeadListItem(
                 lead_id=lead.id,
@@ -53,6 +54,7 @@ class AdminService:
                 lead_status=lead.lead_status.value if lead.lead_status is not None else None,
                 last_seen_at=user.last_seen_at,
                 source=lead.source,
+                bot_contact_state=state_map.get(lead.id, 'unknown'),
             )
             for lead, user in rows
         ]
@@ -117,9 +119,12 @@ class AdminService:
 
         lead, user = pair
         status = NotificationStatus.FAILED
+        blocked = False
+        error_description: str | None = None
 
         if not settings.telegram_bot_token or settings.telegram_bot_token == 'test_bot_token':
             logger.warning('telegram_bot_token_not_configured_for_direct_message lead_id=%s', lead_id)
+            error_description = 'telegram_bot_token_not_configured'
         else:
             try:
                 url = f'https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage'
@@ -136,13 +141,28 @@ class AdminService:
                 if isinstance(body, dict) and body.get('ok') is True:
                     status = NotificationStatus.SENT
                 else:
+                    if isinstance(body, dict):
+                        error_description = str(body.get('description') or body.get('error_code') or '') or None
+                        lowered = (error_description or '').lower()
+                        blocked = 'blocked by the user' in lowered or 'user is deactivated' in lowered
                     logger.warning(
                         'telegram_direct_message_rejected lead_id=%s telegram_id=%s response=%s',
                         lead_id,
                         user.telegram_id,
                         body_raw,
                     )
+            except urllib_error.HTTPError as exc:
+                try:
+                    raw = exc.read().decode('utf-8')
+                    body = json.loads(raw)
+                    if isinstance(body, dict):
+                        error_description = str(body.get('description') or exc)
+                        lowered = error_description.lower()
+                        blocked = 'blocked by the user' in lowered or 'user is deactivated' in lowered
+                except Exception:  # noqa: BLE001
+                    error_description = str(exc)
             except (urllib_error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                error_description = str(exc)
                 logger.exception(
                     'telegram_direct_message_failed lead_id=%s telegram_id=%s error=%s',
                     lead_id,
@@ -150,6 +170,7 @@ class AdminService:
                     exc,
                 )
             except Exception as exc:  # noqa: BLE001
+                error_description = str(exc)
                 logger.exception(
                     'telegram_direct_message_unexpected_error lead_id=%s telegram_id=%s error=%s',
                     lead_id,
@@ -171,6 +192,8 @@ class AdminService:
                     'text': text,
                     'status': status.value,
                     'telegram_id': user.telegram_id,
+                    'blocked': blocked,
+                    'error': error_description,
                 },
             )
         )

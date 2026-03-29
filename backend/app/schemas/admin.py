@@ -21,6 +21,7 @@ class AdminLeadListItem(BaseModel):
     lead_status: str | None
     last_seen_at: datetime | None
     source: str | None
+    bot_contact_state: str | None = None
 
 
 class AdminLeadListResponse(BaseModel):

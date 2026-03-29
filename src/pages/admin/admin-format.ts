@@ -221,3 +221,17 @@ export const getHotLevelLabel = (score: number): string => {
   if (score >= 70) return "Тёплый";
   return "Обычный";
 };
+
+export const formatBotContactLabel = (state?: string | null): string => {
+  const normalized = normalizeValue(state);
+  if (normalized === "blocked") return "бот остановлен";
+  if (normalized === "active") return "бот активен";
+  return "статус неизвестен";
+};
+
+export const getBotContactTone = (state?: string | null): "red" | "green" | "gray" => {
+  const normalized = normalizeValue(state);
+  if (normalized === "blocked") return "red";
+  if (normalized === "active") return "green";
+  return "gray";
+};

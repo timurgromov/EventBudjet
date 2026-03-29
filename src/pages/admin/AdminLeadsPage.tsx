@@ -5,6 +5,7 @@ import { listAdminLeads, type AdminLeadListItem } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  formatBotContactLabel,
   formatAdminDateTime,
   formatAdminMoney,
   formatCityLabel,
@@ -16,6 +17,7 @@ import {
   getLeadPriorityLabel,
   getLeadPriorityScore,
   getLeadRoleLabel,
+  getBotContactTone,
   isLowPrioritySpecialist,
   isMoscowPriorityCity,
 } from "./admin-format";
@@ -27,6 +29,7 @@ interface AdminOutletContext {
 type LeadsFilter = "all" | "moscow" | "specialists";
 
 const LeadRow = ({ lead }: { lead: AdminLeadListItem }) => {
+  const contactTone = getBotContactTone(lead.bot_contact_state);
   const hotScore = getLeadHotScore({
     city: lead.city,
     role: lead.role,
@@ -45,6 +48,10 @@ const LeadRow = ({ lead }: { lead: AdminLeadListItem }) => {
     <div className="min-w-0">
       <div className="truncate text-sm font-semibold text-slate-950">{formatLeadName(lead.name, lead.username)}</div>
       <div className="mt-1 text-xs text-slate-500">lead #{lead.lead_id}</div>
+      <div className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+        <span className={contactTone === "red" ? "h-2 w-2 rounded-full bg-red-500" : contactTone === "green" ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-slate-400"} />
+        {formatBotContactLabel(lead.bot_contact_state)}
+      </div>
     </div>
     <div className="text-sm text-slate-700">
       <div>{formatCityLabel(lead.city)}</div>
@@ -220,6 +227,10 @@ const AdminLeadsPage = () => {
                   <div className="truncate text-sm font-semibold text-slate-950">{formatLeadName(lead.name, lead.username)}</div>
                   <div className="mt-1 text-xs text-slate-600">
                     {formatCityLabel(lead.city)} • {getLeadRoleLabel(lead.role)} • {formatAdminDateTime(lead.last_seen_at)}
+                  </div>
+                  <div className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+                    <span className={getBotContactTone(lead.bot_contact_state) === "red" ? "h-2 w-2 rounded-full bg-red-500" : getBotContactTone(lead.bot_contact_state) === "green" ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-slate-400"} />
+                    {formatBotContactLabel(lead.bot_contact_state)}
                   </div>
                   <div className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                     {getHotLevelLabel(hotScore)} • score {hotScore}
