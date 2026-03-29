@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.enums import NotificationStatus
+from app.models.lead_event import LeadEvent
 from app.models.user import User
 from app.repositories.admin_repository import AdminRepository
 from app.schemas.admin import (
@@ -64,7 +65,7 @@ class AdminService:
 
         lead, user = pair
         expenses = self.repo.list_expenses(lead_id)
-        events = self.repo.list_lead_events(lead_id=lead_id, limit=50)
+        events = self.repo.list_lead_events(lead_id=lead_id, limit=200)
 
         return AdminLeadDetailResponse(
             lead=LeadRead.model_validate(lead),
@@ -161,6 +162,17 @@ class AdminService:
             notification_type='direct_message',
             priority='manual',
             status=status,
+        )
+        self.repo.db.add(
+            LeadEvent(
+                lead_id=lead.id,
+                event_type='admin_message_sent',
+                event_payload={
+                    'text': text,
+                    'status': status.value,
+                    'telegram_id': user.telegram_id,
+                },
+            )
         )
         self.repo.db.commit()
 

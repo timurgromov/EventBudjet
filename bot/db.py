@@ -108,16 +108,20 @@ class BotRepository:
             ).scalar_one()
             return int(created)
 
-    def create_lead_event(self, lead_id: int, event_type: str) -> None:
+    def create_lead_event(self, lead_id: int, event_type: str, event_payload: dict[str, Any] | None = None) -> None:
         with SessionLocal.begin() as db:
             db.execute(
                 text(
                     """
                     INSERT INTO lead_events (lead_id, event_type, event_payload, created_at)
-                    VALUES (:lead_id, :event_type, NULL, now());
+                    VALUES (:lead_id, :event_type, CAST(:event_payload AS jsonb), now());
                     """
                 ),
-                {'lead_id': lead_id, 'event_type': event_type},
+                {
+                    'lead_id': lead_id,
+                    'event_type': event_type,
+                    'event_payload': json.dumps(event_payload) if event_payload is not None else None,
+                },
             )
 
     def log_admin_notification(self, lead_id: int, notification_type: str, priority: str, status: str) -> None:

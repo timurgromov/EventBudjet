@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { deleteAdminLead, getAdminLead, resetAdminLead, sendAdminMessageToLead } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
   const totalBudget = asString(p.total_budget);
   const action = asString(p.action);
   const source = asString(p.source);
+  const messageText = asString(p.text);
 
   if (eventType === "expense_added") {
     return `Добавлен расход${categoryName ? `: ${categoryName}` : ""}${amount ? ` — ${formatAdminMoney(amount)}` : ""}`;
@@ -64,6 +65,12 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
 
   if (eventType === "budget_calculated") {
     return `Пересчитан бюджет${totalBudget ? `: ${formatAdminMoney(totalBudget)}` : ""}`;
+  }
+  if (eventType === "user_message") {
+    return `Сообщение клиента${messageText ? `: ${messageText}` : ""}`;
+  }
+  if (eventType === "admin_message_sent") {
+    return `Исходящее сообщение${messageText ? `: ${messageText}` : ""}`;
   }
 
   if (eventType === "profile_completed") return "Профиль заполнен";
@@ -102,13 +109,14 @@ const AdminLeadDetailPage = () => {
 
   const directMessageMutation = useMutation({
     mutationFn: async (text: string) => sendAdminMessageToLead(adminToken, leadId, text),
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       if (result.status === "sent") {
         setDirectMessageStatus("Сообщение отправлено пользователю в Telegram.");
         setDirectMessageText("");
       } else {
         setDirectMessageStatus("Отправка не удалась. Проверь, запускал ли пользователь бота.");
       }
+      await query.refetch();
     },
     onError: (error) => {
       setDirectMessageStatus(error instanceof Error ? `Ошибка: ${error.message}` : "Ошибка отправки сообщения.");
@@ -149,6 +157,13 @@ const AdminLeadDetailPage = () => {
   }
 
   const { lead, user, expenses, recent_events: recentEvents } = query.data;
+  const conversationEvents = useMemo(
+    () =>
+      [...recentEvents]
+        .reverse()
+        .filter((event) => ["user_message", "admin_message_sent", "bot_started", "miniapp_opened", "app_resumed"].includes(event.event_type)),
+    [recentEvents],
+  );
 
   const handleCopy = async (text: string, label: string) => {
     try {
@@ -185,91 +200,43 @@ const AdminLeadDetailPage = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <Link to="/admin/leads" className="text-sm text-slate-500 underline underline-offset-4">Назад к лидам</Link>
-            <h2 className="mt-2 text-2xl font-serif text-slate-950">{formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}</h2>
-            <div className="mt-1 text-sm text-slate-600">lead #{lead.id} • telegram_id {user.telegram_id}</div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {user.username ? (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <Link to="/admin/leads" className="text-sm text-slate-500 underline underline-offset-4">Назад к лидам</Link>
+              <h2 className="mt-2 text-2xl font-serif text-slate-950">{formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}</h2>
+              <div className="mt-1 text-sm text-slate-600">lead #{lead.id} • telegram_id {user.telegram_id}</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {user.username ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    onClick={() => handleCopy(`@${user.username}`, "Username")}
+                  >
+                    Копировать @username
+                  </Button>
+                ) : null}
                 <Button
                   variant="outline"
                   size="sm"
                   className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                  onClick={() => handleCopy(`@${user.username}`, "Username")}
+                  onClick={() => handleCopy(String(user.telegram_id), "Telegram ID")}
                 >
-                  Копировать @username
+                  Копировать telegram_id
                 </Button>
-              ) : null}
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                onClick={() => handleCopy(String(user.telegram_id), "Telegram ID")}
-              >
-                Копировать telegram_id
-              </Button>
+              </div>
+              {copyStatus ? <div className="mt-2 text-xs text-emerald-700">{copyStatus}</div> : null}
             </div>
-            {copyStatus ? <div className="mt-2 text-xs text-emerald-700">{copyStatus}</div> : null}
+            <div className="rounded-xl bg-slate-50 px-4 py-3 text-right">
+              <div className="text-xs uppercase tracking-[0.14em] text-slate-500">Итоговый бюджет</div>
+              <div className="mt-1 text-2xl font-semibold text-slate-950">{formatAdminMoney(lead.total_budget)}</div>
+            </div>
           </div>
-          <div className="rounded-xl bg-slate-50 px-4 py-3 text-right">
-            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">Итоговый бюджет</div>
-            <div className="mt-1 text-2xl font-semibold text-slate-950">{formatAdminMoney(lead.total_budget)}</div>
-          </div>
         </div>
-      </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-3 text-lg font-semibold text-slate-950">Сообщение пользователю</div>
-        <div className="mb-2 text-sm text-slate-600">
-          Отправка персонального сообщения в бот пользователю {formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}.
-        </div>
-        <Textarea
-          value={directMessageText}
-          onChange={(e) => setDirectMessageText(e.target.value)}
-          placeholder="Введите сообщение для пользователя..."
-          className="min-h-[110px] bg-white"
-        />
-        <div className="mt-3 flex items-center gap-3">
-          <Button
-            onClick={handleDirectMessageSend}
-            disabled={!directMessageText.trim() || directMessageMutation.isPending}
-          >
-            {directMessageMutation.isPending ? "Отправляю..." : "Отправить сообщение"}
-          </Button>
-          {directMessageStatus ? (
-            <div className="text-sm text-slate-600">{directMessageStatus}</div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
-        <div className="mb-2 text-lg font-semibold text-slate-950">Управление лидом</div>
-        <div className="text-sm text-slate-600">
-          Сброс полезен для ретеста. Удаление окончательно уберёт лид из админки.
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Button
-            onClick={handleResetLead}
-            disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
-            className="bg-[#E6BF3A] text-black hover:bg-[#d4af34]"
-          >
-            {resetLeadMutation.isPending ? "Сбрасываю..." : "Сбросить данные"}
-          </Button>
-          <Button
-            onClick={handleDeleteLead}
-            disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
-            variant="destructive"
-          >
-            {deleteLeadMutation.isPending ? "Удаляю..." : "Удалить лид"}
-          </Button>
-          {dangerStatus ? <div className="text-sm text-slate-700">{dangerStatus}</div> : null}
-        </div>
-      </section>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 text-lg font-semibold text-slate-950">Профиль</div>
           <div className="grid gap-3 text-sm text-slate-700 md:grid-cols-2">
@@ -305,30 +272,87 @@ const AdminLeadDetailPage = () => {
             </div>
           )}
         </section>
+
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
+          <div className="mb-2 text-lg font-semibold text-slate-950">Управление лидом</div>
+          <div className="text-sm text-slate-600">
+            Сброс полезен для ретеста. Удаление окончательно уберёт лид из админки.
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button
+              onClick={handleResetLead}
+              disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
+              className="bg-[#E6BF3A] text-black hover:bg-[#d4af34]"
+            >
+              {resetLeadMutation.isPending ? "Сбрасываю..." : "Сбросить данные"}
+            </Button>
+            <Button
+              onClick={handleDeleteLead}
+              disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
+              variant="destructive"
+            >
+              {deleteLeadMutation.isPending ? "Удаляю..." : "Удалить лид"}
+            </Button>
+            {dangerStatus ? <div className="text-sm text-slate-700">{dangerStatus}</div> : null}
+          </div>
+        </section>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 text-lg font-semibold text-slate-950">Последние события</div>
-        {recentEvents.length === 0 ? (
-          <div className="text-sm text-slate-600">Событий пока нет.</div>
-        ) : (
-          <div className="space-y-3">
-            {recentEvents.map((event) => (
-              <div key={event.id} className="rounded-xl border border-slate-200 p-4">
-                <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                  <div className="text-sm font-semibold text-slate-950">{formatEventSummary(event.event_type, event.event_payload)}</div>
-                  <div className="text-xs text-slate-500">{formatAdminDateTime(event.created_at)}</div>
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm xl:sticky xl:top-6 xl:h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
+        <div className="border-b border-slate-200 px-4 py-3">
+          <div className="text-lg font-semibold text-slate-950">Диалог с клиентом</div>
+          <div className="text-sm text-slate-500">Сообщения клиента, ваши ответы и ключевые точки входа.</div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50/70">
+          {conversationEvents.length === 0 ? (
+            <div className="text-sm text-slate-600">Пока нет событий переписки.</div>
+          ) : (
+            conversationEvents.map((event) => {
+              const isOutgoing = event.event_type === "admin_message_sent";
+              const isIncoming = event.event_type === "user_message";
+              const text = asString(event.event_payload?.text);
+
+              return (
+                <div key={event.id} className={isOutgoing ? "flex justify-end" : "flex justify-start"}>
+                  <div
+                    className={isOutgoing
+                      ? "max-w-[88%] rounded-2xl rounded-br-md bg-[#E6BF3A] px-3 py-2 text-sm text-black"
+                      : isIncoming
+                        ? "max-w-[88%] rounded-2xl rounded-bl-md bg-white border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                        : "max-w-[92%] rounded-xl bg-slate-200 px-3 py-2 text-xs text-slate-700"}
+                  >
+                    <div className="whitespace-pre-wrap break-words">
+                      {isIncoming || isOutgoing ? (text || "Сообщение без текста") : formatEventSummary(event.event_type, event.event_payload)}
+                    </div>
+                    <div className={isOutgoing ? "mt-1 text-[11px] text-black/70" : "mt-1 text-[11px] text-slate-500"}>
+                      {formatAdminDateTime(event.created_at)}
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-1 text-xs text-slate-500">технический тип: {event.event_type}</div>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-xs text-slate-500">Показать payload</summary>
-                  <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">{JSON.stringify(event.event_payload ?? {}, null, 2)}</pre>
-                </details>
-              </div>
-            ))}
+              );
+            })
+          )}
+        </div>
+
+        <div className="border-t border-slate-200 p-4 space-y-3 bg-white">
+          <Textarea
+            value={directMessageText}
+            onChange={(e) => setDirectMessageText(e.target.value)}
+            placeholder="Напишите сообщение клиенту..."
+            className="min-h-[96px] bg-white"
+          />
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleDirectMessageSend}
+              disabled={!directMessageText.trim() || directMessageMutation.isPending}
+            >
+              {directMessageMutation.isPending ? "Отправляю..." : "Отправить сообщение"}
+            </Button>
+            {directMessageStatus ? <div className="text-sm text-slate-600">{directMessageStatus}</div> : null}
           </div>
-        )}
-      </section>
+        </div>
+      </div>
     </div>
   );
 };

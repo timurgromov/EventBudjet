@@ -108,6 +108,35 @@ async def start_handler(message: Message) -> None:
 
     await send_start_message_with_retry(message)
 
+
+@router.message()
+async def user_message_handler(message: Message) -> None:
+    if message.from_user is None:
+        return
+    if message.chat.type != 'private':
+        return
+    if isinstance(message.text, str) and message.text.startswith('/start'):
+        return
+
+    telegram_user = {
+        'id': message.from_user.id,
+        'username': message.from_user.username,
+        'first_name': message.from_user.first_name,
+        'last_name': message.from_user.last_name,
+        'language_code': message.from_user.language_code,
+    }
+    user_id, _visits_count = repository.create_or_update_user(telegram_user)
+    lead_id = repository.get_or_create_lead_for_user(user_id)
+
+    text_value = (message.text or message.caption or '').strip()
+    payload = {
+        'text': text_value[:3000],
+        'message_id': message.message_id,
+        'has_media': message.content_type not in {'text'},
+        'content_type': message.content_type,
+    }
+    repository.create_lead_event(lead_id, 'user_message', payload)
+
 async def main() -> None:
     READY_FILE.unlink(missing_ok=True)
     session: AiohttpSession | None = None
