@@ -305,7 +305,7 @@ const AdminLeadDetailPage = () => {
         </section>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm xl:sticky xl:top-6 xl:h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm h-[72vh] xl:sticky xl:top-6 xl:h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
         <div className="border-b border-slate-200 px-4 py-3">
           <div className="text-lg font-semibold text-slate-950">Диалог с клиентом</div>
           <div className="text-sm text-slate-500">Сообщения клиента, ваши ответы и ключевые точки входа.</div>
