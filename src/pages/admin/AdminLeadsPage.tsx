@@ -1,9 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useOutletContext, Link } from "react-router-dom";
-import { listAdminLeads, type AdminLeadListItem } from "@/lib/api";
+import { MoreHorizontal, Trash2 } from "lucide-react";
+import { deleteAdminLead, listAdminLeads, type AdminLeadListItem } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   formatBotContactLabel,
   formatAdminDateTime,
@@ -28,7 +45,7 @@ interface AdminOutletContext {
 
 type LeadsFilter = "all" | "moscow" | "specialists";
 
-const LeadRow = ({ lead }: { lead: AdminLeadListItem }) => {
+const LeadRow = ({ lead, onRequestDelete }: { lead: AdminLeadListItem; onRequestDelete: (lead: AdminLeadListItem) => void }) => {
   const contactTone = getBotContactTone(lead.bot_contact_state);
   const hotScore = getLeadHotScore({
     city: lead.city,
@@ -43,8 +60,39 @@ const LeadRow = ({ lead }: { lead: AdminLeadListItem }) => {
   return (
   <Link
     to={`/admin/leads/${lead.lead_id}`}
-    className="grid gap-2 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 hover:bg-slate-50 md:grid-cols-[minmax(0,1.3fr)_0.9fr_0.8fr_0.8fr_0.9fr]"
+    className="relative grid gap-2 rounded-xl border border-slate-200 bg-white p-4 pr-12 transition-colors hover:border-slate-300 hover:bg-slate-50 md:grid-cols-[minmax(0,1.3fr)_0.9fr_0.8fr_0.8fr_0.9fr]"
   >
+    <div className="absolute right-2 top-2 z-10">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            className="text-rose-700 focus:text-rose-700"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onRequestDelete(lead);
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Удалить лид
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
     <div className="min-w-0">
       <div className="truncate text-sm font-semibold text-slate-950">{formatLeadName(lead.name, lead.username)}</div>
       <div className="mt-1 text-xs text-slate-500">lead #{lead.lead_id}</div>
@@ -78,6 +126,9 @@ const AdminLeadsPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<LeadsFilter>("all");
+  const [deleteLead, setDeleteLead] = useState<AdminLeadListItem | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteStatus, setDeleteStatus] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["admin-leads", adminToken],
     queryFn: () => listAdminLeads(adminToken),
@@ -86,6 +137,20 @@ const AdminLeadsPage = () => {
 
   const leads = query.data?.leads ?? [];
   const normalizedSearch = search.trim().toLowerCase();
+  const canDelete = deleteConfirmText.trim() === "DELETE";
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (leadId: number) => deleteAdminLead(adminToken, leadId),
+    onSuccess: async () => {
+      setDeleteStatus("Лид удалён.");
+      setDeleteLead(null);
+      setDeleteConfirmText("");
+      await query.refetch();
+    },
+    onError: (error) => {
+      setDeleteStatus(error instanceof Error ? `Ошибка удаления: ${error.message}` : "Ошибка удаления.");
+    },
+  });
 
   const filteredLeads = useMemo(() => {
     const bySearch = normalizedSearch
@@ -163,9 +228,49 @@ const AdminLeadsPage = () => {
 
   return (
     <div className="space-y-4">
+      <AlertDialog
+        open={Boolean(deleteLead)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteLead(null);
+            setDeleteConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить лида?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие необратимо. Для подтверждения введите <span className="font-semibold text-slate-900">DELETE</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmText}
+            onChange={(event) => setDeleteConfirmText(event.target.value)}
+            placeholder="Введите DELETE"
+            className="mt-1"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLeadMutation.isPending}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!canDelete || deleteLeadMutation.isPending || !deleteLead}
+              className="bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+              onClick={(event) => {
+                event.preventDefault();
+                if (!deleteLead || !canDelete) return;
+                deleteLeadMutation.mutate(deleteLead.lead_id);
+              }}
+            >
+              {deleteLeadMutation.isPending ? "Удаляю..." : "Удалить"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="text-lg font-semibold text-slate-950">Лиды</div>
         <div className="mt-1 text-sm text-slate-600">Всего: {leads.length} • приоритет Москва/МО: {moscowHighPriority}</div>
+        {deleteStatus ? <div className="mt-2 text-xs text-slate-600">{deleteStatus}</div> : null}
         <div className="mt-3">
           <Input
             value={search}
@@ -246,7 +351,15 @@ const AdminLeadsPage = () => {
       ) : (
         <div className="space-y-3">
           {visibleLeads.map((lead) => (
-            <LeadRow key={lead.lead_id} lead={lead} />
+            <LeadRow
+              key={lead.lead_id}
+              lead={lead}
+              onRequestDelete={(leadRow) => {
+                setDeleteStatus(null);
+                setDeleteLead(leadRow);
+                setDeleteConfirmText("");
+              }}
+            />
           ))}
         </div>
       )}
