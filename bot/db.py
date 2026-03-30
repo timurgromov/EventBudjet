@@ -57,6 +57,13 @@ class LeadSnapshot:
     expenses: list[LeadExpenseSnapshot]
 
 
+@dataclass
+class ReminderCandidate:
+    lead_id: int
+    telegram_id: int
+    reminder_code: str
+
+
 class BotRepository:
     def create_or_update_user(self, telegram_user: dict[str, Any]) -> tuple[int, int]:
         with SessionLocal.begin() as db:
@@ -249,6 +256,63 @@ class BotRepository:
                     continue
                 current.events.append(event)
             return batches
+
+    def list_due_reminder_candidates(self, limit: int, cooldown_days: int) -> list[ReminderCandidate]:
+        with SessionLocal.begin() as db:
+            rows = db.execute(
+                text(
+                    """
+                    WITH base AS (
+                      SELECT
+                        l.id AS lead_id,
+                        u.telegram_id,
+                        u.last_seen_at
+                      FROM leads l
+                      JOIN users u ON u.id = l.user_id
+                      WHERE u.last_seen_at IS NOT NULL
+                        AND l.lead_status <> 'archived'
+                    ),
+                    candidates AS (
+                      SELECT lead_id, telegram_id, 'reminder_d2'::text AS reminder_code, 2 AS threshold_days, 1 AS prio FROM base
+                      UNION ALL
+                      SELECT lead_id, telegram_id, 'reminder_d7'::text AS reminder_code, 7 AS threshold_days, 2 AS prio FROM base
+                      UNION ALL
+                      SELECT lead_id, telegram_id, 'reminder_d14'::text AS reminder_code, 14 AS threshold_days, 3 AS prio FROM base
+                    )
+                    SELECT c.lead_id, c.telegram_id, c.reminder_code
+                    FROM candidates c
+                    JOIN base b ON b.lead_id = c.lead_id
+                    WHERE b.last_seen_at <= now() - make_interval(days => c.threshold_days)
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM admin_notifications an
+                        WHERE an.lead_id = c.lead_id
+                          AND an.notification_type = c.reminder_code
+                          AND an.status = 'sent'
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM admin_notifications an2
+                        WHERE an2.lead_id = c.lead_id
+                          AND an2.notification_type LIKE 'reminder_d%'
+                          AND an2.status = 'sent'
+                          AND an2.created_at >= now() - make_interval(days => :cooldown_days)
+                      )
+                    ORDER BY c.prio ASC, b.last_seen_at ASC
+                    LIMIT :limit;
+                    """
+                ),
+                {'limit': limit, 'cooldown_days': cooldown_days},
+            ).mappings().all()
+
+            return [
+                ReminderCandidate(
+                    lead_id=int(row['lead_id']),
+                    telegram_id=int(row['telegram_id']),
+                    reminder_code=str(row['reminder_code']),
+                )
+                for row in rows
+            ]
 
     def get_lead_snapshot(self, lead_id: int) -> LeadSnapshot | None:
         with SessionLocal.begin() as db:

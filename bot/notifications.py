@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -8,9 +9,15 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
 
 from bot.config import settings
-from bot.db import BotRepository, LeadSnapshot, PendingLeadEvent, PendingLeadEventBatch
+from bot.db import BotRepository, LeadSnapshot, PendingLeadEvent, PendingLeadEventBatch, ReminderCandidate
 
 logger = logging.getLogger(__name__)
+
+REMINDER_TEXTS: dict[str, str] = {
+    'reminder_d2': 'Вы давно не заходили в свадебный калькулятор. Продолжите с того места, где остановились.',
+    'reminder_d7': 'Привет! Если подготовка уже двигается, загляните в калькулятор на 5 минут — обновить смету и сверить приоритеты.',
+    'reminder_d14': 'Привет! Часто суммы меняются по ходу подготовки. Можно быстро вернуться в калькулятор и проверить, всё ли актуально.',
+}
 
 
 class AdminNotificationService:
@@ -32,6 +39,41 @@ class AdminNotificationService:
             notification_keys=[f'lead_event:{event.id}' for event in batch.events],
             actor_telegram_id=batch.telegram_id,
         )
+
+    async def send_reminder(self, candidate: ReminderCandidate) -> bool:
+        text = REMINDER_TEXTS.get(candidate.reminder_code)
+        if not text:
+            return False
+
+        if settings.bot_dry_run or settings.bot_reminder_dry_run:
+            logger.info(
+                'bot_dry_run_reminder lead_id=%s telegram_id=%s code=%s text=%s',
+                candidate.lead_id,
+                candidate.telegram_id,
+                candidate.reminder_code,
+                text,
+            )
+            sent = True
+        else:
+            sent = await _safe_send_message(bot=self.bot, chat_id=candidate.telegram_id, text=text)
+
+        status = 'sent' if sent else 'failed'
+        self.repository.log_admin_notification(
+            lead_id=candidate.lead_id,
+            notification_type=candidate.reminder_code,
+            priority='low',
+            status=status,
+        )
+        self.repository.create_lead_event(
+            lead_id=candidate.lead_id,
+            event_type='bot_message_sent',
+            event_payload={
+                'text': text,
+                'source': candidate.reminder_code,
+                'status': status,
+            },
+        )
+        return sent
 
     async def _send_and_log(
         self,
@@ -495,8 +537,13 @@ async def run_lead_event_notifier(
     repository: BotRepository,
     stop_event: asyncio.Event,
 ) -> None:
+    next_reminder_check_at = 0.0
     while not stop_event.is_set():
         await process_pending_events_once(service, repository)
+        now = time.monotonic()
+        if now >= next_reminder_check_at:
+            await process_due_reminders_once(service, repository)
+            next_reminder_check_at = now + max(5, settings.bot_reminder_check_interval_seconds)
         await asyncio.sleep(settings.bot_event_poll_interval_seconds)
 
 
@@ -510,3 +557,37 @@ async def process_pending_events_once(service: AdminNotificationService, reposit
         await service.notify_lead_event_batch(batch)
         processed += len(batch.events)
     return processed
+
+
+async def process_due_reminders_once(service: AdminNotificationService, repository: BotRepository) -> int:
+    if not settings.bot_reminder_enabled:
+        return 0
+
+    candidates = repository.list_due_reminder_candidates(
+        limit=settings.bot_reminder_max_per_run,
+        cooldown_days=settings.bot_reminder_cooldown_days,
+    )
+    if candidates:
+        logger.info('reminder_candidates_found count=%s dry_run=%s', len(candidates), settings.bot_reminder_dry_run)
+    sent = 0
+    for candidate in candidates:
+        ok = await service.send_reminder(candidate)
+        if ok:
+            sent += 1
+        await asyncio.sleep(0)
+    return sent
+
+
+async def _safe_send_message(bot: Bot, chat_id: int, text: str) -> bool:
+    try:
+        await bot.send_message(chat_id=chat_id, text=text)
+        return True
+    except TelegramRetryAfter as exc:
+        await asyncio.sleep(exc.retry_after)
+        try:
+            await bot.send_message(chat_id=chat_id, text=text)
+            return True
+        except Exception:
+            return False
+    except Exception:
+        return False
