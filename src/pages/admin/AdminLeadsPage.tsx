@@ -78,16 +78,16 @@ const LeadRow = ({ lead, onRequestDelete }: { lead: AdminLeadListItem; onRequest
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-44 border-slate-200 bg-white">
           <DropdownMenuItem
-            className="text-rose-700 focus:text-rose-700"
+            className="text-slate-700 focus:bg-slate-50 focus:text-slate-900"
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
               onRequestDelete(lead);
             }}
           >
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="mr-2 h-4 w-4 text-slate-500" />
             Удалить лид
           </DropdownMenuItem>
         </DropdownMenuContent>
