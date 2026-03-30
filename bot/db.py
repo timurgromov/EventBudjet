@@ -317,21 +317,22 @@ class BotRepository:
 
                 reminder_code: str | None = None
                 reason = ''
-                if inactivity_days >= 14:
-                    if not d14_after_seen:
-                        reminder_code = 'reminder_d14'
-                        reason = 'inactivity_14d_first'
-                    elif d14_at is not None and (now - d14_at).total_seconds() >= 14 * 86400:
-                        reminder_code = 'reminder_d14'
-                        reason = 'inactivity_14d_periodic'
-                elif inactivity_days >= 7:
-                    if not d7_after_seen:
-                        reminder_code = 'reminder_d7'
-                        reason = 'inactivity_7d'
-                elif inactivity_days >= 2:
-                    if not d2_after_seen:
+                if not d2_after_seen:
+                    if inactivity_days >= 2:
                         reminder_code = 'reminder_d2'
                         reason = 'inactivity_2d'
+                elif not d7_after_seen:
+                    if d2_at is not None and (now - d2_at).total_seconds() >= 7 * 86400:
+                        reminder_code = 'reminder_d7'
+                        reason = 'followup_7d_after_d2'
+                elif not d14_after_seen:
+                    if d7_at is not None and (now - d7_at).total_seconds() >= 14 * 86400:
+                        reminder_code = 'reminder_d14'
+                        reason = 'followup_14d_after_d7'
+                else:
+                    if d14_at is not None and (now - d14_at).total_seconds() >= 14 * 86400:
+                        reminder_code = 'reminder_d14'
+                        reason = 'periodic_14d_after_d14'
 
                 if reminder_code:
                     candidates.append(
