@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 import json
@@ -62,6 +63,7 @@ class ReminderCandidate:
     lead_id: int
     telegram_id: int
     reminder_code: str
+    reason: str
 
 
 class BotRepository:
@@ -257,62 +259,90 @@ class BotRepository:
                 current.events.append(event)
             return batches
 
-    def list_due_reminder_candidates(self, limit: int, cooldown_days: int) -> list[ReminderCandidate]:
+    def list_due_reminder_candidates(self, limit: int) -> list[ReminderCandidate]:
         with SessionLocal.begin() as db:
             rows = db.execute(
                 text(
                     """
-                    WITH base AS (
-                      SELECT
-                        l.id AS lead_id,
-                        u.telegram_id,
-                        u.last_seen_at
-                      FROM leads l
-                      JOIN users u ON u.id = l.user_id
-                      WHERE u.last_seen_at IS NOT NULL
-                        AND l.lead_status <> 'archived'
-                    ),
-                    candidates AS (
-                      SELECT lead_id, telegram_id, 'reminder_d2'::text AS reminder_code, 2 AS threshold_days, 1 AS prio FROM base
-                      UNION ALL
-                      SELECT lead_id, telegram_id, 'reminder_d7'::text AS reminder_code, 7 AS threshold_days, 2 AS prio FROM base
-                      UNION ALL
-                      SELECT lead_id, telegram_id, 'reminder_d14'::text AS reminder_code, 14 AS threshold_days, 3 AS prio FROM base
+                    WITH latest AS (
+                      SELECT DISTINCT ON (an.lead_id)
+                        an.lead_id,
+                        an.notification_type,
+                        an.created_at
+                      FROM admin_notifications an
+                      WHERE an.status = 'sent'
+                        AND an.notification_type IN ('reminder_d2', 'reminder_d7', 'reminder_d14')
+                      ORDER BY an.lead_id, an.created_at DESC, an.id DESC
                     )
-                    SELECT c.lead_id, c.telegram_id, c.reminder_code
-                    FROM candidates c
-                    JOIN base b ON b.lead_id = c.lead_id
-                    WHERE b.last_seen_at <= now() - make_interval(days => c.threshold_days)
-                      AND NOT EXISTS (
-                        SELECT 1
-                        FROM admin_notifications an
-                        WHERE an.lead_id = c.lead_id
-                          AND an.notification_type = c.reminder_code
-                          AND an.status = 'sent'
-                      )
-                      AND NOT EXISTS (
-                        SELECT 1
-                        FROM admin_notifications an2
-                        WHERE an2.lead_id = c.lead_id
-                          AND an2.notification_type LIKE 'reminder_d%'
-                          AND an2.status = 'sent'
-                          AND an2.created_at >= now() - make_interval(days => :cooldown_days)
-                      )
-                    ORDER BY c.prio ASC, b.last_seen_at ASC
+                    SELECT
+                      l.id AS lead_id,
+                      u.telegram_id,
+                      u.last_seen_at,
+                      latest.notification_type AS last_reminder_type,
+                      latest.created_at AS last_reminder_at
+                    FROM leads l
+                    JOIN users u ON u.id = l.user_id
+                    LEFT JOIN latest ON latest.lead_id = l.id
+                    WHERE u.last_seen_at IS NOT NULL
+                      AND l.lead_status <> 'archived'
+                    ORDER BY u.last_seen_at ASC
                     LIMIT :limit;
                     """
                 ),
-                {'limit': limit, 'cooldown_days': cooldown_days},
+                {'limit': max(limit * 5, 200)},
             ).mappings().all()
+            now = datetime.now(timezone.utc)
+            candidates: list[ReminderCandidate] = []
+            for row in rows:
+                last_seen_at = row['last_seen_at']
+                if last_seen_at is None:
+                    continue
+                if last_seen_at.tzinfo is None:
+                    last_seen_at = last_seen_at.replace(tzinfo=timezone.utc)
 
-            return [
-                ReminderCandidate(
-                    lead_id=int(row['lead_id']),
-                    telegram_id=int(row['telegram_id']),
-                    reminder_code=str(row['reminder_code']),
-                )
-                for row in rows
-            ]
+                last_reminder_type = row['last_reminder_type']
+                last_reminder_at = row['last_reminder_at']
+                if last_reminder_at is not None and last_reminder_at.tzinfo is None:
+                    last_reminder_at = last_reminder_at.replace(tzinfo=timezone.utc)
+
+                # If user returned after the previous reminder, restart the sequence from d2.
+                stage = str(last_reminder_type) if last_reminder_type and last_reminder_at and last_seen_at <= last_reminder_at else None
+                ref_time = last_reminder_at if stage else last_seen_at
+                if ref_time is None:
+                    continue
+
+                age_days = (now - ref_time).total_seconds() / 86400
+                reminder_code: str | None = None
+                reason = ''
+                if stage is None:
+                    if age_days >= 2:
+                        reminder_code = 'reminder_d2'
+                        reason = 'inactive_after_last_seen'
+                elif stage == 'reminder_d2':
+                    if age_days >= 7:
+                        reminder_code = 'reminder_d7'
+                        reason = 'followup_after_d2'
+                elif stage == 'reminder_d7':
+                    if age_days >= 14:
+                        reminder_code = 'reminder_d14'
+                        reason = 'followup_after_d7'
+                elif stage == 'reminder_d14':
+                    if age_days >= 14:
+                        reminder_code = 'reminder_d14'
+                        reason = 'periodic_after_d14'
+
+                if reminder_code:
+                    candidates.append(
+                        ReminderCandidate(
+                            lead_id=int(row['lead_id']),
+                            telegram_id=int(row['telegram_id']),
+                            reminder_code=reminder_code,
+                            reason=reason,
+                        )
+                    )
+                    if len(candidates) >= limit:
+                        break
+            return candidates
 
     def get_lead_snapshot(self, lead_id: int) -> LeadSnapshot | None:
         with SessionLocal.begin() as db:

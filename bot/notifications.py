@@ -47,10 +47,11 @@ class AdminNotificationService:
 
         if settings.bot_dry_run or settings.bot_reminder_dry_run:
             logger.info(
-                'bot_dry_run_reminder lead_id=%s telegram_id=%s code=%s text=%s',
+                'bot_dry_run_reminder lead_id=%s telegram_id=%s code=%s reason=%s text=%s',
                 candidate.lead_id,
                 candidate.telegram_id,
                 candidate.reminder_code,
+                candidate.reason,
                 text,
             )
             sent = True
@@ -70,6 +71,7 @@ class AdminNotificationService:
             event_payload={
                 'text': text,
                 'source': candidate.reminder_code,
+                'reason': candidate.reason,
                 'status': status,
             },
         )
@@ -563,10 +565,7 @@ async def process_due_reminders_once(service: AdminNotificationService, reposito
     if not settings.bot_reminder_enabled:
         return 0
 
-    candidates = repository.list_due_reminder_candidates(
-        limit=settings.bot_reminder_max_per_run,
-        cooldown_days=settings.bot_reminder_cooldown_days,
-    )
+    candidates = repository.list_due_reminder_candidates(limit=settings.bot_reminder_max_per_run)
     if candidates:
         logger.info('reminder_candidates_found count=%s dry_run=%s', len(candidates), settings.bot_reminder_dry_run)
     sent = 0

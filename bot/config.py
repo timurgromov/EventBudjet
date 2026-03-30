@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     bot_startup_retry_seconds: int = 5
     bot_telegram_proxy_url: str | None = None
     bot_reminder_enabled: bool = False
-    bot_reminder_dry_run: bool = True
+    bot_reminder_dry_run: bool = False
     bot_reminder_check_interval_seconds: int = 300
     bot_reminder_max_per_run: int = 30
     bot_reminder_cooldown_days: int = 10
