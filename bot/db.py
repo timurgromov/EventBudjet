@@ -311,26 +311,26 @@ class BotRepository:
                     d14_at = d14_at.replace(tzinfo=timezone.utc)
 
                 inactivity_days = (now - last_seen_at).total_seconds() / 86400
-                d2_after_seen = d2_at is not None and d2_at >= last_seen_at
-                d7_after_seen = d7_at is not None and d7_at >= last_seen_at
-                d14_after_seen = d14_at is not None and d14_at >= last_seen_at
-
                 reminder_code: str | None = None
                 reason = ''
-                if not d2_after_seen:
+                # Stage progression is monotonic:
+                # d2 -> d7 -> d14.
+                # Any new visit resets inactivity timer, but does not roll stage back to d2.
+                if d2_at is None:
                     if inactivity_days >= 2:
                         reminder_code = 'reminder_d2'
                         reason = 'inactivity_2d'
-                elif not d7_after_seen:
-                    if d2_at is not None and (now - d2_at).total_seconds() >= 7 * 86400:
+                elif d7_at is None:
+                    if inactivity_days >= 7:
                         reminder_code = 'reminder_d7'
-                        reason = 'followup_7d_after_d2'
-                elif not d14_after_seen:
-                    if d7_at is not None and (now - d7_at).total_seconds() >= 14 * 86400:
+                        reason = 'inactivity_7d_after_d2_stage'
+                elif d14_at is None:
+                    if inactivity_days >= 14:
                         reminder_code = 'reminder_d14'
-                        reason = 'followup_14d_after_d7'
+                        reason = 'inactivity_14d_after_d7_stage'
                 else:
-                    if d14_at is not None and (now - d14_at).total_seconds() >= 14 * 86400:
+                    # Keep a gentle periodic ping while user remains inactive.
+                    if inactivity_days >= 14 and (now - d14_at).total_seconds() >= 14 * 86400:
                         reminder_code = 'reminder_d14'
                         reason = 'periodic_14d_after_d14'
 
