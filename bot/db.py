@@ -264,25 +264,25 @@ class BotRepository:
             rows = db.execute(
                 text(
                     """
-                    WITH latest AS (
-                      SELECT DISTINCT ON (an.lead_id)
+                    WITH reminder_stats AS (
+                      SELECT
                         an.lead_id,
-                        an.notification_type,
-                        an.created_at
+                        MAX(an.created_at) FILTER (WHERE an.notification_type = 'reminder_d2' AND an.status = 'sent') AS d2_at,
+                        MAX(an.created_at) FILTER (WHERE an.notification_type = 'reminder_d7' AND an.status = 'sent') AS d7_at,
+                        MAX(an.created_at) FILTER (WHERE an.notification_type = 'reminder_d14' AND an.status = 'sent') AS d14_at
                       FROM admin_notifications an
-                      WHERE an.status = 'sent'
-                        AND an.notification_type IN ('reminder_d2', 'reminder_d7', 'reminder_d14')
-                      ORDER BY an.lead_id, an.created_at DESC, an.id DESC
+                      GROUP BY an.lead_id
                     )
                     SELECT
                       l.id AS lead_id,
                       u.telegram_id,
                       u.last_seen_at,
-                      latest.notification_type AS last_reminder_type,
-                      latest.created_at AS last_reminder_at
+                      rs.d2_at,
+                      rs.d7_at,
+                      rs.d14_at
                     FROM leads l
                     JOIN users u ON u.id = l.user_id
-                    LEFT JOIN latest ON latest.lead_id = l.id
+                    LEFT JOIN reminder_stats rs ON rs.lead_id = l.id
                     WHERE u.last_seen_at IS NOT NULL
                       AND l.lead_status <> 'archived'
                     ORDER BY u.last_seen_at ASC
@@ -300,36 +300,38 @@ class BotRepository:
                 if last_seen_at.tzinfo is None:
                     last_seen_at = last_seen_at.replace(tzinfo=timezone.utc)
 
-                last_reminder_type = row['last_reminder_type']
-                last_reminder_at = row['last_reminder_at']
-                if last_reminder_at is not None and last_reminder_at.tzinfo is None:
-                    last_reminder_at = last_reminder_at.replace(tzinfo=timezone.utc)
+                d2_at = row['d2_at']
+                d7_at = row['d7_at']
+                d14_at = row['d14_at']
+                if d2_at is not None and d2_at.tzinfo is None:
+                    d2_at = d2_at.replace(tzinfo=timezone.utc)
+                if d7_at is not None and d7_at.tzinfo is None:
+                    d7_at = d7_at.replace(tzinfo=timezone.utc)
+                if d14_at is not None and d14_at.tzinfo is None:
+                    d14_at = d14_at.replace(tzinfo=timezone.utc)
 
-                # If user returned after the previous reminder, restart the sequence from d2.
-                stage = str(last_reminder_type) if last_reminder_type and last_reminder_at and last_seen_at <= last_reminder_at else None
-                ref_time = last_reminder_at if stage else last_seen_at
-                if ref_time is None:
-                    continue
+                inactivity_days = (now - last_seen_at).total_seconds() / 86400
+                d2_after_seen = d2_at is not None and d2_at >= last_seen_at
+                d7_after_seen = d7_at is not None and d7_at >= last_seen_at
+                d14_after_seen = d14_at is not None and d14_at >= last_seen_at
 
-                age_days = (now - ref_time).total_seconds() / 86400
                 reminder_code: str | None = None
                 reason = ''
-                if stage is None:
-                    if age_days >= 2:
-                        reminder_code = 'reminder_d2'
-                        reason = 'inactive_after_last_seen'
-                elif stage == 'reminder_d2':
-                    if age_days >= 7:
+                if inactivity_days >= 14:
+                    if not d14_after_seen:
+                        reminder_code = 'reminder_d14'
+                        reason = 'inactivity_14d_first'
+                    elif d14_at is not None and (now - d14_at).total_seconds() >= 14 * 86400:
+                        reminder_code = 'reminder_d14'
+                        reason = 'inactivity_14d_periodic'
+                elif inactivity_days >= 7:
+                    if not d7_after_seen:
                         reminder_code = 'reminder_d7'
-                        reason = 'followup_after_d2'
-                elif stage == 'reminder_d7':
-                    if age_days >= 14:
-                        reminder_code = 'reminder_d14'
-                        reason = 'followup_after_d7'
-                elif stage == 'reminder_d14':
-                    if age_days >= 14:
-                        reminder_code = 'reminder_d14'
-                        reason = 'periodic_after_d14'
+                        reason = 'inactivity_7d'
+                elif inactivity_days >= 2:
+                    if not d2_after_seen:
+                        reminder_code = 'reminder_d2'
+                        reason = 'inactivity_2d'
 
                 if reminder_code:
                     candidates.append(
