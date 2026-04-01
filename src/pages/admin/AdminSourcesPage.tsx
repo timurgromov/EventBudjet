@@ -14,6 +14,7 @@ interface AdminOutletContext {
 }
 
 const FALLBACK_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? "gromov_wedding_bot";
+const LEGACY_SOURCE_CODES = new Set(["telegram_mini_app", "calc"]);
 
 const buildSourceLink = (code: string): string => `https://t.me/${FALLBACK_BOT_USERNAME}?startapp=${encodeURIComponent(code)}`;
 
@@ -75,6 +76,10 @@ const AdminSourcesPage = () => {
     );
   }
 
+  const allSources = query.data?.sources ?? [];
+  const activeSources = allSources.filter((source) => !LEGACY_SOURCE_CODES.has(source.code));
+  const legacySources = allSources.filter((source) => LEGACY_SOURCE_CODES.has(source.code));
+
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -132,11 +137,11 @@ const AdminSourcesPage = () => {
           <div className="mt-3 text-sm text-rose-700">
             {query.error instanceof Error ? query.error.message : "Не удалось загрузить источники"}
           </div>
-        ) : (query.data?.sources.length ?? 0) === 0 ? (
+        ) : activeSources.length === 0 ? (
           <div className="mt-3 text-sm text-slate-600">Пока нет источников.</div>
         ) : (
           <div className="mt-3 space-y-2">
-            {query.data?.sources.map((source) => {
+            {activeSources.map((source) => {
               const link = buildSourceLink(source.code);
               return (
                 <div key={source.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -171,6 +176,25 @@ const AdminSourcesPage = () => {
         )}
       </section>
 
+      {legacySources.length > 0 ? (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-sm font-semibold text-slate-700">Исторические источники (legacy)</div>
+          <div className="mt-1 text-xs text-slate-500">
+            Эти источники оставлены для истории и совместимости старых ссылок.
+          </div>
+          <div className="mt-3 space-y-2">
+            {legacySources.map((source) => (
+              <div key={`legacy-${source.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="text-sm font-medium text-slate-900">{source.name}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  код: <span className="font-mono text-slate-700">{source.code}</span> • лидов: {source.leads_count}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm">
         <div className="flex items-center gap-2 font-medium text-slate-800">
           <Link2 className="h-4 w-4" />
@@ -185,4 +209,3 @@ const AdminSourcesPage = () => {
 };
 
 export default AdminSourcesPage;
-
