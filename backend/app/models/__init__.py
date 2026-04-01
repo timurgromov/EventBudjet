@@ -4,6 +4,7 @@ from app.models.enums import LeadStatus, NotificationStatus, ScheduledMessageSta
 from app.models.expense import Expense
 from app.models.lead import Lead
 from app.models.lead_event import LeadEvent
+from app.models.lead_source import LeadSource
 from app.models.message_template import MessageTemplate
 from app.models.scheduled_message import ScheduledMessage
 from app.models.user import User
@@ -15,6 +16,7 @@ __all__ = [
     'ScheduledMessageStatus',
     'User',
     'Lead',
+    'LeadSource',
     'Expense',
     'LeadEvent',
     'ScheduledMessage',

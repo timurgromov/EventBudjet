@@ -108,8 +108,8 @@ class BotRepository:
             created = db.execute(
                 text(
                     """
-                    INSERT INTO leads (user_id, lead_status, created_at, updated_at)
-                    VALUES (:user_id, 'draft', now(), now())
+                    INSERT INTO leads (user_id, lead_status, source, created_at, updated_at)
+                    VALUES (:user_id, 'draft', 'direct_personal', now(), now())
                     RETURNING id;
                     """
                 ),

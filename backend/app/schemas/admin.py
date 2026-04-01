@@ -21,6 +21,7 @@ class AdminLeadListItem(BaseModel):
     lead_status: str | None
     last_seen_at: datetime | None
     source: str | None
+    source_label: str | None = None
     bot_contact_state: str | None = None
 
 
@@ -49,6 +50,7 @@ class AdminLeadEventRead(BaseModel):
 
 class AdminLeadDetailResponse(BaseModel):
     lead: LeadRead
+    source_label: str | None = None
     user: AdminUserRead
     expenses: list[ExpenseRead]
     recent_events: list[AdminLeadEventRead]
@@ -88,3 +90,23 @@ class AdminDirectMessageResponse(BaseModel):
 class AdminLeadActionResponse(BaseModel):
     lead_id: int
     status: str
+
+
+class AdminLeadSourceRead(BaseModel):
+    id: int
+    code: str
+    name: str
+    description: str | None
+    leads_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminLeadSourcesResponse(BaseModel):
+    sources: list[AdminLeadSourceRead]
+
+
+class AdminLeadSourceCreateRequest(BaseModel):
+    name: str
+    code: str | None = None
+    description: str | None = None

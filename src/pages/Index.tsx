@@ -45,10 +45,21 @@ const parseMoney = (raw: string): number => {
 
 const itemById = new Map(defaultItems.map((item) => [item.id, item]));
 const FALLBACK_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? "gromov_wedding_bot";
-const TELEGRAM_STARTAPP_URL = `https://t.me/${FALLBACK_BOT_USERNAME}?startapp=calc`;
+const DEFAULT_SOURCE_CODE = "direct_personal";
+const TELEGRAM_STARTAPP_URL = `https://t.me/${FALLBACK_BOT_USERNAME}?startapp=${DEFAULT_SOURCE_CODE}`;
+
+const parseSourceCodeFromInitData = (initDataRaw: string): string => {
+  if (!initDataRaw) return DEFAULT_SOURCE_CODE;
+  const params = new URLSearchParams(initDataRaw);
+  const raw = (params.get("start_param") ?? "").trim().toLowerCase();
+  if (!raw || raw === "calc") return DEFAULT_SOURCE_CODE;
+  if (!/^[a-z0-9][a-z0-9_-]{1,63}$/.test(raw)) return DEFAULT_SOURCE_CODE;
+  return raw;
+};
 
 const Index = () => {
   const { user, initData, isTelegram } = useTelegramContext();
+  const sourceCode = useMemo(() => parseSourceCodeFromInitData(initData), [initData]);
 
   const [bootstrapTick, setBootstrapTick] = useState(0);
   const [bootLoading, setBootLoading] = useState(true);
@@ -202,7 +213,7 @@ const Index = () => {
       season: hasSeason ? q.dateSeason : null,
       next_year_flag: nextYear,
       guests_count: q.guests,
-      source: "telegram_mini_app",
+      source: sourceCode,
     };
   };
 

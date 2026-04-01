@@ -10,6 +10,9 @@ from app.schemas.admin import (
     AdminLeadDetailResponse,
     AdminLeadEventsResponse,
     AdminLeadListResponse,
+    AdminLeadSourceCreateRequest,
+    AdminLeadSourceRead,
+    AdminLeadSourcesResponse,
     AdminNotificationsResponse,
 )
 from app.services.admin_service import AdminService
@@ -20,6 +23,22 @@ router = APIRouter(prefix='/admin', tags=['admin'], dependencies=[Depends(requir
 @router.get('/leads', response_model=AdminLeadListResponse)
 def list_admin_leads(db: Session = Depends(get_db)) -> AdminLeadListResponse:
     return AdminService(db).list_leads()
+
+
+@router.get('/sources', response_model=AdminLeadSourcesResponse)
+def list_admin_sources(db: Session = Depends(get_db)) -> AdminLeadSourcesResponse:
+    return AdminService(db).list_sources()
+
+
+@router.post('/sources', response_model=AdminLeadSourceRead)
+def create_admin_source(
+    payload: AdminLeadSourceCreateRequest,
+    db: Session = Depends(get_db),
+) -> AdminLeadSourceRead:
+    try:
+        return AdminService(db).create_source(name=payload.name, code=payload.code, description=payload.description)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 
 @router.get('/leads/{lead_id}', response_model=AdminLeadDetailResponse)

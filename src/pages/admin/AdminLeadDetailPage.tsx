@@ -254,7 +254,7 @@ const AdminLeadDetailPage = () => {
             <div><span className="text-slate-500">Гостей:</span> {lead.guests_count ?? "—"}</div>
             <div><span className="text-slate-500">Статус:</span> {formatLeadStatusLabel(lead.lead_status)}</div>
             <div><span className="text-slate-500">Площадка:</span> {formatVenueValue(lead.venue_status, lead.venue_name)}</div>
-            <div><span className="text-slate-500">Источник:</span> {formatSourceLabel(lead.source)}</div>
+            <div><span className="text-slate-500">Источник:</span> {query.data.source_label ?? formatSourceLabel(lead.source)}</div>
             <div><span className="text-slate-500">Формат даты:</span> {formatDateModeLabel(lead.wedding_date_mode)}</div>
             <div><span className="text-slate-500">Последняя активность:</span> {formatAdminDateTime(user.last_seen_at)}</div>
           </div>

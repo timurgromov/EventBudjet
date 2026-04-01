@@ -37,6 +37,7 @@ import {
   getBotContactTone,
   isLowPrioritySpecialist,
   isMoscowPriorityCity,
+  formatSourceLabel,
 } from "./admin-format";
 
 interface AdminOutletContext {
@@ -100,6 +101,7 @@ const LeadRow = ({ lead, onRequestDelete }: { lead: AdminLeadListItem; onRequest
         <span className={contactTone === "red" ? "h-2 w-2 rounded-full bg-red-500" : contactTone === "green" ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-slate-400"} />
         {formatBotContactLabel(lead.bot_contact_state)}
       </div>
+      <div className="mt-1 text-xs text-slate-500">Источник: {lead.source_label ?? formatSourceLabel(lead.source)}</div>
     </div>
     <div className="text-sm text-slate-700">
       <div>{formatCityLabel(lead.city)}</div>

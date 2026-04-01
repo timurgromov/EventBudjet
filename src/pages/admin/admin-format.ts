@@ -55,6 +55,8 @@ const VENUE_STATUS_LABELS: Record<string, string> = {
 
 const SOURCE_LABELS: Record<string, string> = {
   telegram_mini_app: "Telegram Mini App",
+  direct_personal: "Личный контакт (без метки)",
+  calc: "Старая ссылка calc",
 };
 
 const DATE_MODE_LABELS: Record<string, string> = {

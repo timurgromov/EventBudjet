@@ -63,6 +63,7 @@ export interface AdminLeadListItem {
   lead_status: string | null;
   last_seen_at: string | null;
   source: string | null;
+  source_label?: string | null;
   bot_contact_state: "active" | "blocked" | "unknown" | string | null;
 }
 
@@ -89,9 +90,30 @@ export interface AdminLeadEventRead {
 
 export interface AdminLeadDetailResponse {
   lead: Lead;
+  source_label?: string | null;
   user: AdminUserRead;
   expenses: Expense[];
   recent_events: AdminLeadEventRead[];
+}
+
+export interface AdminLeadSourceItem {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  leads_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminLeadSourcesResponse {
+  sources: AdminLeadSourceItem[];
+}
+
+export interface AdminLeadSourceCreatePayload {
+  name: string;
+  code?: string | null;
+  description?: string | null;
 }
 
 export interface AdminNotificationsRead {
@@ -295,6 +317,20 @@ export function getAdminLead(adminToken: string, leadId: number): Promise<AdminL
 
 export function listAdminNotifications(adminToken: string): Promise<AdminNotificationsResponse> {
   return adminRequest<AdminNotificationsResponse>("/admin/notifications", adminToken);
+}
+
+export function listAdminSources(adminToken: string): Promise<AdminLeadSourcesResponse> {
+  return adminRequest<AdminLeadSourcesResponse>("/admin/sources", adminToken);
+}
+
+export function createAdminSource(
+  adminToken: string,
+  payload: AdminLeadSourceCreatePayload,
+): Promise<AdminLeadSourceItem> {
+  return adminRequest<AdminLeadSourceItem>("/admin/sources", adminToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function sendAdminMessageToLead(

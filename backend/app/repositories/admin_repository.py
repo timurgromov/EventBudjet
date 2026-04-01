@@ -1,4 +1,4 @@
-from sqlalchemy import Select, desc, select
+from sqlalchemy import Select, desc, func, select
 from sqlalchemy.orm import Session
 
 from app.models.admin_notification import AdminNotification
@@ -6,6 +6,7 @@ from app.models.enums import NotificationStatus
 from app.models.expense import Expense
 from app.models.lead import Lead
 from app.models.lead_event import LeadEvent
+from app.models.lead_source import LeadSource
 from app.models.user import User
 
 
@@ -29,6 +30,19 @@ class AdminRepository:
             .limit(1)
         )
         return self.db.execute(stmt).first()
+
+    def get_source_by_code(self, code: str | None) -> LeadSource | None:
+        if not code:
+            return None
+        stmt = select(LeadSource).where(LeadSource.code == code).limit(1)
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def get_source_name_map(self, codes: list[str]) -> dict[str, str]:
+        if not codes:
+            return {}
+        stmt = select(LeadSource.code, LeadSource.name).where(LeadSource.code.in_(codes))
+        rows = self.db.execute(stmt).all()
+        return {code: name for code, name in rows}
 
     def list_lead_events(self, lead_id: int, limit: int = 100) -> list[LeadEvent]:
         stmt = (
@@ -106,6 +120,21 @@ class AdminRepository:
     def delete_lead(self, lead: Lead) -> None:
         self.db.delete(lead)
         self.db.flush()
+
+    def list_lead_sources(self) -> list[tuple[LeadSource, int]]:
+        stmt = (
+            select(LeadSource, func.count(Lead.id))
+            .outerjoin(Lead, Lead.source == LeadSource.code)
+            .group_by(LeadSource.id)
+            .order_by(desc(func.count(Lead.id)), LeadSource.created_at.asc(), LeadSource.id.asc())
+        )
+        return list(self.db.execute(stmt).all())
+
+    def create_lead_source(self, code: str, name: str, description: str | None) -> LeadSource:
+        source = LeadSource(code=code, name=name, description=description)
+        self.db.add(source)
+        self.db.flush()
+        return source
 
     def get_bot_contact_state_map(self, lead_ids: list[int]) -> dict[int, str]:
         if not lead_ids:

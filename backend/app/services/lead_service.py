@@ -20,6 +20,7 @@ class LeadService:
     def create_user_lead(self, user_id: int, payload: LeadCreate) -> Lead:
         data = payload.model_dump(exclude_none=True)
         data.setdefault('lead_status', LeadStatus.ACTIVE)
+        data.setdefault('source', 'direct_personal')
 
         lead = self.leads.create(user_id=user_id, data=data)
         self.events.write_event(lead.id, EventType.BOT_STARTED, {'user_id': user_id})

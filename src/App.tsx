@@ -9,6 +9,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
 import AdminLeadDetailPage from "./pages/admin/AdminLeadDetailPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
+import AdminSourcesPage from "./pages/admin/AdminSourcesPage";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route index element={<Navigate to="/admin/leads" replace />} />
             <Route path="leads" element={<AdminLeadsPage />} />
             <Route path="leads/:leadId" element={<AdminLeadDetailPage />} />
+            <Route path="sources" element={<AdminSourcesPage />} />
             <Route path="notifications" element={<AdminNotificationsPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

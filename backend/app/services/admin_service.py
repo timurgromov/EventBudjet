@@ -1,7 +1,9 @@
 import json
 import logging
+import re
 from urllib import error as urllib_error
 from urllib import request as urllib_request
+from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
@@ -18,6 +20,8 @@ from app.schemas.admin import (
     AdminLeadEventsResponse,
     AdminLeadListItem,
     AdminLeadListResponse,
+    AdminLeadSourceRead,
+    AdminLeadSourcesResponse,
     AdminNotificationRead,
     AdminNotificationsResponse,
     AdminUserRead,
@@ -29,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 
 class AdminService:
+    SOURCE_CODE_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{1,63}$')
+
     def __init__(self, db: Session):
         self.repo = AdminRepository(db)
 
@@ -40,6 +46,9 @@ class AdminService:
     def list_leads(self) -> AdminLeadListResponse:
         rows = self.repo.list_leads()
         state_map = self.repo.get_bot_contact_state_map([lead.id for lead, _ in rows])
+        source_name_map = self.repo.get_source_name_map(
+            [lead.source for lead, _ in rows if isinstance(lead.source, str) and lead.source.strip()]
+        )
         leads = [
             AdminLeadListItem(
                 lead_id=lead.id,
@@ -54,6 +63,7 @@ class AdminService:
                 lead_status=lead.lead_status.value if lead.lead_status is not None else None,
                 last_seen_at=user.last_seen_at,
                 source=lead.source,
+                source_label=source_name_map.get(lead.source or ''),
                 bot_contact_state=state_map.get(lead.id, 'unknown'),
             )
             for lead, user in rows
@@ -71,6 +81,7 @@ class AdminService:
 
         return AdminLeadDetailResponse(
             lead=LeadRead.model_validate(lead),
+            source_label=(self.repo.get_source_by_code(lead.source).name if lead.source else None),
             user=AdminUserRead(
                 id=user.id,
                 telegram_id=user.telegram_id,
@@ -81,6 +92,60 @@ class AdminService:
             ),
             expenses=[ExpenseRead.model_validate(expense) for expense in expenses],
             recent_events=[AdminLeadEventRead.model_validate(event) for event in events],
+        )
+
+    def list_sources(self) -> AdminLeadSourcesResponse:
+        rows = self.repo.list_lead_sources()
+        return AdminLeadSourcesResponse(
+            sources=[
+                AdminLeadSourceRead(
+                    id=source.id,
+                    code=source.code,
+                    name=source.name,
+                    description=source.description,
+                    leads_count=int(leads_count or 0),
+                    created_at=source.created_at,
+                    updated_at=source.updated_at,
+                )
+                for source, leads_count in rows
+            ]
+        )
+
+    def create_source(self, name: str, code: str | None = None, description: str | None = None) -> AdminLeadSourceRead:
+        normalized_name = name.strip()
+        if not normalized_name:
+            raise ValueError('Название источника не может быть пустым')
+
+        normalized_code = (code or '').strip().lower()
+        if normalized_code:
+            if not self.SOURCE_CODE_RE.match(normalized_code):
+                raise ValueError('Код источника должен содержать только a-z, 0-9, "_" или "-" и начинаться с буквы/цифры')
+            if self.repo.get_source_by_code(normalized_code) is not None:
+                raise ValueError('Источник с таким кодом уже существует')
+        else:
+            # Auto-generate stable code when user fills only title.
+            while True:
+                candidate = f'src_{uuid4().hex[:8]}'
+                if self.repo.get_source_by_code(candidate) is None:
+                    normalized_code = candidate
+                    break
+
+        source = self.repo.create_lead_source(
+            code=normalized_code,
+            name=normalized_name,
+            description=(description.strip() if isinstance(description, str) and description.strip() else None),
+        )
+        self.repo.db.commit()
+        self.repo.db.refresh(source)
+
+        return AdminLeadSourceRead(
+            id=source.id,
+            code=source.code,
+            name=source.name,
+            description=source.description,
+            leads_count=0,
+            created_at=source.created_at,
+            updated_at=source.updated_at,
         )
 
     def get_lead_events(self, lead_id: int) -> AdminLeadEventsResponse | None:
