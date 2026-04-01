@@ -101,6 +101,7 @@ export interface AdminLeadSourceItem {
   code: string;
   name: string;
   description: string | null;
+  is_archived: boolean;
   leads_count: number;
   created_at: string;
   updated_at: string;
@@ -114,6 +115,11 @@ export interface AdminLeadSourceCreatePayload {
   name: string;
   code?: string | null;
   description?: string | null;
+}
+
+export interface AdminLeadSourceActionResponse {
+  source_id: number;
+  status: "archived" | "restored" | "deleted" | string;
 }
 
 export interface AdminNotificationsRead {
@@ -330,6 +336,24 @@ export function createAdminSource(
   return adminRequest<AdminLeadSourceItem>("/admin/sources", adminToken, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function archiveAdminSource(adminToken: string, sourceId: number): Promise<AdminLeadSourceActionResponse> {
+  return adminRequest<AdminLeadSourceActionResponse>(`/admin/sources/${sourceId}/archive`, adminToken, {
+    method: "POST",
+  });
+}
+
+export function restoreAdminSource(adminToken: string, sourceId: number): Promise<AdminLeadSourceActionResponse> {
+  return adminRequest<AdminLeadSourceActionResponse>(`/admin/sources/${sourceId}/restore`, adminToken, {
+    method: "POST",
+  });
+}
+
+export function deleteAdminSource(adminToken: string, sourceId: number): Promise<AdminLeadSourceActionResponse> {
+  return adminRequest<AdminLeadSourceActionResponse>(`/admin/sources/${sourceId}`, adminToken, {
+    method: "DELETE",
   });
 }
 

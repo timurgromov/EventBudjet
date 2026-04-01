@@ -136,6 +136,15 @@ class AdminRepository:
         self.db.flush()
         return source
 
+    def get_lead_source(self, source_id: int) -> LeadSource | None:
+        stmt = select(LeadSource).where(LeadSource.id == source_id).limit(1)
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def get_leads_count_by_source_code(self, source_code: str) -> int:
+        stmt = select(func.count(Lead.id)).where(Lead.source == source_code)
+        count = self.db.execute(stmt).scalar_one()
+        return int(count or 0)
+
     def get_bot_contact_state_map(self, lead_ids: list[int]) -> dict[int, str]:
         if not lead_ids:
             return {}

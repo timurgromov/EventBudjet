@@ -97,6 +97,7 @@ class AdminLeadSourceRead(BaseModel):
     code: str
     name: str
     description: str | None
+    is_archived: bool
     leads_count: int
     created_at: datetime
     updated_at: datetime
@@ -110,3 +111,8 @@ class AdminLeadSourceCreateRequest(BaseModel):
     name: str
     code: str | None = None
     description: str | None = None
+
+
+class AdminLeadSourceActionResponse(BaseModel):
+    source_id: int
+    status: str

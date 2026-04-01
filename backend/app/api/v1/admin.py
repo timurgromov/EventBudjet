@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import require_admin_access
 from app.core.database import get_db
 from app.schemas.admin import (
+    AdminLeadSourceActionResponse,
     AdminLeadActionResponse,
     AdminDirectMessageRequest,
     AdminDirectMessageResponse,
@@ -39,6 +40,33 @@ def create_admin_source(
         return AdminService(db).create_source(name=payload.name, code=payload.code, description=payload.description)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.post('/sources/{source_id}/archive', response_model=AdminLeadSourceActionResponse)
+def archive_admin_source(source_id: int, db: Session = Depends(get_db)) -> AdminLeadSourceActionResponse:
+    result = AdminService(db).archive_source(source_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Source not found')
+    return result
+
+
+@router.post('/sources/{source_id}/restore', response_model=AdminLeadSourceActionResponse)
+def restore_admin_source(source_id: int, db: Session = Depends(get_db)) -> AdminLeadSourceActionResponse:
+    result = AdminService(db).restore_source(source_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Source not found')
+    return result
+
+
+@router.delete('/sources/{source_id}', response_model=AdminLeadSourceActionResponse)
+def delete_admin_source(source_id: int, db: Session = Depends(get_db)) -> AdminLeadSourceActionResponse:
+    try:
+        result = AdminService(db).delete_source(source_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Source not found')
+    return result
 
 
 @router.get('/leads/{lead_id}', response_model=AdminLeadDetailResponse)

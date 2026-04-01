@@ -13,6 +13,7 @@ from app.models.lead_event import LeadEvent
 from app.models.user import User
 from app.repositories.admin_repository import AdminRepository
 from app.schemas.admin import (
+    AdminLeadSourceActionResponse,
     AdminLeadActionResponse,
     AdminDirectMessageResponse,
     AdminLeadDetailResponse,
@@ -103,6 +104,7 @@ class AdminService:
                     code=source.code,
                     name=source.name,
                     description=source.description,
+                    is_archived=bool(source.is_archived),
                     leads_count=int(leads_count or 0),
                     created_at=source.created_at,
                     updated_at=source.updated_at,
@@ -143,10 +145,41 @@ class AdminService:
             code=source.code,
             name=source.name,
             description=source.description,
+            is_archived=bool(source.is_archived),
             leads_count=0,
             created_at=source.created_at,
             updated_at=source.updated_at,
         )
+
+    def archive_source(self, source_id: int) -> AdminLeadSourceActionResponse | None:
+        source = self.repo.get_lead_source(source_id)
+        if source is None:
+            return None
+        source.is_archived = True
+        self.repo.db.commit()
+        return AdminLeadSourceActionResponse(source_id=source.id, status='archived')
+
+    def restore_source(self, source_id: int) -> AdminLeadSourceActionResponse | None:
+        source = self.repo.get_lead_source(source_id)
+        if source is None:
+            return None
+        source.is_archived = False
+        self.repo.db.commit()
+        return AdminLeadSourceActionResponse(source_id=source.id, status='restored')
+
+    def delete_source(self, source_id: int) -> AdminLeadSourceActionResponse | None:
+        source = self.repo.get_lead_source(source_id)
+        if source is None:
+            return None
+
+        leads_count = self.repo.get_leads_count_by_source_code(source.code)
+        if leads_count > 0:
+            raise ValueError('Нельзя удалить источник, в котором есть лиды. Сначала архивируйте его.')
+
+        deleted_id = source.id
+        self.repo.db.delete(source)
+        self.repo.db.commit()
+        return AdminLeadSourceActionResponse(source_id=deleted_id, status='deleted')
 
     def get_lead_events(self, lead_id: int) -> AdminLeadEventsResponse | None:
         pair = self.repo.get_lead_with_user(lead_id)
