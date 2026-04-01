@@ -1,9 +1,10 @@
 import asyncio
 import logging
 import time
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
@@ -564,6 +565,8 @@ async def process_pending_events_once(service: AdminNotificationService, reposit
 async def process_due_reminders_once(service: AdminNotificationService, repository: BotRepository) -> int:
     if not settings.bot_reminder_enabled:
         return 0
+    if not _is_reminder_send_window_open():
+        return 0
 
     candidates = repository.list_due_reminder_candidates(limit=settings.bot_reminder_max_per_run)
     if candidates:
@@ -575,6 +578,34 @@ async def process_due_reminders_once(service: AdminNotificationService, reposito
             sent += 1
         await asyncio.sleep(0)
     return sent
+
+
+def _is_reminder_send_window_open() -> bool:
+    tz_name = settings.bot_reminder_timezone
+    start_hour = settings.bot_reminder_send_hour_start
+    end_hour = settings.bot_reminder_send_hour_end
+    now_local = datetime.now(ZoneInfo(tz_name))
+    hour = now_local.hour
+
+    if start_hour == end_hour:
+        # 24/7 mode if start == end.
+        return True
+
+    if start_hour < end_hour:
+        allowed = start_hour <= hour < end_hour
+    else:
+        # Overnight window support (e.g. 22 -> 6).
+        allowed = hour >= start_hour or hour < end_hour
+
+    if not allowed:
+        logger.info(
+            'reminder_window_closed tz=%s local_hour=%s allowed=%02d..%02d',
+            tz_name,
+            hour,
+            start_hour,
+            end_hour,
+        )
+    return allowed
 
 
 async def _safe_send_message(bot: Bot, chat_id: int, text: str) -> bool:

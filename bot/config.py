@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     bot_reminder_check_interval_seconds: int = 300
     bot_reminder_max_per_run: int = 30
     bot_reminder_cooldown_days: int = 10
+    bot_reminder_timezone: str = 'Europe/Moscow'
+    bot_reminder_send_hour_start: int = Field(default=10, ge=0, le=23)
+    bot_reminder_send_hour_end: int = Field(default=22, ge=0, le=23)
 
     database_url: str = 'postgresql+psycopg://postgres:postgres@postgres:5432/wedding_calculator'
 
