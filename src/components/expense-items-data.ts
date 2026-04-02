@@ -34,7 +34,7 @@ export const defaultItems: DefaultItem[] = [
       includes: ["работа ведущего", "DJ", "базовое звуковое оборудование", "подготовка сценария"],
       factors: ["опыт ведущего", "длительность программы", "масштаб свадьбы", "дополнительные активности"],
     },
-    getPrice: () => 95000, defaultChecked: false,
+    getPrice: () => 100000, defaultChecked: false,
   },
   {
     id: "photo", name: "Фотограф",
