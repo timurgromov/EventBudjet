@@ -6,7 +6,7 @@ from urllib.parse import parse_qsl, unquote_plus, urlencode, urlparse, urlunpars
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.session.aiohttp import AiohttpSession
-from aiogram.exceptions import TelegramNetworkError
+from aiogram.exceptions import TelegramForbiddenError, TelegramNetworkError
 from aiogram.filters import CommandStart
 from aiogram.types import ChatMemberUpdated, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
@@ -57,7 +57,7 @@ def build_start_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-async def send_start_message_with_retry(message: Message) -> None:
+async def send_start_message_with_retry(message: Message, lead_id: int) -> bool:
     last_error: Exception | None = None
     for attempt in range(1, START_MESSAGE_SEND_RETRIES + 1):
         try:
@@ -67,11 +67,28 @@ async def send_start_message_with_retry(message: Message) -> None:
                     caption=START_MESSAGE_TEXT,
                     reply_markup=build_start_keyboard(),
                 )
-                return
+                return True
 
             logger.warning('start_message_image_missing path=%s', START_MESSAGE_IMAGE)
             await message.answer(START_MESSAGE_TEXT, reply_markup=build_start_keyboard())
-            return
+            return True
+        except TelegramForbiddenError as exc:
+            logger.warning(
+                'start_message_blocked telegram_id=%s lead_id=%s error=%s',
+                message.chat.id,
+                lead_id,
+                exc,
+            )
+            repository.create_lead_event(
+                lead_id,
+                'bot_blocked',
+                {
+                    'telegram_id': int(message.chat.id),
+                    'detected_via': 'start_reply',
+                    'error': str(exc),
+                },
+            )
+            return False
         except TelegramNetworkError as exc:
             last_error = exc
             logger.warning(
@@ -86,6 +103,7 @@ async def send_start_message_with_retry(message: Message) -> None:
 
     if last_error is not None:
         raise last_error
+    return False
 
 
 def parse_source_code_from_start(message: Message) -> str:
@@ -159,13 +177,15 @@ async def start_handler(message: Message) -> None:
     lead_id = repository.get_or_create_lead_for_user(user_id, source_code=source_code)
     repository.create_lead_event(lead_id, 'bot_started', {'source': source_code})
 
-    await send_start_message_with_retry(message)
+    sent = await send_start_message_with_retry(message, lead_id)
     repository.create_lead_event(
         lead_id,
         'bot_message_sent',
         {
             'text': START_MESSAGE_TEXT,
             'source': 'start',
+            'status': 'sent' if sent else 'failed',
+            'blocked': sent is False,
         },
     )
 
