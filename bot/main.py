@@ -1,7 +1,8 @@
 import asyncio
 import logging
+import re
 from pathlib import Path
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, unquote_plus, urlencode, urlparse, urlunparse
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -32,6 +33,7 @@ START_MESSAGE_TEXT = (
     '— открыть онлайн-разбор по пошаговой подготовке к свадьбе\n\n'
     'Нажмите кнопку ниже, чтобы начать.'
 )
+SOURCE_CODE_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{1,63}$')
 
 
 def build_mini_app_url() -> str:
@@ -86,6 +88,22 @@ async def send_start_message_with_retry(message: Message) -> None:
         raise last_error
 
 
+def parse_source_code_from_start(message: Message) -> str:
+    text_value = (message.text or '').strip()
+    if not text_value:
+        return 'direct_personal'
+    parts = text_value.split(maxsplit=1)
+    if len(parts) < 2:
+        return 'direct_personal'
+
+    raw = unquote_plus(parts[1].strip().lower())
+    if not raw or raw == 'calc':
+        return 'direct_personal'
+    if not SOURCE_CODE_RE.match(raw):
+        return 'direct_personal'
+    return raw
+
+
 @router.message(CommandStart())
 async def start_handler(message: Message) -> None:
     if message.from_user is None:
@@ -103,8 +121,9 @@ async def start_handler(message: Message) -> None:
     }
 
     user_id, _visits_count = repository.create_or_update_user(telegram_user)
-    lead_id = repository.get_or_create_lead_for_user(user_id)
-    repository.create_lead_event(lead_id, 'bot_started')
+    source_code = parse_source_code_from_start(message)
+    lead_id = repository.get_or_create_lead_for_user(user_id, source_code=source_code)
+    repository.create_lead_event(lead_id, 'bot_started', {'source': source_code})
 
     await send_start_message_with_retry(message)
     repository.create_lead_event(

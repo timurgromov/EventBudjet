@@ -96,24 +96,37 @@ class BotRepository:
             ).mappings().one()
             return int(row['id']), int(row['visits_count'])
 
-    def get_or_create_lead_for_user(self, user_id: int) -> int:
+    def get_or_create_lead_for_user(self, user_id: int, source_code: str | None = None) -> int:
         with SessionLocal.begin() as db:
             existing = db.execute(
                 text('SELECT id FROM leads WHERE user_id = :user_id ORDER BY id DESC LIMIT 1'),
                 {'user_id': user_id},
             ).scalar_one_or_none()
             if existing is not None:
+                if source_code:
+                    db.execute(
+                        text(
+                            """
+                            UPDATE leads
+                            SET source = :source_code,
+                                updated_at = now()
+                            WHERE id = :lead_id
+                              AND (source IS NULL OR source IN ('direct_personal', 'telegram_mini_app', 'calc'));
+                            """
+                        ),
+                        {'source_code': source_code, 'lead_id': int(existing)},
+                    )
                 return int(existing)
 
             created = db.execute(
                 text(
                     """
                     INSERT INTO leads (user_id, lead_status, source, created_at, updated_at)
-                    VALUES (:user_id, 'draft', 'direct_personal', now(), now())
+                    VALUES (:user_id, 'draft', :source_code, now(), now())
                     RETURNING id;
                     """
                 ),
-                {'user_id': user_id},
+                {'user_id': user_id, 'source_code': source_code or 'direct_personal'},
             ).scalar_one()
             return int(created)
 

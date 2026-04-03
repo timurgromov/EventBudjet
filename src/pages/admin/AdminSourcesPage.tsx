@@ -34,7 +34,7 @@ const FALLBACK_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? "gro
 const LEGACY_SOURCE_CODES = new Set(["telegram_mini_app", "calc"]);
 type SourceFilter = "active" | "archived";
 
-const buildSourceLink = (code: string): string => `https://t.me/${FALLBACK_BOT_USERNAME}?startapp=${encodeURIComponent(code)}`;
+const buildSourceLink = (code: string): string => `https://t.me/${FALLBACK_BOT_USERNAME}?start=${encodeURIComponent(code)}`;
 
 const AdminSourcesPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
@@ -338,7 +338,7 @@ const AdminSourcesPage = () => {
           Как это работает
         </div>
         <div className="mt-2">
-          Клиент открывает ссылку источника → Telegram передаёт метку `startapp` → при создании лида источник сохраняется в карточке.
+          Клиент открывает ссылку источника → Telegram передаёт метку `start` → после нажатия Start источник сохраняется в карточке.
         </div>
       </section>
     </div>

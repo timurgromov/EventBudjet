@@ -157,6 +157,17 @@ const AdminLeadDetailPage = () => {
         ),
     [recentEvents],
   );
+  const stageEvents = useMemo(() => {
+    const findLatest = (eventType: string): string | null => {
+      const match = recentEvents.find((event) => event.event_type === eventType);
+      return match?.created_at ?? null;
+    };
+    return {
+      botStartedAt: findLatest("bot_started"),
+      miniAppOpenedAt: findLatest("miniapp_opened"),
+      budgetCalculatedAt: findLatest("budget_calculated"),
+    };
+  }, [recentEvents]);
 
   if (!adminToken.trim()) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть карточку лида.</div>;
@@ -257,6 +268,14 @@ const AdminLeadDetailPage = () => {
             <div><span className="text-slate-500">Источник:</span> {query.data.source_label ?? formatSourceLabel(lead.source)}</div>
             <div><span className="text-slate-500">Формат даты:</span> {formatDateModeLabel(lead.wedding_date_mode)}</div>
             <div><span className="text-slate-500">Последняя активность:</span> {formatAdminDateTime(user.last_seen_at)}</div>
+          </div>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="text-sm font-medium text-slate-900">Этапы пользователя</div>
+            <div className="mt-2 grid gap-2 text-xs text-slate-700 md:grid-cols-3">
+              <div>Start в боте: <span className="text-slate-900">{formatAdminDateTime(stageEvents.botStartedAt)}</span></div>
+              <div>Открыл Mini App: <span className="text-slate-900">{formatAdminDateTime(stageEvents.miniAppOpenedAt)}</span></div>
+              <div>Сделал расчёт: <span className="text-slate-900">{formatAdminDateTime(stageEvents.budgetCalculatedAt)}</span></div>
+            </div>
           </div>
         </section>
 
