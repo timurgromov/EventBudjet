@@ -133,8 +133,8 @@ const AdminSourcesPage = () => {
   }
 
   const allSources = query.data?.sources ?? [];
-  const activeSources = allSources.filter((source) => !source.is_archived);
-  const archivedSources = allSources.filter((source) => source.is_archived);
+  const activeSources = allSources.filter((source) => !source.is_archived && !LEGACY_SOURCE_CODES.has(source.code));
+  const archivedSources = allSources.filter((source) => source.is_archived || LEGACY_SOURCE_CODES.has(source.code));
   const sourcesToShow = sourceFilter === "active" ? activeSources : archivedSources;
   const canDelete = deleteConfirmText.trim() === "DELETE";
 
