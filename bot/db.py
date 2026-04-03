@@ -67,6 +67,23 @@ class ReminderCandidate:
 
 
 class BotRepository:
+    def get_latest_lead_id_by_telegram_id(self, telegram_id: int) -> int | None:
+        with SessionLocal.begin() as db:
+            row = db.execute(
+                text(
+                    """
+                    SELECT l.id
+                    FROM leads l
+                    JOIN users u ON u.id = l.user_id
+                    WHERE u.telegram_id = :telegram_id
+                    ORDER BY l.id DESC
+                    LIMIT 1;
+                    """
+                ),
+                {'telegram_id': int(telegram_id)},
+            ).scalar_one_or_none()
+            return int(row) if row is not None else None
+
     def create_or_update_user(self, telegram_user: dict[str, Any]) -> tuple[int, int]:
         with SessionLocal.begin() as db:
             row = db.execute(

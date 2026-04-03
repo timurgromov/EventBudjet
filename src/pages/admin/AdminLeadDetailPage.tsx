@@ -75,6 +75,12 @@ const formatEventSummary = (eventType: string, payload: Record<string, unknown> 
   if (eventType === "bot_message_sent") {
     return `Сообщение бота${messageText ? `: ${messageText}` : ""}`;
   }
+  if (eventType === "bot_blocked") {
+    return "Пользователь заблокировал бота";
+  }
+  if (eventType === "bot_unblocked") {
+    return "Пользователь снова разрешил бота";
+  }
 
   if (eventType === "profile_completed") return "Профиль заполнен";
   if (eventType === "profile_started") return "Начато заполнение профиля";
@@ -153,7 +159,7 @@ const AdminLeadDetailPage = () => {
       [...recentEvents]
         .reverse()
         .filter((event) =>
-          ["user_message", "admin_message_sent", "bot_message_sent", "bot_started", "miniapp_opened", "app_resumed"].includes(event.event_type),
+          ["user_message", "admin_message_sent", "bot_message_sent", "bot_started", "bot_blocked", "bot_unblocked", "miniapp_opened", "app_resumed"].includes(event.event_type),
         ),
     [recentEvents],
   );

@@ -8,7 +8,7 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import CommandStart
-from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
+from aiogram.types import ChatMemberUpdated, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
 from bot.config import settings
 from bot.db import BotRepository
@@ -102,6 +102,40 @@ def parse_source_code_from_start(message: Message) -> str:
     if not SOURCE_CODE_RE.match(raw):
         return 'direct_personal'
     return raw
+
+
+def normalize_chat_member_status(value: object) -> str:
+    return str(getattr(value, 'status', value) or '').lower()
+
+
+@router.my_chat_member()
+async def my_chat_member_handler(update: ChatMemberUpdated) -> None:
+    if update.chat.type != 'private':
+        return
+
+    telegram_id = int(update.chat.id)
+    lead_id = repository.get_latest_lead_id_by_telegram_id(telegram_id)
+    if lead_id is None:
+        return
+
+    old_status = normalize_chat_member_status(update.old_chat_member)
+    new_status = normalize_chat_member_status(update.new_chat_member)
+    if old_status == new_status:
+        return
+
+    payload = {
+        'telegram_id': telegram_id,
+        'old_status': old_status,
+        'new_status': new_status,
+        'detected_via': 'my_chat_member',
+    }
+    if new_status == 'kicked':
+        repository.create_lead_event(lead_id, 'bot_blocked', payload)
+        return
+
+    if old_status == 'kicked' and new_status in {'member', 'administrator'}:
+        repository.create_lead_event(lead_id, 'bot_unblocked', payload)
+        return
 
 
 @router.message(CommandStart())

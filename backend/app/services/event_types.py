@@ -3,6 +3,8 @@ from enum import Enum
 
 class EventType(str, Enum):
     BOT_STARTED = 'bot_started'
+    BOT_BLOCKED = 'bot_blocked'
+    BOT_UNBLOCKED = 'bot_unblocked'
     MINIAPP_OPENED = 'miniapp_opened'
     LEAD_CREATED = 'lead_created'
     PROFILE_STARTED = 'profile_started'

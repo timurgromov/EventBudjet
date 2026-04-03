@@ -159,6 +159,8 @@ class AdminRepository:
                         'user_message',
                         'bot_message_sent',
                         'bot_started',
+                        'bot_blocked',
+                        'bot_unblocked',
                         'miniapp_opened',
                         'app_resumed',
                     ]
@@ -172,12 +174,31 @@ class AdminRepository:
 
         for lead_id, event_type, event_payload, created_at in rows:
             payload = event_payload or {}
+            if event_type == 'bot_blocked':
+                if lead_id not in blocked_at:
+                    blocked_at[lead_id] = created_at
+                continue
+
+            if event_type == 'bot_unblocked':
+                if lead_id not in active_at:
+                    active_at[lead_id] = created_at
+                continue
+
             if event_type == 'admin_message_sent':
                 status = str(payload.get('status') or '')
                 blocked = bool(payload.get('blocked') is True)
                 if blocked and lead_id not in blocked_at:
                     blocked_at[lead_id] = created_at
                 if status == 'sent' and lead_id not in active_at:
+                    active_at[lead_id] = created_at
+                continue
+
+            if event_type == 'bot_message_sent':
+                status = str(payload.get('status') or '')
+                blocked = bool(payload.get('blocked') is True)
+                if blocked and lead_id not in blocked_at:
+                    blocked_at[lead_id] = created_at
+                if status != 'failed' and lead_id not in active_at:
                     active_at[lead_id] = created_at
                 continue
 

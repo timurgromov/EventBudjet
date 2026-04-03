@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -19,6 +20,13 @@ REMINDER_TEXTS: dict[str, str] = {
     'reminder_d7': 'Привет! Если подготовка уже двигается, загляните в калькулятор на 5 минут — обновить смету и сверить приоритеты.',
     'reminder_d14': 'Привет! Часто суммы меняются по ходу подготовки. Можно быстро вернуться в калькулятор и проверить, всё ли актуально.',
 }
+
+
+@dataclass
+class SendAttemptResult:
+    sent: bool
+    blocked: bool = False
+    error: str | None = None
 
 
 class AdminNotificationService:
@@ -55,11 +63,11 @@ class AdminNotificationService:
                 candidate.reason,
                 text,
             )
-            sent = True
+            result = SendAttemptResult(sent=True)
         else:
-            sent = await _safe_send_message(bot=self.bot, chat_id=candidate.telegram_id, text=text)
+            result = await _safe_send_message(bot=self.bot, chat_id=candidate.telegram_id, text=text)
 
-        status = 'sent' if sent else 'failed'
+        status = 'sent' if result.sent else 'failed'
         self.repository.log_admin_notification(
             lead_id=candidate.lead_id,
             notification_type=candidate.reminder_code,
@@ -74,9 +82,22 @@ class AdminNotificationService:
                 'source': candidate.reminder_code,
                 'reason': candidate.reason,
                 'status': status,
+                'blocked': result.blocked,
+                'error': result.error,
             },
         )
-        return sent
+        if result.blocked:
+            self.repository.create_lead_event(
+                lead_id=candidate.lead_id,
+                event_type='bot_blocked',
+                event_payload={
+                    'source': candidate.reminder_code,
+                    'reason': candidate.reason,
+                    'detected_via': 'reminder_send',
+                    'error': result.error,
+                },
+            )
+        return result.sent
 
     async def _send_and_log(
         self,
@@ -608,16 +629,23 @@ def _is_reminder_send_window_open() -> bool:
     return allowed
 
 
-async def _safe_send_message(bot: Bot, chat_id: int, text: str) -> bool:
+def _is_blocked_error(raw_error: str | None) -> bool:
+    lowered = (raw_error or '').lower()
+    return 'blocked by the user' in lowered or 'user is deactivated' in lowered
+
+
+async def _safe_send_message(bot: Bot, chat_id: int, text: str) -> SendAttemptResult:
     try:
         await bot.send_message(chat_id=chat_id, text=text)
-        return True
+        return SendAttemptResult(sent=True)
     except TelegramRetryAfter as exc:
         await asyncio.sleep(exc.retry_after)
         try:
             await bot.send_message(chat_id=chat_id, text=text)
-            return True
-        except Exception:
-            return False
-    except Exception:
-        return False
+            return SendAttemptResult(sent=True)
+        except Exception as retry_exc:  # noqa: BLE001
+            error_text = str(retry_exc)
+            return SendAttemptResult(sent=False, blocked=_is_blocked_error(error_text), error=error_text)
+    except Exception as exc:  # noqa: BLE001
+        error_text = str(exc)
+        return SendAttemptResult(sent=False, blocked=_is_blocked_error(error_text), error=error_text)
