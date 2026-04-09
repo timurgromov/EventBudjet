@@ -179,9 +179,8 @@ const AdminMarginCalculatorPage = () => {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_360px]">
-        <div className="space-y-4">
-          <div className="grid gap-4 2xl:grid-cols-2">
+      <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-2">
             {fieldGroups.map((group) => (
               <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-1">
@@ -191,21 +190,23 @@ const AdminMarginCalculatorPage = () => {
 
                 <div className="mt-4 grid gap-3">
                   {group.fields.map((field) => (
-                    <div key={field.key} className="grid gap-1.5">
+                    <div key={field.key} className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_176px] lg:items-center lg:gap-4">
                       <Label htmlFor={field.key} className="text-xs font-medium leading-snug text-slate-500">
                         {field.label}
                       </Label>
-                      <Input
-                        id={field.key}
-                        type="number"
-                        min="0"
-                        step={field.step ?? "1"}
-                        inputMode="decimal"
-                        value={values[field.key]}
-                        onChange={(event) => handleFieldChange(field.key, event.target.value)}
-                        className="h-11 bg-slate-50 text-base"
-                        placeholder="0"
-                      />
+                      <div className="lg:justify-self-end">
+                        <Input
+                          id={field.key}
+                          type="number"
+                          min="0"
+                          step={field.step ?? "1"}
+                          inputMode="decimal"
+                          value={values[field.key]}
+                          onChange={(event) => handleFieldChange(field.key, event.target.value)}
+                          className="h-10 w-full bg-slate-50 text-right text-base lg:w-44"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -220,12 +221,13 @@ const AdminMarginCalculatorPage = () => {
                 </div>
               </section>
             ))}
-          </div>
+        </div>
 
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-lg font-semibold text-slate-950">Сценарий заказа</div>
             <div className="mt-1 text-sm text-slate-600">Сводка по текущему набору значений пересчитывается сразу при изменении полей.</div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4">
               <ScenarioMetricCard label="Выручка" value={formatMoney(calculations.revenue)} />
               <ScenarioMetricCard label="Расходы" value={formatMoney(calculations.totalCosts)} />
               <ScenarioMetricCard
@@ -236,45 +238,45 @@ const AdminMarginCalculatorPage = () => {
               <ScenarioMetricCard label="Маржа" value={formatMargin(calculations.margin)} accent={tone.value} />
             </div>
           </section>
+
+          <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel)}>
+            <div className="text-sm font-medium text-slate-600">Финансовый результат</div>
+            <div className="mt-3 rounded-2xl bg-white/80 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Маржа</div>
+                  <div className={cn("mt-1.5 text-4xl font-semibold tracking-tight", tone.value)}>
+                    {formatMargin(calculations.margin)}
+                  </div>
+                </div>
+                <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>
+                  {marginStatus.label}
+                </div>
+              </div>
+
+              <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
+
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
+                  <div className={cn("mt-1.5 text-2xl font-semibold", calculations.profit < 0 ? "text-rose-700" : "text-slate-950")}>
+                    {formatMoney(calculations.profit)}
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Выручка</div>
+                    <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.revenue)}</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общие расходы</div>
+                    <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.totalCosts)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-
-        <section className={cn("rounded-2xl border p-4 shadow-sm xl:sticky xl:top-6 xl:h-fit", tone.panel)}>
-          <div className="text-sm font-medium text-slate-600">Финансовый результат</div>
-          <div className="mt-3 rounded-2xl bg-white/80 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Маржа</div>
-                <div className={cn("mt-1.5 text-4xl font-semibold tracking-tight 2xl:text-5xl", tone.value)}>
-                  {formatMargin(calculations.margin)}
-                </div>
-              </div>
-              <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>
-                {marginStatus.label}
-              </div>
-            </div>
-
-            <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
-
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
-                <div className={cn("mt-1.5 text-2xl font-semibold 2xl:text-3xl", calculations.profit < 0 ? "text-rose-700" : "text-slate-950")}>
-                  {formatMoney(calculations.profit)}
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Выручка</div>
-                  <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.revenue)}</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общие расходы</div>
-                  <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.totalCosts)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   );
