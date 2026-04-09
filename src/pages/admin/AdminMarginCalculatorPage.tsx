@@ -17,8 +17,6 @@ type MarginFormValues = Record<MarginFieldKey, string>;
 
 type MarginTone = "red" | "yellow" | "green" | "teal" | "violet";
 
-const MIN_PROFIT_ALERT = 60000;
-
 const INITIAL_VALUES: MarginFormValues = {
   basePackage: "",
   extraEquipment: "",
@@ -51,6 +49,42 @@ const parseNumericValue = (value: string): number => {
 const formatMoney = (value: number): string => MONEY_FORMATTER.format(value);
 
 const formatMargin = (value: number): string => `${MARGIN_FORMATTER.format(value)}%`;
+
+const getProfitStatus = (profit: number): { label: string; description: string; tone: MarginTone } => {
+  if (profit < 60000) {
+    return {
+      label: "Низкая прибыль",
+      description: "Заказ ниже минимально комфортного уровня. Брать только осознанно / как исключение.",
+      tone: "red",
+    };
+  }
+  if (profit < 75000) {
+    return {
+      label: "Компромиссная прибыль",
+      description: "Экономика допустимая, но слот неидеален.",
+      tone: "yellow",
+    };
+  }
+  if (profit < 95000) {
+    return {
+      label: "Хорошая прибыль",
+      description: "Соответствует сильной рабочей модели.",
+      tone: "green",
+    };
+  }
+  if (profit < 120000) {
+    return {
+      label: "Высокая прибыль",
+      description: "Сильный коммерческий слот.",
+      tone: "teal",
+    };
+  }
+  return {
+    label: "Выдающаяся прибыль",
+    description: "Топовый слот / премиум-экономика.",
+    tone: "violet",
+  };
+};
 
 const getMarginStatus = (margin: number): { label: string; description: string; tone: MarginTone } => {
   if (margin < 35) {
@@ -157,9 +191,10 @@ const AdminMarginCalculatorPage = () => {
     };
   }, [values]);
 
+  const profitStatus = getProfitStatus(calculations.profit);
   const marginStatus = getMarginStatus(calculations.margin);
+  const profitTone = toneClasses[profitStatus.tone];
   const tone = toneClasses[marginStatus.tone];
-  const isProfitAlert = calculations.profit < MIN_PROFIT_ALERT;
 
   return (
     <div className="space-y-4">
@@ -225,23 +260,22 @@ const AdminMarginCalculatorPage = () => {
                 <div
                   className={cn(
                     "mt-3 rounded-xl border px-4 py-3",
-                    isProfitAlert
-                      ? "border-red-200 bg-red-50 ring-1 ring-red-100/80 shadow-[0_10px_24px_rgba(239,68,68,0.08)]"
-                      : "border-slate-200 bg-slate-50",
+                    profitTone.panel,
+                    profitTone.effect,
                   )}
                 >
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
-                  <div
-                    className={cn(
-                      "mt-1.5 text-2xl font-semibold",
-                      isProfitAlert ? "text-red-600" : calculations.profit < 0 ? "text-rose-700" : "text-slate-950",
-                    )}
-                  >
-                    {formatMoney(calculations.profit)}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
+                      <div className={cn("mt-1.5 text-2xl font-semibold", profitTone.value)}>
+                        {formatMoney(calculations.profit)}
+                      </div>
+                    </div>
+                    <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", profitTone.badge)}>
+                      {profitStatus.label}
+                    </div>
                   </div>
-                  {isProfitAlert ? (
-                    <div className="mt-2 text-sm font-medium text-red-600">Ниже минимально допустимого уровня</div>
-                  ) : null}
+                  <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
