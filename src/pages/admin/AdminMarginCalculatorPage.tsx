@@ -89,26 +89,23 @@ const toneClasses: Record<MarginTone, { badge: string; panel: string; value: str
 
 const fieldGroups: Array<{
   title: string;
-  description: string;
   fields: Array<{ key: MarginFieldKey; label: string; step?: string }>;
 }> = [
   {
     title: "Доходы",
-    description: "Собираем входную выручку по заказу и дополнительным работам.",
     fields: [
-      { key: "basePackage", label: "Базовая стоимость пакета «Ведущий + DJ»" },
-      { key: "extraEquipment", label: "Стоимость дополнительного оборудования" },
-      { key: "extraHours", label: "Количество дополнительных часов", step: "1" },
-      { key: "extraHourRate", label: "Стоимость 1 дополнительного часа" },
+      { key: "basePackage", label: "Ведущий + DJ" },
+      { key: "extraEquipment", label: "Оборудование" },
+      { key: "extraHours", label: "Доп. часы", step: "1" },
+      { key: "extraHourRate", label: "Стоимость часа" },
     ],
   },
   {
     title: "Расходы",
-    description: "Фиксируем переменные затраты, которые влияют на маржу заказа.",
     fields: [
       { key: "djPayout", label: "Выплата DJ" },
-      { key: "adsCost", label: "Расход на рекламу / привлечение клиента" },
-      { key: "otherCosts", label: "Прочие переменные расходы" },
+      { key: "adsCost", label: "Реклама" },
+      { key: "otherCosts", label: "Прочие расходы" },
     ],
   },
 ];
@@ -183,10 +180,7 @@ const AdminMarginCalculatorPage = () => {
         <div className="grid gap-4 lg:grid-cols-2">
           {fieldGroups.map((group) => (
             <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-1">
-                <div className="text-lg font-semibold text-slate-950">{group.title}</div>
-                <div className="text-sm text-slate-600">{group.description}</div>
-              </div>
+              <div className="text-lg font-semibold text-slate-950">{group.title}</div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {group.fields.map((field) => (
