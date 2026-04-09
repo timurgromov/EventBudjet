@@ -81,9 +81,9 @@ const toneClasses: Record<MarginTone, { badge: string; panel: string; value: str
     value: "text-emerald-700",
   },
   amber: {
-    badge: "bg-amber-100 text-amber-800",
+    badge: "bg-amber-100 text-[#b7791f]",
     panel: "border-amber-200 bg-amber-50/70",
-    value: "text-amber-800",
+    value: "text-[#b7791f]",
   },
 };
 
@@ -220,11 +220,8 @@ const AdminMarginCalculatorPage = () => {
 
         <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-lg font-semibold text-slate-950">Сценарий заказа</div>
-            <div className="mt-1 text-sm text-slate-600">Сводка по текущему набору значений пересчитывается сразу при изменении полей.</div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4">
-              <ScenarioMetricCard label="Выручка" value={formatMoney(calculations.revenue)} />
-              <ScenarioMetricCard label="Расходы" value={formatMoney(calculations.totalCosts)} />
+            <div className="text-lg font-semibold text-slate-950">Сводка</div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <ScenarioMetricCard
                 label="Чистая прибыль"
                 value={formatMoney(calculations.profit)}
