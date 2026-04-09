@@ -15,7 +15,7 @@ type MarginFieldKey =
 
 type MarginFormValues = Record<MarginFieldKey, string>;
 
-type MarginTone = "red" | "yellow" | "green" | "amber" | "violet";
+type MarginTone = "red" | "yellow" | "green" | "teal" | "violet";
 
 const INITIAL_VALUES: MarginFormValues = {
   basePackage: "",
@@ -61,7 +61,7 @@ const getMarginStatus = (margin: number): { label: string; description: string; 
     return { label: "Хорошая маржа", description: "Сценарий выглядит здоровым по текущей модели.", tone: "green" };
   }
   if (margin <= 75) {
-    return { label: "Высокая маржа", description: "Сценарий даёт сильный запас по прибыльности.", tone: "amber" };
+    return { label: "Высокая маржа", description: "Сценарий даёт сильный запас по прибыльности.", tone: "teal" };
   }
   return { label: "Выдающаяся маржа", description: "Премиальный уровень рентабельности, сценарий выглядит максимально сильным.", tone: "violet" };
 };
@@ -82,10 +82,10 @@ const toneClasses: Record<MarginTone, { badge: string; panel: string; value: str
     panel: "border-green-200 bg-green-50/70",
     value: "text-green-600",
   },
-  amber: {
-    badge: "border border-amber-200 bg-amber-50 text-amber-700",
-    panel: "border-amber-200 bg-amber-50/70",
-    value: "text-amber-700",
+  teal: {
+    badge: "border border-teal-200 bg-teal-50 text-teal-700",
+    panel: "border-teal-200 bg-teal-50/70",
+    value: "text-teal-700",
   },
   violet: {
     badge: "border border-violet-300 bg-violet-50 text-violet-700",
