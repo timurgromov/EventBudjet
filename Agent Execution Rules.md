@@ -179,8 +179,8 @@ Before completing a task:
 - API endpoints respond
 - DB migrations run
 - No unrelated changes included
-- For UI tasks, final visual conclusions must be based on the deployed production URL on VPS, not on localhost, preview, or any other local environment
-- Local preview may be used only as an intermediate development aid, never as the final source of truth for what the user sees
+- For UI tasks, final visual conclusions must be based on the final deployed product URL where users actually open the product
+- Local preview may be used only as an intermediate development aid, never as the final source of truth once the product is already deployed somewhere
 
 ---
 
