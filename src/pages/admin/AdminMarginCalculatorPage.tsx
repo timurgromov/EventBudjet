@@ -15,7 +15,7 @@ type MarginFieldKey =
 
 type MarginFormValues = Record<MarginFieldKey, string>;
 
-type MarginTone = "red" | "yellow" | "green" | "amber";
+type MarginTone = "red" | "yellow" | "green" | "amber" | "violet";
 
 const INITIAL_VALUES: MarginFormValues = {
   basePackage: "",
@@ -60,31 +60,41 @@ const getMarginStatus = (margin: number): { label: string; description: string; 
   if (margin <= 60) {
     return { label: "Хорошая маржа", description: "Сценарий выглядит здоровым по текущей модели.", tone: "green" };
   }
-  return { label: "Очень высокая маржа", description: "Запас по прибыльности высокий, можно использовать как сильный сценарий.", tone: "amber" };
+  if (margin <= 75) {
+    return { label: "Высокая маржа", description: "Сценарий даёт сильный запас по прибыльности.", tone: "amber" };
+  }
+  return { label: "Выдающаяся маржа", description: "Премиальный уровень рентабельности, сценарий выглядит максимально сильным.", tone: "violet" };
 };
 
-const toneClasses: Record<MarginTone, { badge: string; panel: string; value: string }> = {
+const toneClasses: Record<MarginTone, { badge: string; panel: string; value: string; effect?: string }> = {
   red: {
-    badge: "bg-rose-100 text-rose-700",
-    panel: "border-rose-200 bg-rose-50/70",
-    value: "text-rose-700",
+    badge: "border border-red-200 bg-red-50 text-red-600",
+    panel: "border-red-200 bg-red-50/70",
+    value: "text-red-600",
   },
   yellow: {
-    badge: "bg-yellow-100 text-yellow-800",
+    badge: "border border-yellow-200 bg-yellow-50 text-yellow-700",
     panel: "border-yellow-200 bg-yellow-50/70",
-    value: "text-yellow-800",
+    value: "text-yellow-700",
   },
   green: {
-    badge: "bg-emerald-100 text-emerald-700",
-    panel: "border-emerald-200 bg-emerald-50/70",
-    value: "text-emerald-700",
+    badge: "border border-green-200 bg-green-50 text-green-600",
+    panel: "border-green-200 bg-green-50/70",
+    value: "text-green-600",
   },
   amber: {
-    badge: "bg-amber-100 text-[#b7791f]",
+    badge: "border border-amber-200 bg-amber-50 text-amber-700",
     panel: "border-amber-200 bg-amber-50/70",
-    value: "text-[#b7791f]",
+    value: "text-amber-700",
   },
-};
+  violet: {
+    badge: "border border-violet-300 bg-violet-50 text-violet-700",
+    panel: "border-violet-300 bg-violet-50/80",
+    value: "text-violet-700",
+    effect:
+      "ring-1 ring-violet-200/80 shadow-[0_0_0_1px_rgba(139,92,246,0.08),0_18px_40px_rgba(139,92,246,0.14)]",
+  },
+} as const;
 
 const fieldGroups: Array<{
   title: string;
@@ -210,7 +220,7 @@ const AdminMarginCalculatorPage = () => {
           ))}
         </div>
 
-        <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel)}>
+        <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel, tone.effect)}>
           <div className="text-sm font-medium text-slate-600">Финансовый результат</div>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="grid gap-3">
