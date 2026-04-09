@@ -179,11 +179,6 @@ Before completing a task:
 - API endpoints respond
 - DB migrations run
 - No unrelated changes included
-- Frontend/UI changes must be checked in a real browser, not only by build/lint output
-- Deployed frontend changes must be checked in:
-  - a fresh browser session
-  - an already-open warm session after reload / hard reload
-- If warm and fresh sessions show different UI, first assume stale frontend bundle/cache and investigate that before changing layout again
 
 ---
 
