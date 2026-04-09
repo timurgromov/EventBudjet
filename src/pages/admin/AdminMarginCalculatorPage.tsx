@@ -181,46 +181,47 @@ const AdminMarginCalculatorPage = () => {
 
       <div className="space-y-4">
         <div className="grid gap-4 xl:grid-cols-2">
-            {fieldGroups.map((group) => (
-              <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-1">
-                  <div className="text-lg font-semibold text-slate-950">{group.title}</div>
-                  <div className="text-sm text-slate-600">{group.description}</div>
-                </div>
+          {fieldGroups.map((group) => (
+            <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-col gap-1">
+                <div className="text-lg font-semibold text-slate-950">{group.title}</div>
+                <div className="text-sm text-slate-600">{group.description}</div>
+              </div>
 
-                <div className="mt-4 grid gap-3">
-                  {group.fields.map((field) => (
-                    <div key={field.key} className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_176px] lg:items-center lg:gap-4">
-                      <Label htmlFor={field.key} className="text-xs font-medium leading-snug text-slate-500">
-                        {field.label}
-                      </Label>
-                      <div className="lg:justify-self-end">
-                        <Input
-                          id={field.key}
-                          type="number"
-                          min="0"
-                          step={field.step ?? "1"}
-                          inputMode="decimal"
-                          value={values[field.key]}
-                          onChange={(event) => handleFieldChange(field.key, event.target.value)}
-                          className="h-10 w-full bg-slate-50 text-right text-base lg:w-44"
-                          placeholder="0"
-                        />
-                      </div>
+              <div className="mt-4 space-y-3">
+                {group.fields.map((field) => (
+                  <div
+                    key={field.key}
+                    className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5"
+                  >
+                    <div className="text-[11px] font-medium leading-snug text-slate-500">
+                      {field.label}
                     </div>
-                  ))}
-                </div>
+                    <Input
+                      id={field.key}
+                      type="number"
+                      min="0"
+                      step={field.step ?? "1"}
+                      inputMode="decimal"
+                      value={values[field.key]}
+                      onChange={(event) => handleFieldChange(field.key, event.target.value)}
+                      className="mt-2 h-10 w-full max-w-[180px] bg-white text-right text-base"
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
+              </div>
 
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    {group.title === "Доходы" ? "Выручка" : "Общие расходы"}
-                  </div>
-                  <div className="mt-1.5 text-2xl font-semibold text-slate-950">
-                    {group.title === "Доходы" ? formatMoney(calculations.revenue) : formatMoney(calculations.totalCosts)}
-                  </div>
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  {group.title === "Доходы" ? "Выручка" : "Общие расходы"}
                 </div>
-              </section>
-            ))}
+                <div className="mt-1.5 text-2xl font-semibold text-slate-950">
+                  {group.title === "Доходы" ? formatMoney(calculations.revenue) : formatMoney(calculations.totalCosts)}
+                </div>
+              </div>
+            </section>
+          ))}
         </div>
 
         <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
