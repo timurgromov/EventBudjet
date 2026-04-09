@@ -24,7 +24,7 @@ const INITIAL_VALUES: MarginFormValues = {
   extraHourRate: "",
   djPayout: "",
   adsCost: "",
-  otherCosts: "",
+  otherCosts: "5000",
 };
 
 const MONEY_FORMATTER = new Intl.NumberFormat("ru-RU", {
