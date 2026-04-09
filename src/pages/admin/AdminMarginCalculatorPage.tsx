@@ -17,6 +17,8 @@ type MarginFormValues = Record<MarginFieldKey, string>;
 
 type MarginTone = "red" | "yellow" | "green" | "teal" | "violet";
 
+const MIN_PROFIT_ALERT = 60000;
+
 const INITIAL_VALUES: MarginFormValues = {
   basePackage: "",
   extraEquipment: "",
@@ -83,9 +85,9 @@ const toneClasses: Record<MarginTone, { badge: string; panel: string; value: str
     value: "text-green-600",
   },
   teal: {
-    badge: "border border-teal-200 bg-teal-50 text-teal-700",
-    panel: "border-teal-200 bg-teal-50/70",
-    value: "text-teal-700",
+    badge: "border border-cyan-200 bg-cyan-50 text-cyan-700",
+    panel: "border-cyan-200 bg-cyan-50/70",
+    value: "text-cyan-700",
   },
   violet: {
     badge: "border border-violet-300 bg-violet-50 text-violet-700",
@@ -157,6 +159,7 @@ const AdminMarginCalculatorPage = () => {
 
   const marginStatus = getMarginStatus(calculations.margin);
   const tone = toneClasses[marginStatus.tone];
+  const isProfitAlert = calculations.profit < MIN_PROFIT_ALERT;
 
   return (
     <div className="space-y-4">
@@ -219,11 +222,26 @@ const AdminMarginCalculatorPage = () => {
               </div>
 
               {group.title === "Доходы" ? (
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div
+                  className={cn(
+                    "mt-3 rounded-xl border px-4 py-3",
+                    isProfitAlert
+                      ? "border-red-200 bg-red-50 ring-1 ring-red-100/80 shadow-[0_10px_24px_rgba(239,68,68,0.08)]"
+                      : "border-slate-200 bg-slate-50",
+                  )}
+                >
                   <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
-                  <div className={cn("mt-1.5 text-2xl font-semibold", calculations.profit < 0 ? "text-rose-700" : "text-slate-950")}>
+                  <div
+                    className={cn(
+                      "mt-1.5 text-2xl font-semibold",
+                      isProfitAlert ? "text-red-600" : calculations.profit < 0 ? "text-rose-700" : "text-slate-950",
+                    )}
+                  >
                     {formatMoney(calculations.profit)}
                   </div>
+                  {isProfitAlert ? (
+                    <div className="mt-2 text-sm font-medium text-red-600">Ниже минимально допустимого уровня</div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
