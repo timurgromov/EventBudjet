@@ -180,7 +180,7 @@ const AdminMarginCalculatorPage = () => {
       </section>
 
       <div className="space-y-4">
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           {fieldGroups.map((group) => (
             <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-1">
@@ -188,7 +188,7 @@ const AdminMarginCalculatorPage = () => {
                 <div className="text-sm text-slate-600">{group.description}</div>
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {group.fields.map((field) => (
                   <div
                     key={field.key}
