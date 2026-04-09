@@ -10,6 +10,7 @@ import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
 import AdminLeadDetailPage from "./pages/admin/AdminLeadDetailPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 import AdminSourcesPage from "./pages/admin/AdminSourcesPage";
+import AdminMarginCalculatorPage from "./pages/admin/AdminMarginCalculatorPage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="leads/:leadId" element={<AdminLeadDetailPage />} />
             <Route path="sources" element={<AdminSourcesPage />} />
             <Route path="notifications" element={<AdminNotificationsPage />} />
+            <Route path="margin-calculator" element={<AdminMarginCalculatorPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
