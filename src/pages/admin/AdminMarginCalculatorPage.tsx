@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 type MarginFieldKey =
@@ -110,13 +109,6 @@ const fieldGroups: Array<{
   },
 ];
 
-const ScenarioMetricCard = ({ label, value, accent }: { label: string; value: string; accent?: string }) => (
-  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</div>
-    <div className={cn("mt-1.5 text-xl font-semibold text-slate-950", accent)}>{value}</div>
-  </div>
-);
-
 const AdminMarginCalculatorPage = () => {
   const [values, setValues] = useState<MarginFormValues>(INITIAL_VALUES);
 
@@ -218,57 +210,43 @@ const AdminMarginCalculatorPage = () => {
           ))}
         </div>
 
-        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-lg font-semibold text-slate-950">Сводка</div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <ScenarioMetricCard
-                label="Чистая прибыль"
-                value={formatMoney(calculations.profit)}
-                accent={calculations.profit < 0 ? "text-rose-700" : "text-slate-950"}
-              />
-              <ScenarioMetricCard label="Маржа" value={formatMargin(calculations.margin)} accent={tone.value} />
-            </div>
-          </section>
-
-          <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel)}>
-            <div className="text-sm font-medium text-slate-600">Финансовый результат</div>
-            <div className="mt-3 rounded-2xl bg-white/80 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Маржа</div>
-                  <div className={cn("mt-1.5 text-4xl font-semibold tracking-tight", tone.value)}>
-                    {formatMargin(calculations.margin)}
-                  </div>
-                </div>
-                <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>
-                  {marginStatus.label}
+        <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel)}>
+          <div className="text-sm font-medium text-slate-600">Финансовый результат</div>
+          <div className="mt-3 rounded-2xl bg-white/80 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Маржа</div>
+                <div className={cn("mt-1.5 text-4xl font-semibold tracking-tight", tone.value)}>
+                  {formatMargin(calculations.margin)}
                 </div>
               </div>
+              <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>
+                {marginStatus.label}
+              </div>
+            </div>
 
-              <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
+            <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
 
-              <div className="mt-4 grid gap-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
-                  <div className={cn("mt-1.5 text-2xl font-semibold", calculations.profit < 0 ? "text-rose-700" : "text-slate-950")}>
-                    {formatMoney(calculations.profit)}
-                  </div>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
+                <div className={cn("mt-1.5 text-2xl font-semibold", calculations.profit < 0 ? "text-rose-700" : "text-slate-950")}>
+                  {formatMoney(calculations.profit)}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Выручка</div>
-                    <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.revenue)}</div>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общие расходы</div>
-                    <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.totalCosts)}</div>
-                  </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Выручка</div>
+                  <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.revenue)}</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общие расходы</div>
+                  <div className="mt-1.5 text-lg font-semibold text-slate-950">{formatMoney(calculations.totalCosts)}</div>
                 </div>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </div>
   );
