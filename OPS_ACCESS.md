@@ -24,7 +24,6 @@ ssh -o IdentitiesOnly=yes -i ~/.ssh/cloudru.key user1@185.50.203.2
 - Назначение: только исходящий SOCKS5 для Telegram API, чтобы бот на Cloud.ru не терял связь с `api.telegram.org`
 - Сервис: `danted`, порт `1080`
 - Ограничение доступа: к SOCKS5 допускается только Cloud.ru VPS IP `185.50.203.2`
-- Legacy fallback proxy: `38.180.158.190` (держать только как временный rollback до деcommission)
 
 ## Путь проекта на VPS
 
