@@ -101,6 +101,7 @@ sudo docker compose logs --tail=100 nginx
 - текущий backend/frontend/postgres/nginx не переносить;
 - на зарубежном VPS поднять только proxy;
 - подключить к proxy только контейнер `bot`;
+- для текущего проекта единственный рабочий proxy endpoint должен быть один, и он должен быть явно зафиксирован в `OPS_ACCESS.md` и `docs/SECRETS_INVENTORY.md`;
 - после этого проверить `bot -> api.telegram.org`.
 
 Это самый простой путь для текущего проекта.

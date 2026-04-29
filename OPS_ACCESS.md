@@ -21,7 +21,7 @@ ssh -o IdentitiesOnly=yes -i ~/.ssh/cloudru.key user1@185.50.203.2
 - VPS public IP: `89.22.227.133`
 - SSH user: `root`
 - SSH auth: password (хранится вне git)
-- Назначение: только исходящий SOCKS5 для Telegram API, чтобы бот на Cloud.ru не терял связь с `api.telegram.org`
+- Назначение: единственный актуальный исходящий SOCKS5 для Telegram API, чтобы бот на Cloud.ru не терял связь с `api.telegram.org`
 - Сервис: `danted`, порт `1080`
 - Ограничение доступа: к SOCKS5 допускается только Cloud.ru VPS IP `185.50.203.2`
 
@@ -66,6 +66,7 @@ sudo docker compose up -d bot
 - Бот использует прокси через env-переменную `BOT_TELEGRAM_PROXY_URL`.
 - Значение задается в `/home/user1/EventBudjet/.env` на Cloud.ru VPS.
 - В коде прокси подхватывается в `bot/main.py` через `AiohttpSession(proxy=...)`.
+- Актуальный proxy endpoint для prod: `89.22.227.133:1080`.
 - Если прокси недоступен, бот может стартовать с ошибками сети Telegram.
 
 Проверка, что прокси активен:
