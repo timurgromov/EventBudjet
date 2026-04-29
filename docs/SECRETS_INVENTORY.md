@@ -29,7 +29,7 @@
 | `POSTGRES_USER` | `postgres`, `backend`, `bot` | `/home/user1/EventBudjet/.env` на VPS | Меняется только при явной ротации |
 | `POSTGRES_PASSWORD` | `postgres`, `backend`, `bot` | `/home/user1/EventBudjet/.env` на VPS | Ротация пароля в `.env` и перезапуск сервисов |
 | `~/.ssh/cloudru.key` | SSH доступ на текущий VPS | Только на локальной машине владельца | Не хранить в репозитории; при утрате выдать новый ключ |
-| SSH пароль/ключ NL VPS (`38.180.158.190`) | Админ-доступ к SOCKS5-хосту | Только у владельца (внешний менеджер паролей) | При утечке: ротация SSH-пароля/ключей и hardening входа |
+| SSH пароль/ключ SOCKS5 VPS (`89.22.227.133`) | Админ-доступ к текущему SOCKS5-хосту | Только у владельца (внешний менеджер паролей) | При утечке: ротация SSH-пароля/ключей и hardening входа |
 | TLS certs for `calcul.timurgromov.ru` | `nginx` HTTPS | `/etc/letsencrypt/live/calcul.timurgromov.ru/` на VPS | Выпустить заново certbot/Let’s Encrypt при переносе |
 
 ## Обязательные env для проекта
@@ -49,10 +49,11 @@
 
 ## Текущая сеть Telegram (prod)
 
-- Бот работает на Cloud.ru VPS (`185.50.203.2`), но Telegram API вызывает через SOCKS5 на NL VPS (`38.180.158.190:1080`).
-- На NL VPS поднят `danted`.
+- Бот работает на Cloud.ru VPS (`185.50.203.2`), но Telegram API вызывает через SOCKS5 на VPS `89.22.227.133:1080`.
+- На SOCKS5 VPS поднят `danted`.
 - Доступ к SOCKS5 ограничен IP источника `185.50.203.2`.
 - В git не хранить логин/пароль SOCKS5; хранить только в `.env` на Cloud.ru VPS.
+- Старый proxy VPS `38.180.158.190` можно держать только как временный rollback, пока не принято решение о деcommission.
 
 ## Быстрая ротация Telegram bot token
 
