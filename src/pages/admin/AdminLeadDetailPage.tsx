@@ -325,6 +325,26 @@ const AdminLeadDetailPage = () => {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 text-lg font-semibold text-slate-950">Смета</div>
+        {expenses.length === 0 ? (
+          <div className="text-sm text-slate-600">Расходов пока нет.</div>
+        ) : (
+          <div className="space-y-2">
+            {expenses.map((expense) => (
+              <div key={expense.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                <div className="min-w-0 pr-4 text-slate-700">{expense.category_name}</div>
+                <div className="shrink-0 font-medium text-slate-950">{formatAdminMoney(expense.amount)}</div>
+              </div>
+            ))}
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm">
+              <div className="font-semibold text-white">Итого</div>
+              <div className="shrink-0 text-base font-semibold text-white">{formatAdminMoney(lead.total_budget)}</div>
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col overflow-hidden">
         <div className="border-b border-slate-200 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -392,26 +412,6 @@ const AdminLeadDetailPage = () => {
             {directMessageStatus ? <div className="text-sm text-slate-600">{directMessageStatus}</div> : null}
           </div>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 text-lg font-semibold text-slate-950">Смета</div>
-        {expenses.length === 0 ? (
-          <div className="text-sm text-slate-600">Расходов пока нет.</div>
-        ) : (
-          <div className="space-y-2">
-            {expenses.map((expense) => (
-              <div key={expense.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm">
-                <div className="min-w-0 pr-4 text-slate-700">{expense.category_name}</div>
-                <div className="shrink-0 font-medium text-slate-950">{formatAdminMoney(expense.amount)}</div>
-              </div>
-            ))}
-            <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm">
-              <div className="font-semibold text-white">Итого</div>
-              <div className="shrink-0 text-base font-semibold text-white">{formatAdminMoney(lead.total_budget)}</div>
-            </div>
-          </div>
-        )}
       </section>
 
       <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
