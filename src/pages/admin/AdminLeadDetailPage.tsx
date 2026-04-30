@@ -107,6 +107,7 @@ const AdminLeadDetailPage = () => {
   const queryClient = useQueryClient();
   const leadId = Number(params.leadId);
   const lastMarkedMessageEventIdRef = useRef<number | null>(null);
+  const conversationViewportRef = useRef<HTMLDivElement | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [directMessageText, setDirectMessageText] = useState("");
   const [directMessageStatus, setDirectMessageStatus] = useState<string | null>(null);
@@ -205,6 +206,15 @@ const AdminLeadDetailPage = () => {
     lastMarkedMessageEventIdRef.current = latestMessageEventId;
     markChatReadMutation.mutate();
   }, [adminToken, markChatReadMutation, query.data]);
+
+  useEffect(() => {
+    const viewport = conversationViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTop = viewport.scrollHeight;
+  }, [conversationEvents]);
 
   if (!adminToken.trim()) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть карточку лида.</div>;
@@ -328,7 +338,10 @@ const AdminLeadDetailPage = () => {
           <div className="text-sm text-slate-500">Сообщения клиента, ваши ответы и ключевые точки входа.</div>
         </div>
 
-        <div className="max-h-[58vh] overflow-y-auto space-y-3 bg-slate-50/70 px-4 py-4">
+        <div
+          ref={conversationViewportRef}
+          className="max-h-[56vh] overflow-y-auto space-y-3 bg-slate-50/70 px-4 py-4 lg:max-h-[46vh] xl:max-h-[42vh]"
+        >
           {conversationEvents.length === 0 ? (
             <div className="text-sm text-slate-600">Пока нет событий переписки.</div>
           ) : (
