@@ -91,4 +91,24 @@
   .glow-gold {
     box-shadow: 0 0 20px hsl(43, 72%, 55% / 0.15);
   }
+
+  .margin-low {
+    @apply border-red-200 bg-red-50/70;
+  }
+
+  .margin-medium {
+    @apply border-orange-200 bg-orange-50/70;
+  }
+
+  .margin-good {
+    @apply border-green-200 bg-green-50/70;
+  }
+
+  .margin-high {
+    @apply border-emerald-300 bg-emerald-100/70;
+  }
+
+  .margin-excellent {
+    @apply border-emerald-300 bg-emerald-100/80;
+  }
 }

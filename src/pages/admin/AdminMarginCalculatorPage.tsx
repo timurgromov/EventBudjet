@@ -132,6 +132,14 @@ const toneClasses: Record<MarginTone, { badge: string; panel: string; value: str
   },
 } as const;
 
+const marginPanelClasses: Record<MarginTone, string> = {
+  red: "margin-low",
+  yellow: "margin-medium",
+  green: "margin-good",
+  teal: "margin-high",
+  violet: "margin-excellent",
+} as const;
+
 const fieldGroups: Array<{
   title: string;
   fields: Array<{ key: MarginFieldKey; label: string; step?: string }>;
@@ -278,7 +286,7 @@ const AdminMarginCalculatorPage = () => {
                   <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
                 </div>
               ) : (
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className={cn("mt-3 rounded-xl border px-4 py-3", marginPanelClasses[marginStatus.tone])}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа</div>
