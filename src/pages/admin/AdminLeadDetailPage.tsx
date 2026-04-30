@@ -114,6 +114,8 @@ const AdminLeadDetailPage = () => {
     queryKey: ["admin-lead-detail", adminToken, leadId],
     queryFn: () => getAdminLead(adminToken, leadId),
     enabled: adminToken.trim().length > 0 && Number.isFinite(leadId),
+    refetchInterval: adminToken.trim().length > 0 && Number.isFinite(leadId) ? 5000 : false,
+    refetchOnWindowFocus: true,
   });
 
   const directMessageMutation = useMutation({

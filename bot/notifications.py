@@ -308,6 +308,14 @@ class AdminNotificationService:
             if details:
                 return (details, 'medium')
             return None
+        if event.event_type == 'user_message':
+            text_value = str(payload.get('text') or '').strip()
+            if text_value:
+                return (f'• Написал в Telegram: {text_value[:500]}', 'high')
+            content_type = str(payload.get('content_type') or '').strip()
+            if content_type:
+                return (f'• Написал в Telegram ({content_type})', 'high')
+            return ('• Написал в Telegram', 'high')
         if event.event_type == 'expense_added':
             name = payload.get('category_name') or 'Новая статья'
             amount = self._format_amount(payload.get('amount'))
