@@ -60,7 +60,7 @@ const LeadRow = ({ lead, onRequestDelete }: { lead: AdminLeadListItem; onRequest
 
   return (
   <Link
-    to={`/admin/leads/${lead.lead_id}`}
+    to={`/admin/wedding-calculator/leads/${lead.lead_id}`}
     className="relative grid gap-2 rounded-xl border border-slate-200 bg-white p-4 pr-12 transition-colors hover:border-slate-300 hover:bg-slate-50 md:grid-cols-[minmax(0,1.3fr)_0.9fr_0.8fr_0.8fr_0.9fr]"
   >
     <div className="absolute right-2 top-2 z-10">
@@ -328,7 +328,7 @@ const AdminLeadsPage = () => {
               return (
                 <Link
                   key={`hot-${lead.lead_id}`}
-                  to={`/admin/leads/${lead.lead_id}`}
+                  to={`/admin/wedding-calculator/leads/${lead.lead_id}`}
                   className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 transition-colors hover:bg-white"
                 >
                   <div className="truncate text-sm font-semibold text-slate-950">{formatLeadName(lead.name, lead.username)}</div>

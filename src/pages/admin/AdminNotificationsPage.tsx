@@ -57,7 +57,7 @@ const AdminNotificationsPage = () => {
               </div>
               <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
                 <div>priority: {notification.priority ?? "—"}</div>
-                <Link to={`/admin/leads/${notification.lead_id}`} className="underline underline-offset-4">Открыть лид</Link>
+                <Link to={`/admin/wedding-calculator/leads/${notification.lead_id}`} className="underline underline-offset-4">Открыть лид</Link>
               </div>
             </div>
           ))}

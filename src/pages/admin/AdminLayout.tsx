@@ -37,9 +37,9 @@ const AdminLayout = () => {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</div>
-              <h1 className="mt-1 text-3xl font-serif text-slate-950">Панель лидов</h1>
+              <h1 className="mt-1 text-3xl font-serif text-slate-950">CRM-система</h1>
               <p className="mt-1 text-sm text-slate-600">
-                Рабочая админка для просмотра лидов, сметы, событий и уведомлений.
+                Внутренняя панель для свадебного калькулятора и калькулятора маржи.
               </p>
             </div>
             <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -70,25 +70,11 @@ const AdminLayout = () => {
             <div className="mb-3 px-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Разделы</div>
             <nav className="space-y-1">
               <NavLink
-                to="/admin/leads"
+                to="/admin/wedding-calculator"
                 className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors"
                 activeClassName="bg-slate-950 text-white"
               >
-                Лиды
-              </NavLink>
-              <NavLink
-                to="/admin/notifications"
-                className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors"
-                activeClassName="bg-slate-950 text-white"
-              >
-                Уведомления
-              </NavLink>
-              <NavLink
-                to="/admin/sources"
-                className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors"
-                activeClassName="bg-slate-950 text-white"
-              >
-                Источники
+                Свадебный калькулятор
               </NavLink>
               <NavLink
                 to="/admin/margin-calculator"

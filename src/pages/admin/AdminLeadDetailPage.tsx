@@ -146,7 +146,7 @@ const AdminLeadDetailPage = () => {
   const deleteLeadMutation = useMutation({
     mutationFn: async () => deleteAdminLead(adminToken, leadId),
     onSuccess: () => {
-      navigate("/admin/leads");
+      navigate("/admin/wedding-calculator/leads");
     },
     onError: (error) => {
       setDangerStatus(error instanceof Error ? `Ошибка удаления: ${error.message}` : "Ошибка удаления.");
@@ -229,7 +229,7 @@ const AdminLeadDetailPage = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
-              <Link to="/admin/leads" className="text-sm text-slate-500 underline underline-offset-4">Назад к лидам</Link>
+              <Link to="/admin/wedding-calculator/leads" className="text-sm text-slate-500 underline underline-offset-4">Назад к лидам</Link>
               <h2 className="mt-2 text-2xl font-serif text-slate-950">{formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}</h2>
               <div className="mt-1 text-sm text-slate-600">lead #{lead.id} • telegram_id {user.telegram_id}</div>
               <div className="mt-3 flex flex-wrap gap-2">
