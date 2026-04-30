@@ -107,6 +107,7 @@ const AdminLeadDetailPage = () => {
   const queryClient = useQueryClient();
   const leadId = Number(params.leadId);
   const lastMarkedMessageEventIdRef = useRef<number | null>(null);
+  const pageOpenedAtRef = useRef<number>(Date.now());
   const conversationViewportRef = useRef<HTMLDivElement | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [directMessageText, setDirectMessageText] = useState("");
@@ -190,9 +191,10 @@ const AdminLeadDetailPage = () => {
 
   useEffect(() => {
     lastMarkedMessageEventIdRef.current = null;
+    pageOpenedAtRef.current = Date.now();
   }, [leadId]);
 
-  useEffect(() => {
+  const markUnreadMessagesAsRead = () => {
     if (!query.data || !adminToken.trim() || markChatReadMutation.isPending) {
       return;
     }
@@ -205,6 +207,17 @@ const AdminLeadDetailPage = () => {
     }
     lastMarkedMessageEventIdRef.current = latestMessageEventId;
     markChatReadMutation.mutate();
+  };
+
+  useEffect(() => {
+    if (!query.data || !adminToken.trim() || markChatReadMutation.isPending) {
+      return;
+    }
+    const latestMessageAt = query.data.latest_user_message_at ? Date.parse(query.data.latest_user_message_at) : Number.NaN;
+    if (!Number.isFinite(latestMessageAt) || latestMessageAt > pageOpenedAtRef.current) {
+      return;
+    }
+    markUnreadMessagesAsRead();
   }, [adminToken, markChatReadMutation, query.data]);
 
   useEffect(() => {
@@ -359,6 +372,7 @@ const AdminLeadDetailPage = () => {
         </div>
 
         <div
+          onClick={markUnreadMessagesAsRead}
           ref={conversationViewportRef}
           className="max-h-[56vh] overflow-y-auto space-y-3 bg-slate-50/70 px-4 py-4 lg:max-h-[46vh] xl:max-h-[42vh]"
         >
@@ -395,10 +409,11 @@ const AdminLeadDetailPage = () => {
           )}
         </div>
 
-        <div className="border-t border-slate-200 bg-white p-4 space-y-3">
+        <div className="border-t border-slate-200 bg-white p-4 space-y-3" onClick={markUnreadMessagesAsRead}>
           <Textarea
             value={directMessageText}
             onChange={(e) => setDirectMessageText(e.target.value)}
+            onFocus={markUnreadMessagesAsRead}
             placeholder="Напишите сообщение клиенту..."
             className="min-h-[96px] bg-white"
           />

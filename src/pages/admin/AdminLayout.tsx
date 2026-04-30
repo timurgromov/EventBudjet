@@ -26,6 +26,7 @@ const AdminLayout = () => {
   const [savedToken, setSavedToken] = useState(getStoredAdminToken());
   const navigate = useNavigate();
   const notifiedEventIdsRef = useRef<Set<number>>(new Set());
+  const toastIdsByEventRef = useRef<Map<number, string | number>>(new Map());
   const initialUnreadHydratedRef = useRef(false);
 
   const hasToken = useMemo(() => savedToken.trim().length > 0, [savedToken]);
@@ -49,6 +50,8 @@ const AdminLayout = () => {
 
   useEffect(() => {
     if (!hasToken) {
+      toastIdsByEventRef.current.forEach((toastId) => toast.dismiss(toastId));
+      toastIdsByEventRef.current.clear();
       notifiedEventIdsRef.current.clear();
       initialUnreadHydratedRef.current = false;
       return;
@@ -62,6 +65,18 @@ const AdminLayout = () => {
         if (aTs !== bTs) return bTs - aTs;
         return (b.latest_user_message_event_id ?? 0) - (a.latest_user_message_event_id ?? 0);
       });
+    const unreadEventIds = new Set(
+      unreadLeads
+        .map((lead) => lead.latest_user_message_event_id)
+        .filter((eventId): eventId is number => typeof eventId === "number"),
+    );
+
+    toastIdsByEventRef.current.forEach((toastId, eventId) => {
+      if (!unreadEventIds.has(eventId)) {
+        toast.dismiss(toastId);
+        toastIdsByEventRef.current.delete(eventId);
+      }
+    });
 
     if (!initialUnreadHydratedRef.current) {
       unreadLeads.forEach((lead) => {
@@ -79,14 +94,20 @@ const AdminLayout = () => {
         return;
       }
       notifiedEventIdsRef.current.add(eventId);
-      toast("Новое сообщение в Telegram", {
+      const toastId = toast("Новое сообщение в Telegram", {
         description: `${formatToastLeadLabel(lead.name, lead.username, lead.lead_id)}: ${lead.latest_user_message_text ?? "Сообщение без текста"}`,
         action: {
           label: "Открыть чат",
-          onClick: () => navigate(`/admin/wedding-calculator/leads/${lead.lead_id}`),
+          onClick: () => {
+            toast.dismiss(toastId);
+            navigate(`/admin/wedding-calculator/leads/${lead.lead_id}`);
+          },
         },
-        duration: 12000,
+        duration: Number.POSITIVE_INFINITY,
+        dismissible: true,
+        closeButton: true,
       });
+      toastIdsByEventRef.current.set(eventId, toastId);
     });
   }, [hasToken, leads, navigate]);
 
