@@ -47,6 +47,7 @@ class AdminService:
     def list_leads(self) -> AdminLeadListResponse:
         rows = self.repo.list_leads()
         state_map = self.repo.get_bot_contact_state_map([lead.id for lead, _ in rows])
+        message_state_map = self.repo.get_lead_message_state_map([lead.id for lead, _ in rows])
         source_name_map = self.repo.get_source_name_map(
             [lead.source for lead, _ in rows if isinstance(lead.source, str) and lead.source.strip()]
         )
@@ -66,6 +67,10 @@ class AdminService:
                 source=lead.source,
                 source_label=source_name_map.get(lead.source or ''),
                 bot_contact_state=state_map.get(lead.id, 'unknown'),
+                unread_messages_count=int(message_state_map.get(lead.id, {}).get('unread_messages_count') or 0),
+                latest_user_message_text=message_state_map.get(lead.id, {}).get('latest_user_message_text'),
+                latest_user_message_at=message_state_map.get(lead.id, {}).get('latest_user_message_at'),
+                latest_user_message_event_id=message_state_map.get(lead.id, {}).get('latest_user_message_event_id'),
             )
             for lead, user in rows
         ]
@@ -79,6 +84,7 @@ class AdminService:
         lead, user = pair
         expenses = self.repo.list_expenses(lead_id)
         events = self.repo.list_lead_events(lead_id=lead_id, limit=200)
+        message_state = self.repo.get_lead_message_state_map([lead_id]).get(lead_id, {})
 
         return AdminLeadDetailResponse(
             lead=LeadRead.model_validate(lead),
@@ -93,6 +99,10 @@ class AdminService:
             ),
             expenses=[ExpenseRead.model_validate(expense) for expense in expenses],
             recent_events=[AdminLeadEventRead.model_validate(event) for event in events],
+            unread_messages_count=int(message_state.get('unread_messages_count') or 0),
+            latest_user_message_text=message_state.get('latest_user_message_text'),
+            latest_user_message_at=message_state.get('latest_user_message_at'),
+            latest_user_message_event_id=message_state.get('latest_user_message_event_id'),
         )
 
     def list_sources(self) -> AdminLeadSourcesResponse:
@@ -191,6 +201,15 @@ class AdminService:
             lead_id=lead_id,
             events=[AdminLeadEventRead.model_validate(event) for event in events],
         )
+
+    def mark_chat_read(self, lead_id: int) -> AdminLeadActionResponse | None:
+        pair = self.repo.get_lead_with_user(lead_id)
+        if pair is None:
+            return None
+
+        self.repo.mark_chat_read(lead_id)
+        self.repo.db.commit()
+        return AdminLeadActionResponse(lead_id=lead_id, status='marked_read')
 
     def list_notifications(self) -> AdminNotificationsResponse:
         rows = self.repo.list_notifications(limit=200)

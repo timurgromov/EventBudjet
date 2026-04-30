@@ -149,13 +149,14 @@ class BotRepository:
             ).scalar_one()
             return int(created)
 
-    def create_lead_event(self, lead_id: int, event_type: str, event_payload: dict[str, Any] | None = None) -> None:
+    def create_lead_event(self, lead_id: int, event_type: str, event_payload: dict[str, Any] | None = None) -> int:
         with SessionLocal.begin() as db:
-            db.execute(
+            event_id = db.execute(
                 text(
                     """
                     INSERT INTO lead_events (lead_id, event_type, event_payload, created_at)
-                    VALUES (:lead_id, :event_type, CAST(:event_payload AS jsonb), now());
+                    VALUES (:lead_id, :event_type, CAST(:event_payload AS jsonb), now())
+                    RETURNING id;
                     """
                 ),
                 {
@@ -163,7 +164,8 @@ class BotRepository:
                     'event_type': event_type,
                     'event_payload': json.dumps(event_payload) if event_payload is not None else None,
                 },
-            )
+            ).scalar_one()
+            return int(event_id)
 
     def log_admin_notification(self, lead_id: int, notification_type: str, priority: str, status: str) -> None:
         is_sent = status == 'sent'
@@ -207,7 +209,6 @@ class BotRepository:
                         'profile_started',
                         'profile_updated',
                         'profile_completed',
-                        'user_message',
                         'expense_added',
                         'expense_updated',
                         'expense_removed',
@@ -246,7 +247,6 @@ class BotRepository:
                       'profile_started',
                       'profile_updated',
                       'profile_completed',
-                      'user_message',
                       'expense_added',
                       'expense_updated',
                       'expense_removed',

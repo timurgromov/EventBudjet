@@ -65,6 +65,10 @@ export interface AdminLeadListItem {
   source: string | null;
   source_label?: string | null;
   bot_contact_state: "active" | "blocked" | "unknown" | string | null;
+  unread_messages_count: number;
+  latest_user_message_text: string | null;
+  latest_user_message_at: string | null;
+  latest_user_message_event_id: number | null;
 }
 
 export interface AdminLeadListResponse {
@@ -94,6 +98,10 @@ export interface AdminLeadDetailResponse {
   user: AdminUserRead;
   expenses: Expense[];
   recent_events: AdminLeadEventRead[];
+  unread_messages_count: number;
+  latest_user_message_text: string | null;
+  latest_user_message_at: string | null;
+  latest_user_message_event_id: number | null;
 }
 
 export interface AdminLeadSourceItem {
@@ -319,6 +327,12 @@ export function listAdminLeads(adminToken: string): Promise<AdminLeadListRespons
 
 export function getAdminLead(adminToken: string, leadId: number): Promise<AdminLeadDetailResponse> {
   return adminRequest<AdminLeadDetailResponse>(`/admin/leads/${leadId}`, adminToken);
+}
+
+export function markAdminLeadChatRead(adminToken: string, leadId: number): Promise<AdminLeadActionResponse> {
+  return adminRequest<AdminLeadActionResponse>(`/admin/leads/${leadId}/mark-chat-read`, adminToken, {
+    method: "POST",
+  });
 }
 
 export function listAdminNotifications(adminToken: string): Promise<AdminNotificationsResponse> {

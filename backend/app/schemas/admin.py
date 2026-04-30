@@ -23,6 +23,10 @@ class AdminLeadListItem(BaseModel):
     source: str | None
     source_label: str | None = None
     bot_contact_state: str | None = None
+    unread_messages_count: int = 0
+    latest_user_message_text: str | None = None
+    latest_user_message_at: datetime | None = None
+    latest_user_message_event_id: int | None = None
 
 
 class AdminLeadListResponse(BaseModel):
@@ -54,6 +58,10 @@ class AdminLeadDetailResponse(BaseModel):
     user: AdminUserRead
     expenses: list[ExpenseRead]
     recent_events: list[AdminLeadEventRead]
+    unread_messages_count: int = 0
+    latest_user_message_text: str | None = None
+    latest_user_message_at: datetime | None = None
+    latest_user_message_event_id: int | None = None
 
 
 class AdminLeadEventsResponse(BaseModel):

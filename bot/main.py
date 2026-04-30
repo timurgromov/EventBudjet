@@ -11,7 +11,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import ChatMemberUpdated, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
 from bot.config import settings
-from bot.db import BotRepository
+from bot.db import BotRepository, PendingLeadEvent
 from bot.notifications import AdminNotificationService, process_pending_events_once, run_lead_event_notifier
 
 logging.basicConfig(level=logging.INFO, format='time=%(asctime)s level=%(levelname)s logger=%(name)s message=%(message)s')
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 repository = BotRepository()
+notification_service: AdminNotificationService | None = None
 READY_FILE = Path('/tmp/bot_ready')
 START_MESSAGE_IMAGE = Path(__file__).resolve().parent / 'assets' / 'start-message.jpg'
 START_MESSAGE_SEND_RETRIES = 3
@@ -192,6 +193,8 @@ async def start_handler(message: Message) -> None:
 
 @router.message()
 async def user_message_handler(message: Message) -> None:
+    global notification_service
+
     if message.from_user is None:
         return
     if message.chat.type != 'private':
@@ -216,9 +219,26 @@ async def user_message_handler(message: Message) -> None:
         'has_media': message.content_type not in {'text'},
         'content_type': message.content_type,
     }
-    repository.create_lead_event(lead_id, 'user_message', payload)
+    event_id = repository.create_lead_event(lead_id, 'user_message', payload)
+
+    if notification_service is not None:
+        await notification_service.notify_incoming_user_message(
+            PendingLeadEvent(
+                id=event_id,
+                lead_id=lead_id,
+                event_type='user_message',
+                telegram_id=int(message.from_user.id),
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name,
+                event_payload=payload,
+                created_at=None,
+            )
+        )
 
 async def main() -> None:
+    global notification_service
+
     READY_FILE.unlink(missing_ok=True)
     session: AiohttpSession | None = None
     if settings.bot_telegram_proxy_url:

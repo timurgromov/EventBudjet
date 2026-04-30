@@ -1,7 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { deleteAdminLead, getAdminLead, resetAdminLead, sendAdminMessageToLead } from "@/lib/api";
+import { deleteAdminLead, getAdminLead, markAdminLeadChatRead, resetAdminLead, sendAdminMessageToLead } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -104,7 +104,9 @@ const AdminLeadDetailPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
   const params = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const leadId = Number(params.leadId);
+  const lastMarkedMessageEventIdRef = useRef<number | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [directMessageText, setDirectMessageText] = useState("");
   const [directMessageStatus, setDirectMessageStatus] = useState<string | null>(null);
@@ -155,6 +157,14 @@ const AdminLeadDetailPage = () => {
     },
   });
 
+  const markChatReadMutation = useMutation({
+    mutationFn: async () => markAdminLeadChatRead(adminToken, leadId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin-leads", adminToken] });
+      await query.refetch();
+    },
+  });
+
   const recentEvents = query.data?.recent_events ?? [];
   const conversationEvents = useMemo(
     () =>
@@ -176,6 +186,25 @@ const AdminLeadDetailPage = () => {
       budgetCalculatedAt: findLatest("budget_calculated"),
     };
   }, [recentEvents]);
+
+  useEffect(() => {
+    lastMarkedMessageEventIdRef.current = null;
+  }, [leadId]);
+
+  useEffect(() => {
+    if (!query.data || !adminToken.trim() || markChatReadMutation.isPending) {
+      return;
+    }
+    const latestMessageEventId = query.data.latest_user_message_event_id ?? null;
+    if ((query.data.unread_messages_count ?? 0) < 1 || latestMessageEventId === null) {
+      return;
+    }
+    if (lastMarkedMessageEventIdRef.current === latestMessageEventId) {
+      return;
+    }
+    lastMarkedMessageEventIdRef.current = latestMessageEventId;
+    markChatReadMutation.mutate();
+  }, [adminToken, markChatReadMutation, query.data]);
 
   if (!adminToken.trim()) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть карточку лида.</div>;
@@ -334,7 +363,14 @@ const AdminLeadDetailPage = () => {
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm h-[72vh] xl:sticky xl:top-6 xl:h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
         <div className="border-b border-slate-200 px-4 py-3">
-          <div className="text-lg font-semibold text-slate-950">Диалог с клиентом</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-lg font-semibold text-slate-950">Диалог с клиентом</div>
+            {query.data.unread_messages_count > 0 ? (
+              <div className="rounded-full bg-rose-500 px-2.5 py-1 text-[11px] font-semibold text-white">
+                {query.data.unread_messages_count} новых
+              </div>
+            ) : null}
+          </div>
           <div className="text-sm text-slate-500">Сообщения клиента, ваши ответы и ключевые точки входа.</div>
         </div>
 

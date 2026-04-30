@@ -49,6 +49,17 @@ class AdminNotificationService:
             actor_telegram_id=batch.telegram_id,
         )
 
+    async def notify_incoming_user_message(self, event: PendingLeadEvent) -> None:
+        text = self._render_incoming_user_message_alert(event)
+        await self._send_and_log(
+            event.lead_id,
+            'incoming_user_message',
+            'high',
+            text,
+            notification_key=f'user_message:{event.id}',
+            actor_telegram_id=event.telegram_id,
+        )
+
     async def send_reminder(self, candidate: ReminderCandidate) -> bool:
         text = REMINDER_TEXTS.get(candidate.reminder_code)
         if not text:
@@ -162,6 +173,31 @@ class AdminNotificationService:
         if snapshot_text:
             lines.extend(['', snapshot_text])
         return ('\n'.join(lines), priority)
+
+    def _render_incoming_user_message_alert(self, event: PendingLeadEvent) -> str:
+        actor = self._format_actor(event)
+        snapshot = self.repository.get_lead_snapshot(event.lead_id)
+        source_label = snapshot.source_label or snapshot.source or '—'
+        payload = event.event_payload or {}
+        text_value = str(payload.get('text') or '').strip()
+        content_type = str(payload.get('content_type') or '').strip()
+
+        lines = [
+            'Новое сообщение в Telegram',
+            '',
+            actor,
+            f'lead #{event.lead_id}',
+            f'Источник: {source_label}',
+        ]
+
+        if text_value:
+            lines.extend(['', f'Сообщение: {text_value[:1500]}'])
+        elif content_type:
+            lines.extend(['', f'Сообщение без текста ({content_type})'])
+        else:
+            lines.extend(['', 'Сообщение без текста'])
+
+        return '\n'.join(lines)
 
     def _build_batch_change_lines(self, events: list[PendingLeadEvent]) -> tuple[list[str], str]:
         priority = 'medium'

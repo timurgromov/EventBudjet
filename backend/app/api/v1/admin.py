@@ -85,6 +85,17 @@ def get_admin_lead_events(lead_id: int, db: Session = Depends(get_db)) -> AdminL
     return result
 
 
+@router.post('/leads/{lead_id}/mark-chat-read', response_model=AdminLeadActionResponse)
+def mark_admin_lead_chat_read(
+    lead_id: int,
+    db: Session = Depends(get_db),
+) -> AdminLeadActionResponse:
+    result = AdminService(db).mark_chat_read(lead_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lead not found')
+    return result
+
+
 @router.get('/notifications', response_model=AdminNotificationsResponse)
 def list_admin_notifications(db: Session = Depends(get_db)) -> AdminNotificationsResponse:
     return AdminService(db).list_notifications()

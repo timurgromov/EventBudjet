@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import Select, desc, func, select
 from sqlalchemy.orm import Session
 
@@ -43,6 +45,49 @@ class AdminRepository:
         stmt = select(LeadSource.code, LeadSource.name).where(LeadSource.code.in_(codes))
         rows = self.db.execute(stmt).all()
         return {code: name for code, name in rows}
+
+    def get_lead_message_state_map(self, lead_ids: list[int]) -> dict[int, dict[str, Any]]:
+        if not lead_ids:
+            return {}
+
+        rows = self.db.execute(
+            select(LeadEvent.lead_id, LeadEvent.id, LeadEvent.event_type, LeadEvent.event_payload, LeadEvent.created_at)
+            .where(LeadEvent.lead_id.in_(lead_ids))
+            .where(LeadEvent.event_type.in_(['user_message', 'admin_chat_read']))
+            .order_by(LeadEvent.lead_id.asc(), LeadEvent.created_at.asc(), LeadEvent.id.asc())
+        ).all()
+
+        states: dict[int, dict[str, Any]] = {
+            lead_id: {
+                'unread_messages_count': 0,
+                'latest_user_message_text': None,
+                'latest_user_message_at': None,
+                'latest_user_message_event_id': None,
+            }
+            for lead_id in lead_ids
+        }
+
+        for lead_id, event_id, event_type, event_payload, created_at in rows:
+            state = states.setdefault(
+                lead_id,
+                {
+                    'unread_messages_count': 0,
+                    'latest_user_message_text': None,
+                    'latest_user_message_at': None,
+                    'latest_user_message_event_id': None,
+                },
+            )
+            if event_type == 'admin_chat_read':
+                state['unread_messages_count'] = 0
+                continue
+
+            state['unread_messages_count'] = int(state.get('unread_messages_count') or 0) + 1
+            payload = event_payload or {}
+            state['latest_user_message_text'] = self._format_user_message_preview(payload)
+            state['latest_user_message_at'] = created_at
+            state['latest_user_message_event_id'] = int(event_id)
+
+        return states
 
     def list_lead_events(self, lead_id: int, limit: int = 100) -> list[LeadEvent]:
         stmt = (
@@ -140,6 +185,11 @@ class AdminRepository:
         stmt = select(LeadSource).where(LeadSource.id == source_id).limit(1)
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def mark_chat_read(self, lead_id: int) -> None:
+        event = LeadEvent(lead_id=lead_id, event_type='admin_chat_read', event_payload=None)
+        self.db.add(event)
+        self.db.flush()
+
     def get_leads_count_by_source_code(self, source_code: str) -> int:
         stmt = select(func.count(Lead.id)).where(Lead.source == source_code)
         count = self.db.execute(stmt).scalar_one()
@@ -217,3 +267,15 @@ class AdminRepository:
                 result[lead_id] = 'unknown'
 
         return result
+
+    @staticmethod
+    def _format_user_message_preview(payload: dict[str, Any]) -> str:
+        text_value = str(payload.get('text') or '').strip()
+        if text_value:
+            return text_value[:300]
+
+        content_type = str(payload.get('content_type') or '').strip()
+        if content_type:
+            return f'[{content_type}]'
+
+        return 'Сообщение без текста'

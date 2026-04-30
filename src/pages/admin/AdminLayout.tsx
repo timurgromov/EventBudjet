@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NavLink } from "@/components/NavLink";
+import { toast } from "@/components/ui/sonner";
+import { listAdminLeads } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Outlet } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const ADMIN_TOKEN_KEY = "eventbudjet_admin_token";
 
@@ -12,11 +15,80 @@ export const getStoredAdminToken = (): string => {
   return window.localStorage.getItem(ADMIN_TOKEN_KEY) ?? "";
 };
 
+const formatToastLeadLabel = (name: string | null, username: string | null, leadId: number): string => {
+  if (name) return name;
+  if (username) return `@${username}`;
+  return `lead #${leadId}`;
+};
+
 const AdminLayout = () => {
   const [draftToken, setDraftToken] = useState(getStoredAdminToken());
   const [savedToken, setSavedToken] = useState(getStoredAdminToken());
+  const navigate = useNavigate();
+  const notifiedEventIdsRef = useRef<Set<number>>(new Set());
+  const initialUnreadHydratedRef = useRef(false);
 
   const hasToken = useMemo(() => savedToken.trim().length > 0, [savedToken]);
+  const leadsQuery = useQuery({
+    queryKey: ["admin-leads", savedToken],
+    queryFn: () => listAdminLeads(savedToken),
+    enabled: hasToken,
+    refetchInterval: hasToken ? 5000 : false,
+    refetchOnWindowFocus: true,
+  });
+
+  const leads = hasToken ? (leadsQuery.data?.leads ?? []) : [];
+  const unreadMessagesCount = useMemo(
+    () => leads.reduce((sum, lead) => sum + Math.max(lead.unread_messages_count ?? 0, 0), 0),
+    [leads],
+  );
+  const unreadLeadCount = useMemo(
+    () => leads.filter((lead) => (lead.unread_messages_count ?? 0) > 0).length,
+    [leads],
+  );
+
+  useEffect(() => {
+    if (!hasToken) {
+      notifiedEventIdsRef.current.clear();
+      initialUnreadHydratedRef.current = false;
+      return;
+    }
+
+    const unreadLeads = [...leads]
+      .filter((lead) => (lead.unread_messages_count ?? 0) > 0 && typeof lead.latest_user_message_event_id === "number")
+      .sort((a, b) => {
+        const aTs = a.latest_user_message_at ? Date.parse(a.latest_user_message_at) : 0;
+        const bTs = b.latest_user_message_at ? Date.parse(b.latest_user_message_at) : 0;
+        if (aTs !== bTs) return bTs - aTs;
+        return (b.latest_user_message_event_id ?? 0) - (a.latest_user_message_event_id ?? 0);
+      });
+
+    if (!initialUnreadHydratedRef.current) {
+      unreadLeads.forEach((lead) => {
+        if (typeof lead.latest_user_message_event_id === "number") {
+          notifiedEventIdsRef.current.add(lead.latest_user_message_event_id);
+        }
+      });
+      initialUnreadHydratedRef.current = true;
+      return;
+    }
+
+    unreadLeads.forEach((lead) => {
+      const eventId = lead.latest_user_message_event_id;
+      if (typeof eventId !== "number" || notifiedEventIdsRef.current.has(eventId)) {
+        return;
+      }
+      notifiedEventIdsRef.current.add(eventId);
+      toast("Новое сообщение в Telegram", {
+        description: `${formatToastLeadLabel(lead.name, lead.username, lead.lead_id)}: ${lead.latest_user_message_text ?? "Сообщение без текста"}`,
+        action: {
+          label: "Открыть чат",
+          onClick: () => navigate(`/admin/wedding-calculator/leads/${lead.lead_id}`),
+        },
+        duration: 12000,
+      });
+    });
+  }, [hasToken, leads, navigate]);
 
   const handleSave = () => {
     const normalized = draftToken.trim();
@@ -74,7 +146,14 @@ const AdminLayout = () => {
                 className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors"
                 activeClassName="bg-slate-950 text-white"
               >
-                Свадебный калькулятор
+                <span className="flex items-center justify-between gap-3">
+                  <span>Свадебный калькулятор</span>
+                  {unreadMessagesCount > 0 ? (
+                    <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                      {unreadMessagesCount}
+                    </span>
+                  ) : null}
+                </span>
               </NavLink>
               <NavLink
                 to="/admin/margin-calculator"
@@ -85,12 +164,16 @@ const AdminLayout = () => {
               </NavLink>
             </nav>
             <div className={cn("mt-4 rounded-xl px-3 py-2 text-xs", hasToken ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
-              {hasToken ? "Токен сохранён локально в браузере." : "Сначала сохраните admin token."}
+              {hasToken
+                ? unreadLeadCount > 0
+                  ? `Есть непрочитанные сообщения: ${unreadMessagesCount} в ${unreadLeadCount} лидах.`
+                  : "Токен сохранён локально в браузере."
+                : "Сначала сохраните admin token."}
             </div>
           </aside>
 
           <main className="min-w-0">
-            <Outlet context={{ adminToken: savedToken }} />
+            <Outlet context={{ adminToken: savedToken, unreadMessagesCount, unreadLeadCount }} />
           </main>
         </div>
       </div>

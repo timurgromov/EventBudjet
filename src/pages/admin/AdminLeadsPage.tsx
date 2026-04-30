@@ -48,6 +48,7 @@ type LeadsFilter = "all" | "moscow" | "specialists";
 
 const LeadRow = ({ lead, onRequestDelete }: { lead: AdminLeadListItem; onRequestDelete: (lead: AdminLeadListItem) => void }) => {
   const contactTone = getBotContactTone(lead.bot_contact_state);
+  const unreadCount = Math.max(lead.unread_messages_count ?? 0, 0);
   const hotScore = getLeadHotScore({
     city: lead.city,
     role: lead.role,
@@ -95,13 +96,25 @@ const LeadRow = ({ lead, onRequestDelete }: { lead: AdminLeadListItem; onRequest
       </DropdownMenu>
     </div>
     <div className="min-w-0">
-      <div className="truncate text-sm font-semibold text-slate-950">{formatLeadName(lead.name, lead.username)}</div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="truncate text-sm font-semibold text-slate-950">{formatLeadName(lead.name, lead.username)}</div>
+        {unreadCount > 0 ? (
+          <div className="shrink-0 rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+            {unreadCount} нов.
+          </div>
+        ) : null}
+      </div>
       <div className="mt-1 text-xs text-slate-500">lead #{lead.lead_id}</div>
       <div className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-slate-600">
         <span className={contactTone === "red" ? "h-2 w-2 rounded-full bg-red-500" : contactTone === "green" ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-slate-400"} />
         {formatBotContactLabel(lead.bot_contact_state)}
       </div>
       <div className="mt-1 text-xs text-slate-500">Источник: {lead.source_label ?? formatSourceLabel(lead.source)}</div>
+      {unreadCount > 0 ? (
+        <div className="mt-2 rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs text-rose-900 break-words">
+          Новое сообщение: {lead.latest_user_message_text ?? "Сообщение без текста"}
+        </div>
+      ) : null}
     </div>
     <div className="text-sm text-slate-700">
       <div>{formatCityLabel(lead.city)}</div>
