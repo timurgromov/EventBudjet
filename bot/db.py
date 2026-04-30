@@ -48,6 +48,8 @@ class LeadExpenseSnapshot:
 class LeadSnapshot:
     role: str | None
     city: str | None
+    source: str | None
+    source_label: str | None
     venue_status: str | None
     venue_name: str | None
     wedding_date_exact: str | None
@@ -383,17 +385,20 @@ class BotRepository:
                 text(
                     """
                     SELECT
-                      role,
-                      city,
-                      venue_status,
-                      venue_name,
-                      wedding_date_exact::text AS wedding_date_exact,
-                      season,
-                      next_year_flag,
-                      guests_count,
-                      total_budget::text AS total_budget
-                    FROM leads
-                    WHERE id = :lead_id
+                      l.role,
+                      l.city,
+                      l.source,
+                      ls.name AS source_label,
+                      l.venue_status,
+                      l.venue_name,
+                      l.wedding_date_exact::text AS wedding_date_exact,
+                      l.season,
+                      l.next_year_flag,
+                      l.guests_count,
+                      l.total_budget::text AS total_budget
+                    FROM leads l
+                    LEFT JOIN lead_sources ls ON ls.code = l.source
+                    WHERE l.id = :lead_id
                     LIMIT 1;
                     """
                 ),
@@ -420,6 +425,8 @@ class BotRepository:
             return LeadSnapshot(
                 role=lead_row['role'],
                 city=lead_row['city'],
+                source=lead_row['source'],
+                source_label=lead_row['source_label'],
                 venue_status=lead_row['venue_status'],
                 venue_name=lead_row['venue_name'],
                 wedding_date_exact=lead_row['wedding_date_exact'],

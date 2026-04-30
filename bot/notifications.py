@@ -452,6 +452,9 @@ class AdminNotificationService:
             lines.append(f'Кто: {self._format_field_value("role", snapshot.role)}')
         if snapshot.city:
             lines.append(f'Город: {self._format_field_value("city", snapshot.city)}')
+        source_label = (snapshot.source_label or snapshot.source or '').strip()
+        if source_label:
+            lines.append(f'Источник: {source_label}')
         lines.append(f'Площадка: {self._format_venue_value(snapshot.venue_status, snapshot.venue_name)}')
         wedding_date = self._format_wedding_date(snapshot)
         if wedding_date:
