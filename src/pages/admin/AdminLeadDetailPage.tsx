@@ -255,113 +255,67 @@ const AdminLeadDetailPage = () => {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div>
-              <Link to="/admin/wedding-calculator/leads" className="text-sm text-slate-500 underline underline-offset-4">Назад к лидам</Link>
-              <h2 className="mt-2 text-2xl font-serif text-slate-950">{formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}</h2>
-              <div className="mt-1 text-sm text-slate-600">lead #{lead.id} • telegram_id {user.telegram_id}</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {user.username ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                    onClick={() => handleCopy(`@${user.username}`, "Username")}
-                  >
-                    Копировать @username
-                  </Button>
-                ) : null}
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <Link to="/admin/wedding-calculator/leads" className="text-sm text-slate-500 underline underline-offset-4">Назад к лидам</Link>
+            <h2 className="mt-2 text-2xl font-serif text-slate-950">{formatLeadName([user.first_name, user.last_name].filter(Boolean).join(" ") || null, user.username)}</h2>
+            <div className="mt-1 text-sm text-slate-600">lead #{lead.id} • telegram_id {user.telegram_id}</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {user.username ? (
                 <Button
                   variant="outline"
                   size="sm"
                   className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                  onClick={() => handleCopy(String(user.telegram_id), "Telegram ID")}
+                  onClick={() => handleCopy(`@${user.username}`, "Username")}
                 >
-                  Копировать telegram_id
+                  Копировать @username
                 </Button>
-              </div>
-              {copyStatus ? <div className="mt-2 text-xs text-emerald-700">{copyStatus}</div> : null}
+              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                onClick={() => handleCopy(String(user.telegram_id), "Telegram ID")}
+              >
+                Копировать telegram_id
+              </Button>
             </div>
-            <div className="rounded-xl bg-slate-50 px-4 py-3 text-right">
-              <div className="text-xs uppercase tracking-[0.14em] text-slate-500">Итоговый бюджет</div>
-              <div className="mt-1 text-2xl font-semibold text-slate-950">{formatAdminMoney(lead.total_budget)}</div>
-            </div>
+            {copyStatus ? <div className="mt-2 text-xs text-emerald-700">{copyStatus}</div> : null}
+          </div>
+          <div className="rounded-xl bg-slate-50 px-4 py-3 text-right">
+            <div className="text-xs uppercase tracking-[0.14em] text-slate-500">Итоговый бюджет</div>
+            <div className="mt-1 text-2xl font-semibold text-slate-950">{formatAdminMoney(lead.total_budget)}</div>
           </div>
         </div>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 text-lg font-semibold text-slate-950">Профиль</div>
-          <div className="grid gap-3 text-sm text-slate-700 md:grid-cols-2">
-            <div><span className="text-slate-500">Роль:</span> {getLeadRoleLabel(lead.role)}</div>
-            <div><span className="text-slate-500">Город:</span> {formatCityLabel(lead.city)}</div>
-            <div><span className="text-slate-500">Дата свадьбы:</span> {formatAdminDate(lead.wedding_date_exact)}</div>
-            <div><span className="text-slate-500">Сезон:</span> {formatSeasonLabel(lead.season)}</div>
-            <div><span className="text-slate-500">Гостей:</span> {lead.guests_count ?? "—"}</div>
-            <div><span className="text-slate-500">Статус:</span> {formatLeadStatusLabel(lead.lead_status)}</div>
-            <div><span className="text-slate-500">Площадка:</span> {formatVenueValue(lead.venue_status, lead.venue_name)}</div>
-            <div><span className="text-slate-500">Источник:</span> {query.data.source_label ?? formatSourceLabel(lead.source)}</div>
-            <div><span className="text-slate-500">Формат даты:</span> {formatDateModeLabel(lead.wedding_date_mode)}</div>
-            <div><span className="text-slate-500">Последняя активность:</span> {formatAdminDateTime(user.last_seen_at)}</div>
-          </div>
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="text-sm font-medium text-slate-900">Этапы пользователя</div>
-            <div className="mt-2 grid gap-2 text-xs text-slate-700 md:grid-cols-3">
-              <div>Start в боте: <span className="text-slate-900">{formatAdminDateTime(stageEvents.botStartedAt)}</span></div>
-              <div>Открыл Mini App: <span className="text-slate-900">{formatAdminDateTime(stageEvents.miniAppOpenedAt)}</span></div>
-              <div>Сделал расчёт: <span className="text-slate-900">{formatAdminDateTime(stageEvents.budgetCalculatedAt)}</span></div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 text-lg font-semibold text-slate-950">Смета</div>
-          {expenses.length === 0 ? (
-            <div className="text-sm text-slate-600">Расходов пока нет.</div>
-          ) : (
-            <div className="space-y-2">
-              {expenses.map((expense) => (
-                <div key={expense.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm">
-                  <div className="min-w-0 pr-4 text-slate-700">{expense.category_name}</div>
-                  <div className="shrink-0 font-medium text-slate-950">{formatAdminMoney(expense.amount)}</div>
-                </div>
-              ))}
-              <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm">
-                <div className="font-semibold text-white">Итого</div>
-                <div className="shrink-0 text-base font-semibold text-white">{formatAdminMoney(lead.total_budget)}</div>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
-          <div className="mb-2 text-lg font-semibold text-slate-950">Управление лидом</div>
-          <div className="text-sm text-slate-600">
-            Сброс полезен для ретеста. Удаление окончательно уберёт лид из админки.
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Button
-              onClick={handleResetLead}
-              disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
-              className="bg-[#E6BF3A] text-black hover:bg-[#d4af34]"
-            >
-              {resetLeadMutation.isPending ? "Сбрасываю..." : "Сбросить данные"}
-            </Button>
-            <Button
-              onClick={handleDeleteLead}
-              disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
-              variant="destructive"
-            >
-              {deleteLeadMutation.isPending ? "Удаляю..." : "Удалить лид"}
-            </Button>
-            {dangerStatus ? <div className="text-sm text-slate-700">{dangerStatus}</div> : null}
-          </div>
-        </section>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm h-[72vh] xl:sticky xl:top-6 xl:h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 text-lg font-semibold text-slate-950">Профиль</div>
+        <div className="grid gap-3 text-sm text-slate-700 md:grid-cols-2">
+          <div><span className="text-slate-500">Роль:</span> {getLeadRoleLabel(lead.role)}</div>
+          <div><span className="text-slate-500">Город:</span> {formatCityLabel(lead.city)}</div>
+          <div><span className="text-slate-500">Дата свадьбы:</span> {formatAdminDate(lead.wedding_date_exact)}</div>
+          <div><span className="text-slate-500">Сезон:</span> {formatSeasonLabel(lead.season)}</div>
+          <div><span className="text-slate-500">Гостей:</span> {lead.guests_count ?? "—"}</div>
+          <div><span className="text-slate-500">Статус:</span> {formatLeadStatusLabel(lead.lead_status)}</div>
+          <div><span className="text-slate-500">Площадка:</span> {formatVenueValue(lead.venue_status, lead.venue_name)}</div>
+          <div><span className="text-slate-500">Источник:</span> {query.data.source_label ?? formatSourceLabel(lead.source)}</div>
+          <div><span className="text-slate-500">Формат даты:</span> {formatDateModeLabel(lead.wedding_date_mode)}</div>
+          <div><span className="text-slate-500">Последняя активность:</span> {formatAdminDateTime(user.last_seen_at)}</div>
+        </div>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="text-sm font-medium text-slate-900">Этапы пользователя</div>
+          <div className="mt-2 grid gap-2 text-xs text-slate-700 md:grid-cols-3">
+            <div>Start в боте: <span className="text-slate-900">{formatAdminDateTime(stageEvents.botStartedAt)}</span></div>
+            <div>Открыл Mini App: <span className="text-slate-900">{formatAdminDateTime(stageEvents.miniAppOpenedAt)}</span></div>
+            <div>Сделал расчёт: <span className="text-slate-900">{formatAdminDateTime(stageEvents.budgetCalculatedAt)}</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col overflow-hidden">
         <div className="border-b border-slate-200 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="text-lg font-semibold text-slate-950">Диалог с клиентом</div>
@@ -374,7 +328,7 @@ const AdminLeadDetailPage = () => {
           <div className="text-sm text-slate-500">Сообщения клиента, ваши ответы и ключевые точки входа.</div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50/70">
+        <div className="max-h-[58vh] overflow-y-auto space-y-3 bg-slate-50/70 px-4 py-4">
           {conversationEvents.length === 0 ? (
             <div className="text-sm text-slate-600">Пока нет событий переписки.</div>
           ) : (
@@ -390,7 +344,7 @@ const AdminLeadDetailPage = () => {
                     className={isOutgoing || isBotMessage
                       ? "max-w-[88%] rounded-2xl rounded-br-md bg-[#E6BF3A] px-3 py-2 text-sm text-black"
                       : isIncoming
-                        ? "max-w-[88%] rounded-2xl rounded-bl-md bg-white border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                        ? "max-w-[88%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                         : "max-w-[92%] rounded-xl bg-slate-200 px-3 py-2 text-xs text-slate-700"}
                   >
                     <div className="whitespace-pre-wrap break-words">
@@ -408,7 +362,7 @@ const AdminLeadDetailPage = () => {
           )}
         </div>
 
-        <div className="border-t border-slate-200 p-4 space-y-3 bg-white">
+        <div className="border-t border-slate-200 bg-white p-4 space-y-3">
           <Textarea
             value={directMessageText}
             onChange={(e) => setDirectMessageText(e.target.value)}
@@ -425,7 +379,51 @@ const AdminLeadDetailPage = () => {
             {directMessageStatus ? <div className="text-sm text-slate-600">{directMessageStatus}</div> : null}
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 text-lg font-semibold text-slate-950">Смета</div>
+        {expenses.length === 0 ? (
+          <div className="text-sm text-slate-600">Расходов пока нет.</div>
+        ) : (
+          <div className="space-y-2">
+            {expenses.map((expense) => (
+              <div key={expense.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                <div className="min-w-0 pr-4 text-slate-700">{expense.category_name}</div>
+                <div className="shrink-0 font-medium text-slate-950">{formatAdminMoney(expense.amount)}</div>
+              </div>
+            ))}
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm">
+              <div className="font-semibold text-white">Итого</div>
+              <div className="shrink-0 text-base font-semibold text-white">{formatAdminMoney(lead.total_budget)}</div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
+        <div className="mb-2 text-lg font-semibold text-slate-950">Управление лидом</div>
+        <div className="text-sm text-slate-600">
+          Сброс полезен для ретеста. Удаление окончательно уберёт лид из админки.
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button
+            onClick={handleResetLead}
+            disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
+            className="bg-[#E6BF3A] text-black hover:bg-[#d4af34]"
+          >
+            {resetLeadMutation.isPending ? "Сбрасываю..." : "Сбросить данные"}
+          </Button>
+          <Button
+            onClick={handleDeleteLead}
+            disabled={resetLeadMutation.isPending || deleteLeadMutation.isPending}
+            variant="destructive"
+          >
+            {deleteLeadMutation.isPending ? "Удаляю..." : "Удалить лид"}
+          </Button>
+          {dangerStatus ? <div className="text-sm text-slate-700">{dangerStatus}</div> : null}
+        </div>
+      </section>
     </div>
   );
 };
