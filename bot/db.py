@@ -66,6 +66,7 @@ class ReminderCandidate:
     telegram_id: int
     reminder_code: str
     reason: str
+    variant_index: int = 0
 
 
 class BotRepository:
@@ -303,7 +304,14 @@ class BotRepository:
                         an.lead_id,
                         MAX(an.created_at) FILTER (WHERE an.notification_type = 'reminder_d2' AND an.status = 'sent') AS d2_at,
                         MAX(an.created_at) FILTER (WHERE an.notification_type = 'reminder_d7' AND an.status = 'sent') AS d7_at,
-                        MAX(an.created_at) FILTER (WHERE an.notification_type = 'reminder_d14' AND an.status = 'sent') AS d14_at
+                        MAX(an.created_at) FILTER (
+                          WHERE an.notification_type IN ('reminder_d14', 'reminder_followup')
+                            AND an.status = 'sent'
+                        ) AS followup_at,
+                        COUNT(*) FILTER (
+                          WHERE an.notification_type IN ('reminder_d14', 'reminder_followup')
+                            AND an.status = 'sent'
+                        ) AS followup_sent_count
                       FROM admin_notifications an
                       GROUP BY an.lead_id
                     )
@@ -313,7 +321,8 @@ class BotRepository:
                       u.last_seen_at,
                       rs.d2_at,
                       rs.d7_at,
-                      rs.d14_at
+                      rs.followup_at,
+                      rs.followup_sent_count
                     FROM leads l
                     JOIN users u ON u.id = l.user_id
                     LEFT JOIN reminder_stats rs ON rs.lead_id = l.id
@@ -336,19 +345,21 @@ class BotRepository:
 
                 d2_at = row['d2_at']
                 d7_at = row['d7_at']
-                d14_at = row['d14_at']
+                followup_at = row['followup_at']
+                followup_sent_count = int(row['followup_sent_count'] or 0)
                 if d2_at is not None and d2_at.tzinfo is None:
                     d2_at = d2_at.replace(tzinfo=timezone.utc)
                 if d7_at is not None and d7_at.tzinfo is None:
                     d7_at = d7_at.replace(tzinfo=timezone.utc)
-                if d14_at is not None and d14_at.tzinfo is None:
-                    d14_at = d14_at.replace(tzinfo=timezone.utc)
+                if followup_at is not None and followup_at.tzinfo is None:
+                    followup_at = followup_at.replace(tzinfo=timezone.utc)
 
                 inactivity_days = (now - last_seen_at).total_seconds() / 86400
                 reminder_code: str | None = None
                 reason = ''
+                variant_index = 0
                 # Stage progression is monotonic:
-                # d2 -> d7 -> recurring follow-up.
+                # d2 -> d7 -> weekly follow-up.
                 # Any new visit resets inactivity timer, but does not roll stage back to d2.
                 if d2_at is None:
                     if inactivity_days >= 2:
@@ -358,15 +369,17 @@ class BotRepository:
                     if inactivity_days >= 7:
                         reminder_code = 'reminder_d7'
                         reason = 'inactivity_7d_after_d2_stage'
-                elif d14_at is None:
+                elif followup_at is None:
                     if inactivity_days >= 14:
-                        reminder_code = 'reminder_d14'
-                        reason = 'inactivity_7d_after_d7_stage'
+                        reminder_code = 'reminder_followup'
+                        reason = 'weekly_followup_stage_entered'
+                        variant_index = followup_sent_count
                 else:
                     # Keep a gentle weekly ping while user remains inactive.
-                    if inactivity_days >= 14 and (now - d14_at).total_seconds() >= 7 * 86400:
-                        reminder_code = 'reminder_d14'
-                        reason = 'periodic_7d_after_d14'
+                    if inactivity_days >= 14 and (now - followup_at).total_seconds() >= 7 * 86400:
+                        reminder_code = 'reminder_followup'
+                        reason = 'weekly_followup_repeat_7d'
+                        variant_index = followup_sent_count
 
                 if reminder_code:
                     candidates.append(
@@ -375,6 +388,7 @@ class BotRepository:
                             telegram_id=int(row['telegram_id']),
                             reminder_code=reminder_code,
                             reason=reason,
+                            variant_index=variant_index,
                         )
                     )
                     if len(candidates) >= limit:

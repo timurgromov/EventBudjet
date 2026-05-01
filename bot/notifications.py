@@ -15,10 +15,19 @@ from bot.db import BotRepository, LeadSnapshot, PendingLeadEvent, PendingLeadEve
 
 logger = logging.getLogger(__name__)
 
-REMINDER_TEXTS: dict[str, str] = {
-    'reminder_d2': 'Вы давно не заходили в свадебный калькулятор. Продолжите с того места, где остановились.',
-    'reminder_d7': 'Привет! Если подготовка уже двигается, загляните в калькулятор на 5 минут — обновить смету и сверить приоритеты.',
-    'reminder_d14': 'Привет! Часто суммы меняются по ходу подготовки. Можно быстро вернуться в калькулятор и проверить, всё ли актуально.',
+REMINDER_TEXTS: dict[str, list[str]] = {
+    'reminder_d2': [
+        'Вы давно не заходили в свадебный калькулятор. Продолжите с того места, где остановились.',
+    ],
+    'reminder_d7': [
+        'Привет! Если подготовка уже двигается, загляните в калькулятор на 5 минут — обновить смету и сверить приоритеты.',
+    ],
+    'reminder_followup': [
+        'Привет! Если подготовка продолжается, можно быстро вернуться в калькулятор и обновить смету.',
+        'Напомню про калькулятор: по ходу подготовки часто меняются суммы, площадка и приоритеты. Проверьте, всё ли ещё актуально.',
+        'Если свадьба всё ещё в процессе планирования, загляните в калькулятор ещё раз — удобно сверить бюджет и ничего не потерять.',
+        'Калькулятор по-прежнему доступен: можно вернуться в любой момент, обновить цифры и продолжить с сохранённого места.',
+    ],
 }
 
 
@@ -61,7 +70,7 @@ class AdminNotificationService:
         )
 
     async def send_reminder(self, candidate: ReminderCandidate) -> bool:
-        text = REMINDER_TEXTS.get(candidate.reminder_code)
+        text = self._resolve_reminder_text(candidate)
         if not text:
             return False
 
@@ -109,6 +118,13 @@ class AdminNotificationService:
                 },
             )
         return result.sent
+
+    def _resolve_reminder_text(self, candidate: ReminderCandidate) -> str | None:
+        variants = REMINDER_TEXTS.get(candidate.reminder_code)
+        if not variants:
+            return None
+        index = candidate.variant_index % len(variants)
+        return variants[index]
 
     async def _send_and_log(
         self,
