@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { ChevronDown, Plus, Play, X, HelpCircle, Copy } from "lucide-react";
+import { ChevronDown, Plus, Play, X, Lightbulb, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { defaultItems, ItemInfo } from "./expense-items-data";
@@ -330,6 +330,11 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     <div className="min-h-screen flex flex-col" style={{ paddingBottom: screenPaddingBottom }}>
       {/* Subtitle */}
       <p className="text-sm text-foreground/80 text-center px-4 pt-1 pb-1">Рассчитайте бюджет вашего торжества</p>
+      <div className="px-4 pt-2">
+        <div className="rounded-full border border-primary/15 bg-primary/5 px-3 py-2 text-[11px] leading-snug text-foreground/70">
+          Нажмите <span className="font-medium text-foreground">«Совет»</span>, чтобы открыть рекомендации по выбору подрядчика.
+        </div>
+      </div>
 
       {/* Items */}
       <div className="px-4 py-3 space-y-2">
@@ -373,10 +378,18 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
 
                   {hasInfo && (
                     <button
-                      className="flex-shrink-0 text-muted-foreground/50 hover:text-primary transition-colors"
+                      className={cn(
+                        "flex-shrink-0 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                        isExpanded
+                          ? "border-primary/30 bg-primary/10 text-primary"
+                          : "border-border bg-secondary/35 text-foreground/72 hover:border-primary/25 hover:text-primary"
+                      )}
                       onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : item.id); }}
+                      aria-label={`${isExpanded ? "Скрыть" : "Показать"} совет для пункта ${item.name}`}
                     >
-                      <HelpCircle className="w-4 h-4" />
+                      <Lightbulb className="h-3.5 w-3.5" />
+                      <span>Совет</span>
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")} />
                     </button>
                   )}
 
