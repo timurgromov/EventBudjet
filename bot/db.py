@@ -348,7 +348,7 @@ class BotRepository:
                 reminder_code: str | None = None
                 reason = ''
                 # Stage progression is monotonic:
-                # d2 -> d7 -> d14.
+                # d2 -> d7 -> recurring follow-up.
                 # Any new visit resets inactivity timer, but does not roll stage back to d2.
                 if d2_at is None:
                     if inactivity_days >= 2:
@@ -361,12 +361,12 @@ class BotRepository:
                 elif d14_at is None:
                     if inactivity_days >= 14:
                         reminder_code = 'reminder_d14'
-                        reason = 'inactivity_14d_after_d7_stage'
+                        reason = 'inactivity_7d_after_d7_stage'
                 else:
-                    # Keep a gentle periodic ping while user remains inactive.
-                    if inactivity_days >= 14 and (now - d14_at).total_seconds() >= 14 * 86400:
+                    # Keep a gentle weekly ping while user remains inactive.
+                    if inactivity_days >= 14 and (now - d14_at).total_seconds() >= 7 * 86400:
                         reminder_code = 'reminder_d14'
-                        reason = 'periodic_14d_after_d14'
+                        reason = 'periodic_7d_after_d14'
 
                 if reminder_code:
                     candidates.append(
