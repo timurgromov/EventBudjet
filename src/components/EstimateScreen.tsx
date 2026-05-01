@@ -330,11 +330,6 @@ const EstimateScreen: React.FC<EstimateScreenProps> = ({
     <div className="min-h-screen flex flex-col" style={{ paddingBottom: screenPaddingBottom }}>
       {/* Subtitle */}
       <p className="text-sm text-foreground/80 text-center px-4 pt-1 pb-1">Рассчитайте бюджет вашего торжества</p>
-      <div className="px-4 pt-2">
-        <div className="rounded-full border border-primary/15 bg-primary/5 px-3 py-2 text-[11px] leading-snug text-foreground/70">
-          Нажмите <span className="font-medium text-foreground">«Совет»</span>, чтобы открыть рекомендации по выбору подрядчика.
-        </div>
-      </div>
 
       {/* Items */}
       <div className="px-4 py-3 space-y-2">
