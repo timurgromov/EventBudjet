@@ -355,12 +355,6 @@ const AdminMarginCalculatorPage = () => {
     return nextErrors;
   }, [calculations.revenue, orderForm.clientName, orderForm.contractDate, orderForm.eventDate]);
   const canCreateOrder = Object.keys(validationErrors).length === 0;
-  const visibleValidationMessages = [
-    validationErrors.clientName,
-    validationErrors.eventDate,
-    validationErrors.contractDate,
-    validationErrors.revenue,
-  ].filter((value): value is string => Boolean(value));
   const previewSummary = useMemo(() => {
     if (!summary) return null;
 
@@ -507,14 +501,15 @@ const AdminMarginCalculatorPage = () => {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+          <div className={cn("rounded-xl border bg-slate-50/70 px-3 py-2.5", validationErrors.clientName ? "border-rose-300" : "border-slate-200")}>
             <div className="text-[11px] font-medium text-slate-500">Имя клиента</div>
             <Input
               value={orderForm.clientName}
               onChange={(event) => handleOrderFieldChange("clientName", event.target.value)}
               placeholder="Например, Анна и Сергей"
-              className="mt-2 bg-white"
+              className={cn("mt-2 bg-white", validationErrors.clientName ? "border-rose-300 focus-visible:ring-rose-200" : "")}
             />
+            {validationErrors.clientName ? <div className="mt-2 text-xs text-rose-700">{validationErrors.clientName}</div> : null}
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
             <div className="text-[11px] font-medium text-slate-500">Название события</div>
@@ -525,23 +520,25 @@ const AdminMarginCalculatorPage = () => {
               className="mt-2 bg-white"
             />
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+          <div className={cn("rounded-xl border bg-slate-50/70 px-3 py-2.5", validationErrors.eventDate ? "border-rose-300" : "border-slate-200")}>
             <div className="text-[11px] font-medium text-slate-500">Дата мероприятия</div>
             <Input
               type="date"
               value={orderForm.eventDate}
               onChange={(event) => handleOrderFieldChange("eventDate", event.target.value)}
-              className="mt-2 bg-white"
+              className={cn("mt-2 bg-white", validationErrors.eventDate ? "border-rose-300 focus-visible:ring-rose-200" : "")}
             />
+            {validationErrors.eventDate ? <div className="mt-2 text-xs text-rose-700">{validationErrors.eventDate}</div> : null}
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+          <div className={cn("rounded-xl border bg-slate-50/70 px-3 py-2.5", validationErrors.contractDate ? "border-rose-300" : "border-slate-200")}>
             <div className="text-[11px] font-medium text-slate-500">Дата договора</div>
             <Input
               type="date"
               value={orderForm.contractDate}
               onChange={(event) => handleOrderFieldChange("contractDate", event.target.value)}
-              className="mt-2 bg-white"
+              className={cn("mt-2 bg-white", validationErrors.contractDate ? "border-rose-300 focus-visible:ring-rose-200" : "")}
             />
+            {validationErrors.contractDate ? <div className="mt-2 text-xs text-rose-700">{validationErrors.contractDate}</div> : null}
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
             <div className="text-[11px] font-medium text-slate-500">Источник заявки</div>
@@ -577,8 +574,8 @@ const AdminMarginCalculatorPage = () => {
           </div>
         </div>
 
-        {visibleValidationMessages.length > 0 ? (
-          <div className="mt-3 text-sm text-rose-700">{visibleValidationMessages[0]}</div>
+        {validationErrors.revenue ? (
+          <div className="mt-3 text-sm text-rose-700">{validationErrors.revenue}</div>
         ) : (
           <div className="mt-3 text-sm text-slate-500">Если расчёт устраивает, можно сразу зафиксировать его как заказ.</div>
         )}
