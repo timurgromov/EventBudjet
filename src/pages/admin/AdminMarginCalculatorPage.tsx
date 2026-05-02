@@ -433,10 +433,10 @@ const AdminMarginCalculatorPage = () => {
         </div>
       ) : null}
 
-      <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel, tone.effect)}>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-2">
           {fieldGroups.map((group) => (
-            <section key={group.title} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+            <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="text-lg font-semibold text-slate-950">{group.title}</div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -466,6 +466,30 @@ const AdminMarginCalculatorPage = () => {
                   {group.title === "Доходы" ? formatMoney(calculations.revenue) : formatMoney(calculations.totalCosts)}
                 </div>
               </div>
+
+              {group.title === "Доходы" ? (
+                <div className={cn("mt-3 rounded-xl border px-4 py-3", profitTone.panel, profitTone.effect)}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
+                      <div className={cn("mt-1.5 text-2xl font-semibold", profitTone.value)}>{formatMoney(calculations.profit)}</div>
+                    </div>
+                    <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", profitTone.badge)}>{profitStatus.label}</div>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
+                </div>
+              ) : (
+                <div className={cn("mt-3 rounded-xl border px-4 py-3", tone.panel, tone.effect)}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа</div>
+                      <div className={cn("mt-1.5 text-3xl font-semibold tracking-tight", tone.value)}>{formatMargin(calculations.margin)}</div>
+                    </div>
+                    <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>{marginStatus.label}</div>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
+                </div>
+              )}
             </section>
           ))}
         </div>
@@ -559,30 +583,6 @@ const AdminMarginCalculatorPage = () => {
           <div className="mt-3 text-sm text-slate-500">Если расчёт устраивает, можно сразу зафиксировать его как заказ.</div>
         )}
       </section>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className={cn("rounded-2xl border px-4 py-4 shadow-sm", profitTone.panel, profitTone.effect)}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль по сценарию</div>
-              <div className={cn("mt-1.5 text-3xl font-semibold tracking-tight", profitTone.value)}>{formatMoney(calculations.profit)}</div>
-            </div>
-            <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", profitTone.badge)}>{profitStatus.label}</div>
-          </div>
-          <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
-        </section>
-
-        <section className={cn("rounded-2xl border px-4 py-4 shadow-sm", tone.panel, tone.effect)}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа по сценарию</div>
-              <div className={cn("mt-1.5 text-3xl font-semibold tracking-tight", tone.value)}>{formatMargin(calculations.margin)}</div>
-            </div>
-            <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>{marginStatus.label}</div>
-          </div>
-          <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
-        </section>
-      </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
