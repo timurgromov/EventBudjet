@@ -247,7 +247,6 @@ const AdminMarginCalculatorPage = () => {
   const [customDateFrom, setCustomDateFrom] = useState("");
   const [customDateTo, setCustomDateTo] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isAdditionalFieldsOpen, setIsAdditionalFieldsOpen] = useState(false);
 
   const { dateFrom, dateTo } = useMemo(
     () => getDateRange(periodFilter, customDateFrom, customDateTo),
@@ -404,15 +403,6 @@ const AdminMarginCalculatorPage = () => {
     };
   }, [calculations.margin, calculations.profit, calculations.revenue, dateFrom, dateTo, orderForm.contractDate, summary]);
 
-  const getFieldShellClassName = (fieldKey: OrderCreateFieldKey) =>
-    cn(
-      "rounded-xl border bg-slate-50/70 px-3 py-2.5",
-      validationErrors[fieldKey] ? "border-rose-300 bg-rose-50/80" : "border-slate-200",
-    );
-
-  const getFieldInputClassName = (fieldKey: OrderCreateFieldKey) =>
-    cn("mt-2 bg-white", validationErrors[fieldKey] ? "border-rose-300 focus-visible:ring-rose-200" : "");
-
   if (!adminToken.trim()) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть модуль маржи.</div>;
   }
@@ -482,23 +472,25 @@ const AdminMarginCalculatorPage = () => {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="text-lg font-semibold text-slate-950">Данные заказа</div>
-            <div className="mt-1 text-sm text-slate-600">Минимум для фиксации заказа: клиент, дата мероприятия и дата договора. Остальные поля можно раскрыть при необходимости.</div>
+            <div className="mt-1 text-sm text-slate-600">Эти поля превратят текущий расчёт в реальный заказ, который начнёт участвовать в годовой картине.</div>
           </div>
+          <Button onClick={() => createOrderMutation.mutate()} disabled={!canCreateOrder || createOrderMutation.isPending}>
+            {createOrderMutation.isPending ? "Создаю..." : "Создать заказ"}
+          </Button>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className={getFieldShellClassName("clientName")}>
-            <div className="text-[11px] font-medium text-slate-500">Имя клиента *</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Имя клиента</div>
             <Input
               value={orderForm.clientName}
               onChange={(event) => handleOrderFieldChange("clientName", event.target.value)}
               placeholder="Например, Анна и Сергей"
-              className={getFieldInputClassName("clientName")}
+              className="mt-2 bg-white"
             />
-            {validationErrors.clientName ? <div className="mt-2 text-xs text-rose-700">{validationErrors.clientName}</div> : null}
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
             <div className="text-[11px] font-medium text-slate-500">Название события</div>
@@ -509,81 +501,66 @@ const AdminMarginCalculatorPage = () => {
               className="mt-2 bg-white"
             />
           </div>
-          <div className={getFieldShellClassName("eventDate")}>
-            <div className="text-[11px] font-medium text-slate-500">Дата мероприятия *</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Дата мероприятия</div>
             <Input
               type="date"
               value={orderForm.eventDate}
               onChange={(event) => handleOrderFieldChange("eventDate", event.target.value)}
-              className={getFieldInputClassName("eventDate")}
+              className="mt-2 bg-white"
             />
-            {validationErrors.eventDate ? <div className="mt-2 text-xs text-rose-700">{validationErrors.eventDate}</div> : null}
           </div>
-          <div className={getFieldShellClassName("contractDate")}>
-            <div className="text-[11px] font-medium text-slate-500">Дата договора *</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Дата договора</div>
             <Input
               type="date"
               value={orderForm.contractDate}
               onChange={(event) => handleOrderFieldChange("contractDate", event.target.value)}
-              className={getFieldInputClassName("contractDate")}
+              className="mt-2 bg-white"
             />
-            {validationErrors.contractDate ? <div className="mt-2 text-xs text-rose-700">{validationErrors.contractDate}</div> : null}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Источник заявки</div>
+            <Input
+              value={orderForm.source}
+              onChange={(event) => handleOrderFieldChange("source", event.target.value)}
+              placeholder="Например, Telegram Mini App"
+              className="mt-2 bg-white"
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Статус заказа</div>
+            <select
+              value={orderForm.status}
+              onChange={(event) => handleOrderFieldChange("status", event.target.value)}
+              className="mt-2 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              {ORDER_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 md:col-span-2">
+            <div className="text-[11px] font-medium text-slate-500">Комментарий</div>
+            <Textarea
+              value={orderForm.comment}
+              onChange={(event) => handleOrderFieldChange("comment", event.target.value)}
+              placeholder="Например, нужен аккуратный апсейл по оборудованию и аккуратно держим скидку."
+              className="mt-2 min-h-[92px] bg-white"
+            />
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4">
-          <button
-            type="button"
-            onClick={() => setIsAdditionalFieldsOpen((current) => !current)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <div>
-              <div className="text-sm font-semibold text-slate-950">Дополнительно</div>
-              <div className="mt-1 text-xs text-slate-500">Источник, статус и комментарий можно заполнить сразу или оставить на карточку заказа.</div>
-            </div>
-            <div className="text-sm text-slate-500">{isAdditionalFieldsOpen ? "Свернуть" : "Раскрыть"}</div>
-          </button>
-
-          {isAdditionalFieldsOpen ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-                <div className="text-[11px] font-medium text-slate-500">Источник заявки</div>
-                <Input
-                  value={orderForm.source}
-                  onChange={(event) => handleOrderFieldChange("source", event.target.value)}
-                  placeholder="Например, Telegram Mini App"
-                  className="mt-2 bg-white"
-                />
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-                <div className="text-[11px] font-medium text-slate-500">Статус заказа</div>
-                <select
-                  value={orderForm.status}
-                  onChange={(event) => handleOrderFieldChange("status", event.target.value)}
-                  className="mt-2 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
-                >
-                  {ORDER_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 md:col-span-2">
-                <div className="text-[11px] font-medium text-slate-500">Комментарий</div>
-                <Textarea
-                  value={orderForm.comment}
-                  onChange={(event) => handleOrderFieldChange("comment", event.target.value)}
-                  placeholder="Например, нужен аккуратный апсейл по оборудованию и аккуратно держим скидку."
-                  className="mt-2 min-h-[92px] bg-white"
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
+        {visibleValidationMessages.length > 0 ? (
+          <div className="mt-3 text-sm text-rose-700">{visibleValidationMessages[0]}</div>
+        ) : (
+          <div className="mt-3 text-sm text-slate-500">Если расчёт устраивает, можно сразу зафиксировать его как заказ.</div>
+        )}
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-4 md:grid-cols-2">
         <section className={cn("rounded-2xl border px-4 py-4 shadow-sm", profitTone.panel, profitTone.effect)}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -606,84 +583,6 @@ const AdminMarginCalculatorPage = () => {
           <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
         </section>
       </div>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="text-lg font-semibold text-slate-950">Фиксация сценария</div>
-            <div className="mt-1 text-sm text-slate-600">Когда сценарий устраивает по прибыли и марже, зафиксируй его как реальный заказ.</div>
-          </div>
-          <div className="flex flex-col items-stretch gap-2 lg:min-w-[260px]">
-            <Button onClick={() => createOrderMutation.mutate()} disabled={!canCreateOrder || createOrderMutation.isPending}>
-              {createOrderMutation.isPending ? "Создаю..." : "Создать заказ"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-            >
-              Сбросить расчёт
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-          <div className={cn("rounded-2xl border p-4", visibleValidationMessages.length > 0 ? "border-rose-200 bg-rose-50/80" : "border-emerald-200 bg-emerald-50/70")}>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Готовность к созданию</div>
-            {visibleValidationMessages.length > 0 ? (
-              <div className="mt-3 space-y-2 text-sm text-rose-700">
-                {visibleValidationMessages.map((message) => (
-                  <div key={message}>{message}</div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-3 text-sm text-emerald-800">
-                Всё заполнено. Текущий сценарий можно сразу превращать в заказ и вести дальше уже из карточки клиента.
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Влияние на период</div>
-            {summaryQuery.isLoading ? (
-              <div className="mt-3 text-sm text-slate-600">Сравниваю сценарий с текущей сводкой периода...</div>
-            ) : summaryQuery.isError ? (
-              <div className="mt-3 text-sm text-rose-700">Не удалось подготовить preview периода.</div>
-            ) : previewSummary?.state === "ready" ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[11px] font-medium text-slate-500">Выручка периода после добавления</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">{formatMoney(previewSummary.nextTotalRevenue)}</div>
-                  <div className="mt-1 text-xs text-emerald-700">{formatSignedMoney(previewSummary.revenueDelta)}</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[11px] font-medium text-slate-500">Прибыль периода после добавления</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">{formatMoney(previewSummary.nextTotalProfit)}</div>
-                  <div className={cn("mt-1 text-xs", previewSummary.profitDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
-                    {formatSignedMoney(previewSummary.profitDelta)}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[11px] font-medium text-slate-500">Средняя маржа периода</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">{formatMargin(previewSummary.nextAverageMargin)}</div>
-                  <div className={cn("mt-1 text-xs", previewSummary.marginDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
-                    {formatSignedMargin(previewSummary.marginDelta)}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[11px] font-medium text-slate-500">Количество заказов периода</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">{previewSummary.nextOrdersCount}</div>
-                  <div className="mt-1 text-xs text-slate-500">Сейчас: {summary?.orders_count ?? 0}</div>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-3 text-sm text-slate-600">{previewSummary?.message ?? "Preview периода появится, когда загрузится summary."}</div>
-            )}
-          </div>
-        </div>
-
-        {validationErrors.revenue ? <div className="mt-4 text-xs text-slate-500">Без выручки сценарий не попадёт ни в preview, ни в заказ.</div> : null}
-      </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -718,6 +617,42 @@ const AdminMarginCalculatorPage = () => {
             </Button>
           </div>
         </div>
+
+        {summary && !summaryQuery.isLoading && !summaryQuery.isError ? (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Если зафиксировать текущий сценарий</div>
+            {previewSummary?.state === "ready" ? (
+              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500">Выручка периода</div>
+                  <div className="mt-1 font-semibold text-slate-950">{formatMoney(previewSummary.nextTotalRevenue)}</div>
+                  <div className="text-xs text-emerald-700">{formatSignedMoney(previewSummary.revenueDelta)}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500">Прибыль периода</div>
+                  <div className="mt-1 font-semibold text-slate-950">{formatMoney(previewSummary.nextTotalProfit)}</div>
+                  <div className={cn("text-xs", previewSummary.profitDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                    {formatSignedMoney(previewSummary.profitDelta)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500">Средняя маржа</div>
+                  <div className="mt-1 font-semibold text-slate-950">{formatMargin(previewSummary.nextAverageMargin)}</div>
+                  <div className={cn("text-xs", previewSummary.marginDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                    {formatSignedMargin(previewSummary.marginDelta)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500">Количество заказов</div>
+                  <div className="mt-1 font-semibold text-slate-950">{previewSummary.nextOrdersCount}</div>
+                  <div className="text-xs text-slate-500">Сейчас: {summary.orders_count}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-slate-600">{previewSummary?.message ?? "Preview периода появится, когда загрузится сводка."}</div>
+            )}
+          </div>
+        ) : null}
 
         {periodFilter === "custom" ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:max-w-xl">
