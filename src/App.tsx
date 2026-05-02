@@ -10,6 +10,7 @@ import AdminLeadsPage from "./pages/admin/AdminLeadsPage";
 import AdminLeadDetailPage from "./pages/admin/AdminLeadDetailPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 import AdminSourcesPage from "./pages/admin/AdminSourcesPage";
+import AdminClientOrderDetailPage from "./pages/admin/AdminClientOrderDetailPage";
 import AdminMarginCalculatorPage from "./pages/admin/AdminMarginCalculatorPage";
 import AdminWeddingCalculatorLayout from "./pages/admin/AdminWeddingCalculatorLayout";
 
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="sources" element={<Navigate to="/admin/wedding-calculator/sources" replace />} />
             <Route path="notifications" element={<Navigate to="/admin/wedding-calculator/notifications" replace />} />
             <Route path="margin-calculator" element={<AdminMarginCalculatorPage />} />
+            <Route path="margin-calculator/orders/:orderId" element={<AdminClientOrderDetailPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

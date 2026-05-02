@@ -157,6 +157,113 @@ export interface AdminLeadActionResponse {
   status: "reset" | "deleted" | string;
 }
 
+export interface ClientOrder {
+  id: number;
+  lead_id: number | null;
+  order_code: string | null;
+  client_name: string;
+  event_title: string | null;
+  event_date: string | null;
+  contract_date: string | null;
+  source: string | null;
+  status: string;
+  comment: string | null;
+  created_at: string;
+  updated_at: string;
+  revenue: string;
+  total_costs: string;
+  profit: string;
+  margin: string;
+}
+
+export interface ClientOrderItem {
+  id: number;
+  order_id: number;
+  item_type: "revenue" | "cost" | string;
+  category_code: string | null;
+  title: string;
+  amount: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientOrderDetailResponse {
+  order: ClientOrder;
+  items: ClientOrderItem[];
+}
+
+export interface ClientOrderListResponse {
+  orders: ClientOrder[];
+}
+
+export interface ClientOrderSummaryResponse {
+  date_from: string | null;
+  date_to: string | null;
+  orders_count: number;
+  low_margin_orders_count: number;
+  total_revenue: string;
+  total_costs: string;
+  total_profit: string;
+  average_margin: string;
+  average_profit_per_order: string;
+}
+
+export interface MarginCalculatorOrderPayload {
+  client_name: string;
+  event_title?: string | null;
+  event_date: string;
+  contract_date: string;
+  source?: string | null;
+  status?: string | null;
+  comment?: string | null;
+  lead_id?: number | null;
+  base_package: string;
+  extra_equipment: string;
+  extra_hours: string;
+  extra_hour_rate: string;
+  dj_payout: string;
+  ads_cost: string;
+  other_costs: string;
+}
+
+export interface ClientOrderCreatePayload {
+  client_name: string;
+  event_title?: string | null;
+  event_date: string;
+  contract_date: string;
+  source?: string | null;
+  status?: string | null;
+  comment?: string | null;
+  lead_id?: number | null;
+}
+
+export interface ClientOrderUpdatePayload {
+  client_name?: string;
+  event_title?: string | null;
+  event_date?: string | null;
+  contract_date?: string | null;
+  source?: string | null;
+  status?: string | null;
+  comment?: string | null;
+  lead_id?: number | null;
+}
+
+export interface ClientOrderItemCreatePayload {
+  item_type: "revenue" | "cost";
+  category_code?: string | null;
+  title: string;
+  amount: string;
+  position?: number;
+}
+
+export interface ClientOrderItemUpdatePayload {
+  category_code?: string | null;
+  title?: string;
+  amount?: string;
+  position?: number;
+}
+
 export interface LeadActionPayload {
   action: string;
   source?: string;
@@ -279,6 +386,10 @@ async function adminRequest<T>(path: string, adminToken: string, options: Reques
     throw new Error(`${response.status}: ${detail}`);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return (await response.json()) as T;
 }
 
@@ -390,6 +501,98 @@ export function resetAdminLead(adminToken: string, leadId: number): Promise<Admi
 
 export function deleteAdminLead(adminToken: string, leadId: number): Promise<AdminLeadActionResponse> {
   return adminRequest<AdminLeadActionResponse>(`/admin/leads/${leadId}`, adminToken, {
+    method: "DELETE",
+  });
+}
+
+export function listClientOrders(
+  adminToken: string,
+  params?: { dateFrom?: string | null; dateTo?: string | null },
+): Promise<ClientOrderListResponse> {
+  const query = new URLSearchParams();
+  if (params?.dateFrom) query.set("date_from", params.dateFrom);
+  if (params?.dateTo) query.set("date_to", params.dateTo);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return adminRequest<ClientOrderListResponse>(`/admin/client-orders${suffix}`, adminToken);
+}
+
+export function getClientOrderSummary(
+  adminToken: string,
+  params?: { dateFrom?: string | null; dateTo?: string | null },
+): Promise<ClientOrderSummaryResponse> {
+  const query = new URLSearchParams();
+  if (params?.dateFrom) query.set("date_from", params.dateFrom);
+  if (params?.dateTo) query.set("date_to", params.dateTo);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return adminRequest<ClientOrderSummaryResponse>(`/admin/client-orders/summary${suffix}`, adminToken);
+}
+
+export function createClientOrderFromMarginCalculator(
+  adminToken: string,
+  payload: MarginCalculatorOrderPayload,
+): Promise<ClientOrderDetailResponse> {
+  return adminRequest<ClientOrderDetailResponse>("/admin/client-orders/from-margin-calculator", adminToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createClientOrder(
+  adminToken: string,
+  payload: ClientOrderCreatePayload,
+): Promise<ClientOrderDetailResponse> {
+  return adminRequest<ClientOrderDetailResponse>("/admin/client-orders", adminToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getClientOrder(adminToken: string, orderId: number): Promise<ClientOrderDetailResponse> {
+  return adminRequest<ClientOrderDetailResponse>(`/admin/client-orders/${orderId}`, adminToken);
+}
+
+export function updateClientOrder(
+  adminToken: string,
+  orderId: number,
+  payload: ClientOrderUpdatePayload,
+): Promise<ClientOrderDetailResponse> {
+  return adminRequest<ClientOrderDetailResponse>(`/admin/client-orders/${orderId}`, adminToken, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteClientOrder(adminToken: string, orderId: number): Promise<void> {
+  return adminRequest<void>(`/admin/client-orders/${orderId}`, adminToken, {
+    method: "DELETE",
+  });
+}
+
+export function createClientOrderItem(
+  adminToken: string,
+  orderId: number,
+  payload: ClientOrderItemCreatePayload,
+): Promise<ClientOrderDetailResponse> {
+  return adminRequest<ClientOrderDetailResponse>(`/admin/client-orders/${orderId}/items`, adminToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateClientOrderItem(
+  adminToken: string,
+  orderId: number,
+  itemId: number,
+  payload: ClientOrderItemUpdatePayload,
+): Promise<ClientOrderDetailResponse> {
+  return adminRequest<ClientOrderDetailResponse>(`/admin/client-orders/${orderId}/items/${itemId}`, adminToken, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteClientOrderItem(adminToken: string, orderId: number, itemId: number): Promise<ClientOrderDetailResponse> {
+  return adminRequest<ClientOrderDetailResponse>(`/admin/client-orders/${orderId}/items/${itemId}`, adminToken, {
     method: "DELETE",
   });
 }

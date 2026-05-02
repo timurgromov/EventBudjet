@@ -30,8 +30,9 @@ wait_for_service_health() {
 cd /home/user1/EventBudjet
 git pull
 sudo docker compose up -d --build --force-recreate frontend backend bot
-wait_for_service_health frontend
 wait_for_service_health backend
+sudo docker compose run --rm backend alembic -c backend/alembic.ini upgrade head
+wait_for_service_health frontend
 sudo docker compose up -d --force-recreate nginx
 wait_for_service_health nginx
 sudo docker compose ps

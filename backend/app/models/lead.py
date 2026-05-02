@@ -49,6 +49,7 @@ class Lead(Base):
     user: Mapped['User'] = relationship('User', back_populates='leads')
     expenses: Mapped[list['Expense']] = relationship('Expense', back_populates='lead', cascade='all, delete-orphan')
     events: Mapped[list['LeadEvent']] = relationship('LeadEvent', back_populates='lead', cascade='all, delete-orphan')
+    client_orders: Mapped[list['ClientOrder']] = relationship('ClientOrder', back_populates='lead')
     scheduled_messages: Mapped[list['ScheduledMessage']] = relationship(
         'ScheduledMessage', back_populates='lead', cascade='all, delete-orphan'
     )

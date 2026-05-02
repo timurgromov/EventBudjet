@@ -1,8 +1,19 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { Link, useOutletContext } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  createClientOrderFromMarginCalculator,
+  getClientOrderSummary,
+  listClientOrders,
+  type MarginCalculatorOrderPayload,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+import { formatAdminDate, formatAdminDateTime, formatAdminMoney, formatOrderStatusLabel, formatSourceLabel } from "./admin-format";
 
 type MarginFieldKey =
   | "basePackage"
@@ -14,8 +25,22 @@ type MarginFieldKey =
   | "otherCosts";
 
 type MarginFormValues = Record<MarginFieldKey, string>;
-
 type MarginTone = "red" | "yellow" | "green" | "teal" | "violet";
+type PeriodFilter = "currentYear" | "previousYear" | "custom";
+
+interface AdminOutletContext {
+  adminToken: string;
+}
+
+interface OrderCreateFormState {
+  clientName: string;
+  eventTitle: string;
+  eventDate: string;
+  contractDate: string;
+  source: string;
+  status: string;
+  comment: string;
+}
 
 const INITIAL_VALUES: MarginFormValues = {
   basePackage: "",
@@ -26,6 +51,14 @@ const INITIAL_VALUES: MarginFormValues = {
   adsCost: "",
   otherCosts: "5000",
 };
+
+const ORDER_STATUS_OPTIONS = [
+  { value: "signed", label: "Подписан" },
+  { value: "in_progress", label: "В работе" },
+  { value: "completed", label: "Проведён" },
+  { value: "closed", label: "Закрыт" },
+  { value: "cancelled", label: "Отменён" },
+];
 
 const MONEY_FORMATTER = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -47,8 +80,22 @@ const parseNumericValue = (value: string): number => {
 };
 
 const formatMoney = (value: number): string => MONEY_FORMATTER.format(value);
-
 const formatMargin = (value: number): string => `${MARGIN_FORMATTER.format(value)}%`;
+const formatDecimalString = (value: string): string => (value.trim() ? value : "0");
+
+const getDefaultOrderForm = (): OrderCreateFormState => {
+  const now = new Date();
+  const isoDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return {
+    clientName: "",
+    eventTitle: "",
+    eventDate: "",
+    contractDate: isoDate,
+    source: "",
+    status: "signed",
+    comment: "",
+  };
+};
 
 const getProfitStatus = (profit: number): { label: string; description: string; tone: MarginTone } => {
   if (profit < 60000) {
@@ -127,10 +174,9 @@ const toneClasses: Record<MarginTone, { badge: string; panel: string; value: str
     badge: "border border-violet-300 bg-violet-50 text-violet-700",
     panel: "border-violet-300 bg-violet-50/80",
     value: "text-violet-700",
-    effect:
-      "ring-1 ring-violet-200/80 shadow-[0_0_0_1px_rgba(139,92,246,0.08),0_18px_40px_rgba(139,92,246,0.14)]",
+    effect: "ring-1 ring-violet-200/80 shadow-[0_0_0_1px_rgba(139,92,246,0.08),0_18px_40px_rgba(139,92,246,0.14)]",
   },
-} as const;
+};
 
 const fieldGroups: Array<{
   title: string;
@@ -155,19 +201,36 @@ const fieldGroups: Array<{
   },
 ];
 
+const getDateRange = (periodFilter: PeriodFilter, customDateFrom: string, customDateTo: string): { dateFrom?: string; dateTo?: string } => {
+  if (periodFilter === "custom") {
+    return {
+      dateFrom: customDateFrom || undefined,
+      dateTo: customDateTo || undefined,
+    };
+  }
+
+  const now = new Date();
+  const year = periodFilter === "currentYear" ? now.getFullYear() : now.getFullYear() - 1;
+  return {
+    dateFrom: `${year}-01-01`,
+    dateTo: `${year}-12-31`,
+  };
+};
+
 const AdminMarginCalculatorPage = () => {
+  const { adminToken } = useOutletContext<AdminOutletContext>();
+  const queryClient = useQueryClient();
   const [values, setValues] = useState<MarginFormValues>(INITIAL_VALUES);
+  const [orderForm, setOrderForm] = useState<OrderCreateFormState>(getDefaultOrderForm);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("currentYear");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const handleFieldChange = (key: MarginFieldKey, nextValue: string) => {
-    setValues((current) => ({
-      ...current,
-      [key]: nextValue,
-    }));
-  };
-
-  const handleReset = () => {
-    setValues(INITIAL_VALUES);
-  };
+  const { dateFrom, dateTo } = useMemo(
+    () => getDateRange(periodFilter, customDateFrom, customDateTo),
+    [periodFilter, customDateFrom, customDateTo],
+  );
 
   const calculations = useMemo(() => {
     const basePackage = parseNumericValue(values.basePackage);
@@ -191,19 +254,88 @@ const AdminMarginCalculatorPage = () => {
     };
   }, [values]);
 
+  const summaryQuery = useQuery({
+    queryKey: ["client-order-summary", adminToken, dateFrom, dateTo],
+    queryFn: () => getClientOrderSummary(adminToken, { dateFrom, dateTo }),
+    enabled: adminToken.trim().length > 0,
+  });
+
+  const ordersQuery = useQuery({
+    queryKey: ["client-orders", adminToken, dateFrom, dateTo],
+    queryFn: () => listClientOrders(adminToken, { dateFrom, dateTo }),
+    enabled: adminToken.trim().length > 0,
+  });
+
+  const createOrderMutation = useMutation({
+    mutationFn: async () => {
+      const payload: MarginCalculatorOrderPayload = {
+        client_name: orderForm.clientName.trim(),
+        event_title: orderForm.eventTitle.trim() || null,
+        event_date: orderForm.eventDate,
+        contract_date: orderForm.contractDate,
+        source: orderForm.source.trim() || null,
+        status: orderForm.status,
+        comment: orderForm.comment.trim() || null,
+        base_package: formatDecimalString(values.basePackage),
+        extra_equipment: formatDecimalString(values.extraEquipment),
+        extra_hours: formatDecimalString(values.extraHours),
+        extra_hour_rate: formatDecimalString(values.extraHourRate),
+        dj_payout: formatDecimalString(values.djPayout),
+        ads_cost: formatDecimalString(values.adsCost),
+        other_costs: formatDecimalString(values.otherCosts),
+      };
+      return createClientOrderFromMarginCalculator(adminToken, payload);
+    },
+    onSuccess: async (result) => {
+      setStatusMessage(`Заказ ${result.order.order_code ?? `#${result.order.id}`} создан.`);
+      setOrderForm(getDefaultOrderForm());
+      await queryClient.invalidateQueries({ queryKey: ["client-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["client-order-summary"] });
+    },
+    onError: (error) => {
+      setStatusMessage(error instanceof Error ? `Ошибка создания: ${error.message}` : "Ошибка создания заказа.");
+    },
+  });
+
+  const handleFieldChange = (key: MarginFieldKey, nextValue: string) => {
+    setValues((current) => ({
+      ...current,
+      [key]: nextValue,
+    }));
+  };
+
+  const handleOrderFieldChange = (key: keyof OrderCreateFormState, nextValue: string) => {
+    setOrderForm((current) => ({
+      ...current,
+      [key]: nextValue,
+    }));
+  };
+
+  const handleReset = () => {
+    setValues(INITIAL_VALUES);
+    setOrderForm(getDefaultOrderForm());
+    setStatusMessage(null);
+  };
+
   const profitStatus = getProfitStatus(calculations.profit);
   const marginStatus = getMarginStatus(calculations.margin);
   const profitTone = toneClasses[profitStatus.tone];
   const tone = toneClasses[marginStatus.tone];
+  const orders = ordersQuery.data?.orders ?? [];
+  const summary = summaryQuery.data;
+
+  if (!adminToken.trim()) {
+    return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть модуль маржи.</div>;
+  }
 
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-lg font-semibold text-slate-950">Калькулятор маржи</div>
+            <div className="text-lg font-semibold text-slate-950">Margin CRM</div>
             <div className="mt-1 max-w-3xl text-sm text-slate-600">
-              Быстрый расчёт выручки, переменных расходов, чистой прибыли и маржи по сценарию заказа.
+              Быстрый расчёт маржи, создание реальных заказов и управленческая картина по периоду на одной странице.
             </div>
           </div>
           <Button
@@ -211,27 +343,27 @@ const AdminMarginCalculatorPage = () => {
             onClick={handleReset}
             className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
           >
-            Сбросить
+            Сбросить всё
           </Button>
         </div>
       </section>
 
-      <div className="space-y-4">
-        <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel, tone.effect)}>
-          <div className="grid gap-4 lg:grid-cols-2">
+      {statusMessage ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+          {statusMessage}
+        </div>
+      ) : null}
+
+      <section className={cn("rounded-2xl border p-4 shadow-sm", tone.panel, tone.effect)}>
+        <div className="grid gap-4 lg:grid-cols-2">
           {fieldGroups.map((group) => (
             <section key={group.title} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
               <div className="text-lg font-semibold text-slate-950">{group.title}</div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {group.fields.map((field) => (
-                  <div
-                    key={field.key}
-                    className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5"
-                  >
-                    <div className="text-[11px] font-medium leading-snug text-slate-500">
-                      {field.label}
-                    </div>
+                  <div key={field.key} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                    <div className="text-[11px] font-medium leading-snug text-slate-500">{field.label}</div>
                     <Input
                       id={field.key}
                       type="number"
@@ -255,49 +387,259 @@ const AdminMarginCalculatorPage = () => {
                   {group.title === "Доходы" ? formatMoney(calculations.revenue) : formatMoney(calculations.totalCosts)}
                 </div>
               </div>
-
-              {group.title === "Доходы" ? (
-                <div
-                  className={cn(
-                    "mt-3 rounded-xl border px-4 py-3",
-                    profitTone.panel,
-                    profitTone.effect,
-                  )}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль</div>
-                      <div className={cn("mt-1.5 text-2xl font-semibold", profitTone.value)}>
-                        {formatMoney(calculations.profit)}
-                      </div>
-                    </div>
-                    <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", profitTone.badge)}>
-                      {profitStatus.label}
-                    </div>
-                  </div>
-                  <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
-                </div>
-              ) : (
-                <div className={cn("mt-3 rounded-xl border px-4 py-3", tone.panel, tone.effect)}>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа</div>
-                      <div className={cn("mt-1.5 text-3xl font-semibold tracking-tight", tone.value)}>
-                        {formatMargin(calculations.margin)}
-                      </div>
-                    </div>
-                    <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>
-                      {marginStatus.label}
-                    </div>
-                  </div>
-                  <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
-                </div>
-              )}
             </section>
           ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-lg font-semibold text-slate-950">Данные заказа</div>
+            <div className="mt-1 text-sm text-slate-600">Эти поля превратят текущий расчёт в реальный заказ, который начнёт участвовать в годовой картине.</div>
           </div>
+          <Button onClick={() => createOrderMutation.mutate()} disabled={createOrderMutation.isPending}>
+            {createOrderMutation.isPending ? "Создаю..." : "Создать заказ"}
+          </Button>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Имя клиента</div>
+            <Input
+              value={orderForm.clientName}
+              onChange={(event) => handleOrderFieldChange("clientName", event.target.value)}
+              placeholder="Например, Анна и Сергей"
+              className="mt-2 bg-white"
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Название события</div>
+            <Input
+              value={orderForm.eventTitle}
+              onChange={(event) => handleOrderFieldChange("eventTitle", event.target.value)}
+              placeholder="Свадьба в Soho Country Club"
+              className="mt-2 bg-white"
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Дата мероприятия</div>
+            <Input
+              type="date"
+              value={orderForm.eventDate}
+              onChange={(event) => handleOrderFieldChange("eventDate", event.target.value)}
+              className="mt-2 bg-white"
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Дата договора</div>
+            <Input
+              type="date"
+              value={orderForm.contractDate}
+              onChange={(event) => handleOrderFieldChange("contractDate", event.target.value)}
+              className="mt-2 bg-white"
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Источник заявки</div>
+            <Input
+              value={orderForm.source}
+              onChange={(event) => handleOrderFieldChange("source", event.target.value)}
+              placeholder="Например, Telegram Mini App"
+              className="mt-2 bg-white"
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <div className="text-[11px] font-medium text-slate-500">Статус заказа</div>
+            <select
+              value={orderForm.status}
+              onChange={(event) => handleOrderFieldChange("status", event.target.value)}
+              className="mt-2 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              {ORDER_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 md:col-span-2">
+            <div className="text-[11px] font-medium text-slate-500">Комментарий</div>
+            <Textarea
+              value={orderForm.comment}
+              onChange={(event) => handleOrderFieldChange("comment", event.target.value)}
+              placeholder="Например, нужен аккуратный апсейл по оборудованию и аккуратно держим скидку."
+              className="mt-2 min-h-[92px] bg-white"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <section className={cn("rounded-2xl border px-4 py-4 shadow-sm", profitTone.panel, profitTone.effect)}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Чистая прибыль по сценарию</div>
+              <div className={cn("mt-1.5 text-3xl font-semibold tracking-tight", profitTone.value)}>{formatMoney(calculations.profit)}</div>
+            </div>
+            <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", profitTone.badge)}>{profitStatus.label}</div>
+          </div>
+          <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
+        </section>
+
+        <section className={cn("rounded-2xl border px-4 py-4 shadow-sm", tone.panel, tone.effect)}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа по сценарию</div>
+              <div className={cn("mt-1.5 text-3xl font-semibold tracking-tight", tone.value)}>{formatMargin(calculations.margin)}</div>
+            </div>
+            <div className={cn("inline-flex rounded-full px-3 py-1 text-sm font-medium", tone.badge)}>{marginStatus.label}</div>
+          </div>
+          <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
         </section>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="text-lg font-semibold text-slate-950">Панель периода</div>
+            <div className="mt-1 text-sm text-slate-600">Сводка считается по дате договора и показывает текущую картину по заказам.</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setPeriodFilter("currentYear")}
+              className={periodFilter === "currentYear" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
+            >
+              Текущий год
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setPeriodFilter("previousYear")}
+              className={periodFilter === "previousYear" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
+            >
+              Прошлый год
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setPeriodFilter("custom")}
+              className={periodFilter === "custom" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
+            >
+              Свой период
+            </Button>
+          </div>
+        </div>
+
+        {periodFilter === "custom" ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:max-w-xl">
+            <Input type="date" value={customDateFrom} onChange={(event) => setCustomDateFrom(event.target.value)} />
+            <Input type="date" value={customDateTo} onChange={(event) => setCustomDateTo(event.target.value)} />
+          </div>
+        ) : null}
+
+        {summaryQuery.isLoading ? (
+          <div className="mt-4 text-sm text-slate-600">Собираю сводку...</div>
+        ) : summaryQuery.isError ? (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {summaryQuery.error instanceof Error ? summaryQuery.error.message : "Не удалось загрузить summary"}
+          </div>
+        ) : summary ? (
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общая выручка</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.total_revenue)}</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общие расходы</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.total_costs)}</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общая прибыль</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.total_profit)}</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Средняя маржа</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatMargin(Number(summary.average_margin))}</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Количество заказов</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">{summary.orders_count}</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Средняя прибыль на заказ</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.average_profit_per_order)}</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Низкомаржинальные</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-950">{summary.low_margin_orders_count}</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Период</div>
+              <div className="mt-2 text-base font-semibold text-slate-950">
+                {formatAdminDate(summary.date_from)} - {formatAdminDate(summary.date_to)}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-lg font-semibold text-slate-950">Список заказов</div>
+            <div className="mt-1 text-sm text-slate-600">Все созданные заказы, которые попадают в выбранный период по дате договора.</div>
+          </div>
+          <div className="text-sm text-slate-500">{orders.length} шт.</div>
+        </div>
+
+        {ordersQuery.isLoading ? (
+          <div className="mt-4 text-sm text-slate-600">Загружаю заказы...</div>
+        ) : ordersQuery.isError ? (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {ordersQuery.error instanceof Error ? ordersQuery.error.message : "Не удалось загрузить заказы"}
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+            Заказов в выбранном периоде пока нет.
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {orders.map((order) => (
+              <Link
+                key={order.id}
+                to={`/admin/margin-calculator/orders/${order.id}`}
+                className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-colors hover:border-slate-300 hover:bg-white md:grid-cols-[1.25fr_0.85fr_0.85fr_0.9fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-950">{order.client_name}</div>
+                  <div className="mt-1 text-xs text-slate-500">{order.order_code ?? `order #${order.id}`}</div>
+                  <div className="mt-1 text-xs text-slate-500">{order.event_title || "Без названия события"}</div>
+                  <div className="mt-2 text-xs text-slate-500">Источник: {formatSourceLabel(order.source)}</div>
+                </div>
+                <div className="text-sm text-slate-700">
+                  <div>Договор: {formatAdminDate(order.contract_date)}</div>
+                  <div className="mt-1 text-xs text-slate-500">Мероприятие: {formatAdminDate(order.event_date)}</div>
+                </div>
+                <div className="text-sm text-slate-700">
+                  <div className="font-medium text-slate-950">{formatAdminMoney(order.revenue)}</div>
+                  <div className="mt-1 text-xs text-slate-500">Выручка</div>
+                </div>
+                <div className="text-sm text-slate-700">
+                  <div className="font-medium text-slate-950">{formatAdminMoney(order.profit)}</div>
+                  <div className="mt-1 text-xs text-slate-500">Прибыль • {formatMargin(Number(order.margin))}</div>
+                </div>
+                <div className="text-sm text-slate-700">
+                  <div>{formatOrderStatusLabel(order.status)}</div>
+                  <div className="mt-1 text-xs text-slate-500">{formatAdminDateTime(order.updated_at)}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

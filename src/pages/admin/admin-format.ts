@@ -59,6 +59,14 @@ const SOURCE_LABELS: Record<string, string> = {
   calc: "Старая ссылка calc",
 };
 
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  signed: "Подписан",
+  in_progress: "В работе",
+  completed: "Проведён",
+  closed: "Закрыт",
+  cancelled: "Отменён",
+};
+
 const DATE_MODE_LABELS: Record<string, string> = {
   exact: "Точная дата",
   season: "Сезон",
@@ -175,6 +183,13 @@ export const formatDateModeLabel = (mode?: string | null): string => {
 export const formatProfileFieldLabel = (field?: string | null): string => {
   const normalizedField = normalizeValue(field);
   return PROFILE_FIELD_LABELS[normalizedField] ?? (field || "поле");
+};
+
+export const formatOrderStatusLabel = (status?: string | null): string => {
+  const normalizedStatus = normalizeValue(status);
+  if (ORDER_STATUS_LABELS[normalizedStatus]) return ORDER_STATUS_LABELS[normalizedStatus];
+  if (typeof status === "string" && status.trim()) return status;
+  return "—";
 };
 
 export const isMoscowPriorityCity = (city?: string | null): boolean => {

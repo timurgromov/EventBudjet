@@ -27,6 +27,8 @@
 docker compose up -d frontend backend postgres nginx
 ```
 
+Для локальной разработки backend это должно выполняться с пересборкой, чтобы Python-контейнер не оставался на старом image cache. Команда `npm run local:up` уже делает это через `docker compose up -d --build ...`.
+
 4. Telegram bot работает только на VPS.
 5. Перед прод-обновлением изменения коммитятся в git и пушатся в GitHub.
 6. На VPS всегда деплоится код из репозитория, а не ручные несохраненные правки.
@@ -55,9 +57,11 @@ npm run deploy:vps
 
 1. `git pull` на VPS
 2. `docker compose up -d --build --force-recreate frontend backend bot`
-3. ожидание `frontend` и `backend` в `healthy`
-4. отдельный `docker compose up -d --force-recreate nginx`
-5. короткая проверка `docker compose ps`
+3. ожидание `backend` в `healthy`
+4. `docker compose run --rm backend alembic -c backend/alembic.ini upgrade head`
+5. ожидание `frontend` в `healthy`
+6. отдельный `docker compose up -d --force-recreate nginx`
+7. короткая проверка `docker compose ps`
 
 Это сделано специально: при одном общем `docker compose up ... frontend backend bot nginx` с `--force-recreate` `nginx` периодически оставался в состоянии `Created` и не поднимал `443`.
 
@@ -158,6 +162,8 @@ git diff -- src/pages/Index.tsx src/App.tsx src/main.tsx
 Если после изменений в админке внезапно сломался весь Mini App, не считать это автоматически проблемой админки: проверить, не был ли задет общий пользовательский экран `src/pages/Index.tsx`.
 
 Если локальная версия и развернутый продукт выглядят по-разному, не делать вывод по локальной версии. Источник истины для финального визуального решения: только конечный адрес, на котором реально размещён продукт.
+
+Если задача добавляет новые SQLAlchemy models или Alembic migration files, деплой без `alembic upgrade head` считать неполным. Этот шаг теперь встроен в `npm run deploy:vps`.
 
 ## Быстрый смысл
 

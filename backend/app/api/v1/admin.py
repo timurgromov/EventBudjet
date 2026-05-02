@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -16,7 +18,18 @@ from app.schemas.admin import (
     AdminLeadSourcesResponse,
     AdminNotificationsResponse,
 )
+from app.schemas.client_order import (
+    ClientOrderCreate,
+    ClientOrderDetailResponse,
+    ClientOrderItemCreate,
+    ClientOrderItemUpdate,
+    ClientOrderListResponse,
+    ClientOrderSummaryResponse,
+    ClientOrderUpdate,
+    MarginCalculatorOrderCreateRequest,
+)
 from app.services.admin_service import AdminService
+from app.services.client_order_service import ClientOrderService
 
 router = APIRouter(prefix='/admin', tags=['admin'], dependencies=[Depends(require_admin_access)])
 
@@ -101,6 +114,113 @@ def list_admin_notifications(db: Session = Depends(get_db)) -> AdminNotification
     return AdminService(db).list_notifications()
 
 
+@router.get('/client-orders/summary', response_model=ClientOrderSummaryResponse)
+def get_admin_client_orders_summary(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    db: Session = Depends(get_db),
+) -> ClientOrderSummaryResponse:
+    return ClientOrderService(db).get_summary(
+        date_from=_parse_optional_date(date_from),
+        date_to=_parse_optional_date(date_to),
+    )
+
+
+@router.get('/client-orders', response_model=ClientOrderListResponse)
+def list_admin_client_orders(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    db: Session = Depends(get_db),
+) -> ClientOrderListResponse:
+    return ClientOrderService(db).list_orders(
+        date_from=_parse_optional_date(date_from),
+        date_to=_parse_optional_date(date_to),
+    )
+
+
+@router.post('/client-orders/from-margin-calculator', response_model=ClientOrderDetailResponse)
+def create_client_order_from_margin_calculator(
+    payload: MarginCalculatorOrderCreateRequest,
+    db: Session = Depends(get_db),
+) -> ClientOrderDetailResponse:
+    return ClientOrderService(db).create_from_margin_calculator(payload)
+
+
+@router.post('/client-orders', response_model=ClientOrderDetailResponse)
+def create_admin_client_order(
+    payload: ClientOrderCreate,
+    db: Session = Depends(get_db),
+) -> ClientOrderDetailResponse:
+    return ClientOrderService(db).create_order(payload)
+
+
+@router.get('/client-orders/{order_id}', response_model=ClientOrderDetailResponse)
+def get_admin_client_order(order_id: int, db: Session = Depends(get_db)) -> ClientOrderDetailResponse:
+    result = ClientOrderService(db).get_order_detail(order_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Client order not found')
+    return result
+
+
+@router.patch('/client-orders/{order_id}', response_model=ClientOrderDetailResponse)
+def update_admin_client_order(
+    order_id: int,
+    payload: ClientOrderUpdate,
+    db: Session = Depends(get_db),
+) -> ClientOrderDetailResponse:
+    result = ClientOrderService(db).update_order(order_id, payload)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Client order not found')
+    return result
+
+
+@router.delete('/client-orders/{order_id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_client_order(order_id: int, db: Session = Depends(get_db)) -> None:
+    deleted = ClientOrderService(db).delete_order(order_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Client order not found')
+
+
+@router.post('/client-orders/{order_id}/items', response_model=ClientOrderDetailResponse)
+def create_admin_client_order_item(
+    order_id: int,
+    payload: ClientOrderItemCreate,
+    db: Session = Depends(get_db),
+) -> ClientOrderDetailResponse:
+    try:
+        result = ClientOrderService(db).create_item(order_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Client order not found')
+    return result
+
+
+@router.patch('/client-orders/{order_id}/items/{item_id}', response_model=ClientOrderDetailResponse)
+def update_admin_client_order_item(
+    order_id: int,
+    item_id: int,
+    payload: ClientOrderItemUpdate,
+    db: Session = Depends(get_db),
+) -> ClientOrderDetailResponse:
+    result = ClientOrderService(db).update_item(order_id, item_id, payload)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Client order or item not found')
+    return result
+
+
+@router.delete('/client-orders/{order_id}/items/{item_id}', response_model=ClientOrderDetailResponse)
+def delete_admin_client_order_item(
+    order_id: int,
+    item_id: int,
+    db: Session = Depends(get_db),
+) -> ClientOrderDetailResponse:
+    result = ClientOrderService(db).delete_item(order_id, item_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Client order or item not found')
+    return result
+
+
 @router.post('/leads/{lead_id}/send-message', response_model=AdminDirectMessageResponse)
 def send_admin_message_to_lead(
     lead_id: int,
@@ -136,3 +256,12 @@ def delete_admin_lead(
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lead not found')
     return result
+
+
+def _parse_optional_date(value: str | None) -> date | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Invalid date format') from exc
