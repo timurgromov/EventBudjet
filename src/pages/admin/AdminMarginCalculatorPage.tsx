@@ -656,8 +656,18 @@ const AdminMarginCalculatorPage = () => {
 
         {periodFilter === "custom" ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:max-w-xl">
-            <Input type="date" value={customDateFrom} onChange={(event) => setCustomDateFrom(event.target.value)} />
-            <Input type="date" value={customDateTo} onChange={(event) => setCustomDateTo(event.target.value)} />
+            <Input
+              type="date"
+              value={customDateFrom}
+              onChange={(event) => setCustomDateFrom(event.target.value)}
+              className="bg-white text-slate-950 [color-scheme:light]"
+            />
+            <Input
+              type="date"
+              value={customDateTo}
+              onChange={(event) => setCustomDateTo(event.target.value)}
+              className="bg-white text-slate-950 [color-scheme:light]"
+            />
           </div>
         ) : null}
 
