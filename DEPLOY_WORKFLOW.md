@@ -27,7 +27,7 @@
 docker compose up -d frontend backend postgres nginx
 ```
 
-Для локальной разработки backend это должно выполняться с пересборкой, чтобы Python-контейнер не оставался на старом image cache. Команда `npm run local:up` уже делает это через `docker compose up -d --build ...`.
+Для локальной разработки backend это должно выполняться с пересборкой, чтобы Python-контейнер не оставался на старом image cache. Команда `npm run local:up` уже делает это через `docker compose up -d --build ...` и сразу прогоняет локальные Alembic migration files.
 
 4. Telegram bot работает только на VPS.
 5. Перед прод-обновлением изменения коммитятся в git и пушатся в GitHub.
@@ -56,12 +56,15 @@ npm run deploy:vps
 Что делает `deploy:vps` теперь:
 
 1. `git pull` на VPS
-2. `docker compose up -d --build --force-recreate frontend backend bot`
-3. ожидание `backend` в `healthy`
-4. `docker compose run --rm backend alembic -c backend/alembic.ini upgrade head`
-5. ожидание `frontend` в `healthy`
-6. отдельный `docker compose up -d --force-recreate nginx`
-7. короткая проверка `docker compose ps`
+2. `docker compose build backend frontend bot`
+3. `docker compose up -d postgres`
+4. ожидание `postgres` в `healthy`
+5. `docker compose run --rm backend alembic -c backend/alembic.ini upgrade head`
+6. `docker compose up -d --force-recreate frontend backend bot`
+7. ожидание `backend` в `healthy`
+8. ожидание `frontend` в `healthy`
+9. отдельный `docker compose up -d --force-recreate nginx`
+10. короткая проверка `docker compose ps`
 
 Это сделано специально: при одном общем `docker compose up ... frontend backend bot nginx` с `--force-recreate` `nginx` периодически оставался в состоянии `Created` и не поднимал `443`.
 
