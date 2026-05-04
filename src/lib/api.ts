@@ -289,6 +289,12 @@ export interface ExpensePayload {
   amount: string;
 }
 
+export interface ExpenseUpdatePayload {
+  category_code?: string | null;
+  category_name?: string;
+  amount?: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 function normalizeErrorDetail(detail: unknown): string {
@@ -418,6 +424,10 @@ export function listExpenses(initData: string): Promise<Expense[]> {
 
 export function createExpense(initData: string, payload: ExpensePayload): Promise<Expense> {
   return request<Expense>("/lead/expenses", { method: "POST", body: JSON.stringify(payload) }, initData);
+}
+
+export function updateExpense(initData: string, expenseId: number, payload: ExpenseUpdatePayload): Promise<Expense> {
+  return request<Expense>(`/lead/expenses/${expenseId}`, { method: "PATCH", body: JSON.stringify(payload) }, initData);
 }
 
 export function deleteExpense(initData: string, expenseId: number): Promise<void> {

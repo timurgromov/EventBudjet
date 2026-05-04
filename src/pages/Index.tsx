@@ -14,6 +14,7 @@ import {
   getLeadProgress,
   listExpenses,
   trackLeadAction,
+  updateExpense,
   updateLead,
 } from "@/lib/api";
 import { formatDateOnly, parseDateOnly } from "@/lib/date";
@@ -41,6 +42,19 @@ const parseMoney = (raw: string): number => {
   const cleaned = raw.replace(/\D/g, "");
   if (!cleaned) return 0;
   return Number.parseInt(cleaned, 10);
+};
+
+const normalizeExpenseName = (value: string | null | undefined): string => value?.trim().toLowerCase() ?? "";
+const normalizeExpenseAmount = (value: string | number | null | undefined): number => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value !== "string") {
+    return 0;
+  }
+
+  const parsed = Number.parseFloat(value.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 const itemById = new Map(defaultItems.map((item) => [item.id, item]));
@@ -289,12 +303,60 @@ const Index = () => {
     });
 
     const existing = await listExpenses(initData);
-    for (const expense of existing) {
-      await deleteExpense(initData, expense.id);
-    }
+    const remainingExpenseIds = new Set(existing.map((expense) => expense.id));
+    const standardExpensePool = new Map<string, typeof existing>();
+    const customExpensePool = new Map<string, typeof existing>();
+
+    existing.forEach((expense) => {
+      if (expense.category_code && expense.category_code !== "custom" && itemById.has(expense.category_code)) {
+        const group = standardExpensePool.get(expense.category_code) ?? [];
+        group.push(expense);
+        standardExpensePool.set(expense.category_code, group);
+        return;
+      }
+
+      const groupKey = normalizeExpenseName(expense.category_name);
+      const group = customExpensePool.get(groupKey) ?? [];
+      group.push(expense);
+      customExpensePool.set(groupKey, group);
+    });
 
     for (const item of desired) {
-      await createExpense(initData, item);
+      if (item.category_code && item.category_code !== "custom" && itemById.has(item.category_code)) {
+        const matches = standardExpensePool.get(item.category_code) ?? [];
+        const matched = matches.shift();
+        if (matched) {
+          remainingExpenseIds.delete(matched.id);
+          const amountChanged = normalizeExpenseAmount(matched.amount) !== normalizeExpenseAmount(item.amount);
+          if (amountChanged) {
+            await updateExpense(initData, matched.id, { amount: item.amount });
+          }
+        } else {
+          await createExpense(initData, item);
+        }
+        continue;
+      }
+
+      const groupKey = normalizeExpenseName(item.category_name);
+      const matches = customExpensePool.get(groupKey) ?? [];
+      const matched = matches.shift();
+      if (matched) {
+        remainingExpenseIds.delete(matched.id);
+        const amountChanged = normalizeExpenseAmount(matched.amount) !== normalizeExpenseAmount(item.amount);
+        const nameChanged = matched.category_name !== item.category_name;
+        if (amountChanged || nameChanged) {
+          await updateExpense(initData, matched.id, {
+            category_name: item.category_name,
+            amount: item.amount,
+          });
+        }
+      } else {
+        await createExpense(initData, item);
+      }
+    }
+
+    for (const expenseId of remainingExpenseIds) {
+      await deleteExpense(initData, expenseId);
     }
   };
 

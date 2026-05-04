@@ -234,6 +234,7 @@ class AdminNotificationService:
                     continue
                 expense_changes[expense_id] = {
                     'action': 'added',
+                    'category_code': payload.get('category_code'),
                     'name': payload.get('category_name') or 'Новая статья',
                     'amount': payload.get('amount'),
                     'changes': {},
@@ -248,6 +249,7 @@ class AdminNotificationService:
                     expense_id,
                     {
                         'action': 'updated',
+                        'category_code': payload.get('category_code'),
                         'name': payload.get('category_name') or 'Статья расходов',
                         'amount': payload.get('amount'),
                         'changes': {},
@@ -255,6 +257,7 @@ class AdminNotificationService:
                 )
                 if entry.get('action') != 'added':
                     entry['action'] = 'updated'
+                entry['category_code'] = payload.get('category_code') or entry.get('category_code')
                 entry['name'] = payload.get('category_name') or entry.get('name') or 'Статья расходов'
                 entry['amount'] = payload.get('amount') or entry.get('amount')
                 self._merge_change_set(entry['changes'], payload.get('changes'))
@@ -270,6 +273,7 @@ class AdminNotificationService:
                     continue
                 expense_changes[expense_id] = {
                     'action': 'removed',
+                    'category_code': payload.get('category_code'),
                     'name': payload.get('category_name') or 'Статья расходов',
                     'amount': payload.get('amount'),
                     'changes': {},
@@ -295,7 +299,7 @@ class AdminNotificationService:
         if profile_details:
             lines.extend(profile_details.splitlines())
 
-        for expense_entry in expense_changes.values():
+        for expense_entry in self._collapse_expense_changes(expense_changes):
             rendered_expense_lines = self._render_expense_summary_lines(expense_entry)
             lines.extend(rendered_expense_lines)
 
@@ -337,6 +341,93 @@ class AdminNotificationService:
         lines = [f'• Изменил расход: {name}']
         lines.extend([f'  {line}' for line in details.splitlines()])
         return lines
+
+    def _collapse_expense_changes(self, expense_changes: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
+        added_entries: list[dict[str, Any]] = []
+        removed_entries: list[dict[str, Any]] = []
+        updated_entries: list[dict[str, Any]] = []
+
+        for entry in expense_changes.values():
+            action = str(entry.get('action') or '')
+            if action == 'added':
+                added_entries.append(dict(entry))
+            elif action == 'removed':
+                removed_entries.append(dict(entry))
+            else:
+                updated_entries.append(dict(entry))
+
+        remaining_added_entries = list(added_entries)
+        reconciled_removed_entries: list[dict[str, Any]] = []
+
+        for removed_entry in removed_entries:
+            match_index = next(
+                (
+                    index
+                    for index, added_entry in enumerate(remaining_added_entries)
+                    if self._expense_semantic_key(added_entry) == self._expense_semantic_key(removed_entry)
+                ),
+                None,
+            )
+
+            if match_index is None:
+                reconciled_removed_entries.append(removed_entry)
+                continue
+
+            added_entry = remaining_added_entries.pop(match_index)
+            synthetic_update = self._build_synthetic_expense_update(removed_entry, added_entry)
+            if synthetic_update is not None:
+                updated_entries.append(synthetic_update)
+
+        return [*updated_entries, *remaining_added_entries, *reconciled_removed_entries]
+
+    @staticmethod
+    def _expense_semantic_key(entry: dict[str, Any]) -> tuple[str, str]:
+        code = str(entry.get('category_code') or '').strip().lower()
+        name = str(entry.get('name') or '').strip().lower()
+        return code, name
+
+    def _build_synthetic_expense_update(
+        self,
+        removed_entry: dict[str, Any],
+        added_entry: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        name_before = str(removed_entry.get('name') or 'Статья расходов')
+        name_after = str(added_entry.get('name') or name_before or 'Статья расходов')
+        amount_before = removed_entry.get('amount')
+        amount_after = added_entry.get('amount')
+
+        changes: dict[str, dict[str, Any]] = {}
+        if name_before != name_after:
+            changes['category_name'] = {
+                'field': 'category_name',
+                'old': name_before,
+                'new': name_after,
+            }
+        if self._normalize_amount_for_compare(amount_before) != self._normalize_amount_for_compare(amount_after):
+            changes['amount'] = {
+                'field': 'amount',
+                'old': amount_before,
+                'new': amount_after,
+            }
+
+        if not changes:
+            return None
+
+        return {
+            'action': 'updated',
+            'name': name_after,
+            'amount': amount_after,
+            'changes': changes,
+        }
+
+    @staticmethod
+    def _normalize_amount_for_compare(value: Any) -> Decimal | None:
+        if value is None:
+            return None
+        try:
+            return Decimal(str(value))
+        except Exception:
+            return None
 
     @staticmethod
     def _parse_expense_id(value: Any) -> int | None:
