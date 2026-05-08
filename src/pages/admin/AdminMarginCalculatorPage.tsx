@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CircleCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createClientOrderFromMarginCalculator,
@@ -313,7 +315,14 @@ const AdminMarginCalculatorPage = () => {
       return createClientOrderFromMarginCalculator(adminToken, payload);
     },
     onSuccess: async (result) => {
-      setStatusMessage(`Заказ ${result.order.order_code ?? `#${result.order.id}`} создан.`);
+      const orderCode = result.order.order_code ?? `#${result.order.id}`;
+      setStatusMessage(`Заказ ${orderCode} создан.`);
+      toast("Заказ добавлен", {
+        description: `${orderCode} сохранён и участвует в годовой картине.`,
+        duration: 4500,
+        icon: <CircleCheck className="h-5 w-5 text-emerald-600" />,
+        className: "border-emerald-200 bg-emerald-50 text-emerald-950",
+      });
       setOrderForm(getDefaultOrderForm());
       await queryClient.invalidateQueries({ queryKey: ["client-orders"] });
       await queryClient.invalidateQueries({ queryKey: ["client-order-summary"] });
