@@ -20,6 +20,7 @@ type MarginFieldKey =
   | "extraEquipment"
   | "extraHours"
   | "extraHourRate"
+  | "upsell"
   | "djPayout"
   | "adsCost"
   | "otherCosts";
@@ -48,6 +49,7 @@ const INITIAL_VALUES: MarginFormValues = {
   extraEquipment: "",
   extraHours: "",
   extraHourRate: "",
+  upsell: "",
   djPayout: "",
   adsCost: "",
   otherCosts: "5000",
@@ -192,6 +194,7 @@ const fieldGroups: Array<{
       { key: "extraEquipment", label: "Оборудование" },
       { key: "extraHours", label: "Доп. часы", step: "1" },
       { key: "extraHourRate", label: "Стоимость часа" },
+      { key: "upsell", label: "Апсейл" },
     ],
   },
   {
@@ -258,11 +261,12 @@ const AdminMarginCalculatorPage = () => {
     const extraEquipment = parseNumericValue(values.extraEquipment);
     const extraHours = parseNumericValue(values.extraHours);
     const extraHourRate = parseNumericValue(values.extraHourRate);
+    const upsell = parseNumericValue(values.upsell);
     const djPayout = parseNumericValue(values.djPayout);
     const adsCost = parseNumericValue(values.adsCost);
     const otherCosts = parseNumericValue(values.otherCosts);
 
-    const revenue = basePackage + extraEquipment + extraHours * extraHourRate;
+    const revenue = basePackage + extraEquipment + extraHours * extraHourRate + upsell;
     const totalCosts = djPayout + adsCost + otherCosts;
     const profit = revenue - totalCosts;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
@@ -301,6 +305,7 @@ const AdminMarginCalculatorPage = () => {
         extra_equipment: formatDecimalString(values.extraEquipment),
         extra_hours: formatDecimalString(values.extraHours),
         extra_hour_rate: formatDecimalString(values.extraHourRate),
+        upsell: formatDecimalString(values.upsell),
         dj_payout: formatDecimalString(values.djPayout),
         ads_cost: formatDecimalString(values.adsCost),
         other_costs: formatDecimalString(values.otherCosts),

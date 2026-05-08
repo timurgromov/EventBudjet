@@ -44,6 +44,7 @@ const ORDER_STATUS_OPTIONS = [
   { value: "closed", label: "Закрыт" },
   { value: "cancelled", label: "Отменён" },
 ];
+const DELETE_CONFIRMATION_WORD = "delete";
 
 const formatMargin = (value?: string | null): string => {
   if (!value) return "—";
@@ -80,6 +81,11 @@ const buildItemDrafts = (items: ClientOrderItem[]) =>
       },
     ]),
   );
+
+const confirmDelete = (message: string): boolean => {
+  const typed = window.prompt(`${message}\n\nДля подтверждения введи: ${DELETE_CONFIRMATION_WORD}`);
+  return typed === DELETE_CONFIRMATION_WORD;
+};
 
 const AdminClientOrderDetailPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
@@ -230,7 +236,7 @@ const AdminClientOrderDetailPage = () => {
           <Button
             variant="outline"
             onClick={() => {
-              if (window.confirm("Удалить заказ целиком? Это действие необратимо.")) {
+              if (confirmDelete("Удалить заказ целиком? Это действие необратимо.")) {
                 deleteOrderMutation.mutate();
               }
             }}
@@ -378,7 +384,11 @@ const AdminClientOrderDetailPage = () => {
                       type="button"
                       variant="outline"
                       className="border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                      onClick={() => deleteItemMutation.mutate({ itemId: item.id })}
+                      onClick={() => {
+                        if (confirmDelete(`Удалить строку «${item.title}»?`)) {
+                          deleteItemMutation.mutate({ itemId: item.id });
+                        }
+                      }}
                       disabled={deleteItemMutation.isPending}
                     >
                       Удалить

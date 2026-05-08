@@ -162,6 +162,7 @@ class ClientOrderService:
                 f'Доп. часы ({self._format_decimal(payload.extra_hours)} x {self._format_decimal(payload.extra_hour_rate)})',
                 payload.extra_hours * payload.extra_hour_rate,
             ),
+            (ClientOrderItemType.REVENUE, 'upsell', 'Апсейл', payload.upsell),
             (ClientOrderItemType.COST, 'dj_payout', 'Выплата DJ', payload.dj_payout),
             (ClientOrderItemType.COST, 'ads_cost', 'Реклама', payload.ads_cost),
             (ClientOrderItemType.COST, 'other_costs', 'Прочие расходы', payload.other_costs),

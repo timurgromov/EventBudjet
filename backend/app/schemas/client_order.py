@@ -147,6 +147,7 @@ class MarginCalculatorOrderCreateRequest(BaseModel):
     extra_equipment: Decimal = Field(default=Decimal('0'), ge=0)
     extra_hours: Decimal = Field(default=Decimal('0'), ge=0)
     extra_hour_rate: Decimal = Field(default=Decimal('0'), ge=0)
+    upsell: Decimal = Field(default=Decimal('0'), ge=0)
     dj_payout: Decimal = Field(default=Decimal('0'), ge=0)
     ads_cost: Decimal = Field(default=Decimal('0'), ge=0)
     other_costs: Decimal = Field(default=Decimal('0'), ge=0)

@@ -222,6 +222,7 @@ export interface MarginCalculatorOrderPayload {
   extra_equipment: string;
   extra_hours: string;
   extra_hour_rate: string;
+  upsell: string;
   dj_payout: string;
   ads_cost: string;
   other_costs: string;
