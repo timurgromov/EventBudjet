@@ -17,7 +17,7 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { formatAdminDate, formatAdminDateTime, formatAdminMoney, formatOrderStatusLabel, formatSourceLabel } from "./admin-format";
+import { formatAdminDateTime, formatAdminMoney } from "./admin-format";
 
 interface AdminOutletContext {
   adminToken: string;
@@ -144,6 +144,15 @@ const toneClasses: Record<MarginTone, { badge: string; panel: string; value: str
 };
 
 const secondaryButtonClass = "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900";
+const FIXED_ITEM_LABELS: Record<string, string> = {
+  base_package: "Ведущий + DJ",
+  extra_equipment: "Оборудование",
+  extra_hours: "Доп. часы",
+  upsell: "Апсейл",
+  dj_payout: "Выплата DJ",
+  ads_cost: "Реклама",
+  other_costs: "Прочие расходы",
+};
 
 const buildOrderForm = (order: {
   client_name: string;
@@ -330,6 +339,9 @@ const AdminClientOrderDetailPage = () => {
             </Link>
             <div className="mt-2 text-2xl font-semibold text-slate-950">{order.client_name}</div>
             <div className="mt-1 text-sm text-slate-500">{order.order_code ?? `order #${order.id}`}</div>
+            <div className="mt-1 text-xs text-slate-400">
+              Создан {formatAdminDateTime(order.created_at)} · обновлён {formatAdminDateTime(order.updated_at)}
+            </div>
           </div>
           <Button
             variant="outline"
@@ -358,12 +370,12 @@ const AdminClientOrderDetailPage = () => {
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 lg:col-span-2">
             <div className="text-[11px] font-medium text-slate-500">Имя клиента</div>
             <Input value={orderForm.clientName} onChange={(event) => setOrderForm((current) => current ? { ...current, clientName: event.target.value } : current)} className="mt-2 bg-white" />
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 lg:col-span-2">
             <div className="text-[11px] font-medium text-slate-500">Название события</div>
             <Input value={orderForm.eventTitle} onChange={(event) => setOrderForm((current) => current ? { ...current, eventTitle: event.target.value } : current)} className="mt-2 bg-white" />
           </div>
@@ -393,9 +405,9 @@ const AdminClientOrderDetailPage = () => {
               ))}
             </select>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 md:col-span-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 lg:col-span-4">
             <div className="text-[11px] font-medium text-slate-500">Комментарий</div>
-            <Textarea value={orderForm.comment} onChange={(event) => setOrderForm((current) => current ? { ...current, comment: event.target.value } : current)} className="mt-2 min-h-[92px] bg-white" />
+            <Textarea value={orderForm.comment} onChange={(event) => setOrderForm((current) => current ? { ...current, comment: event.target.value } : current)} className="mt-2 min-h-[72px] bg-white" />
           </div>
         </div>
       </section>
@@ -431,95 +443,85 @@ const AdminClientOrderDetailPage = () => {
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-lg font-semibold text-slate-950">Контекст заказа</div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm text-slate-700">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Статус</div>
-            <div className="mt-1">{formatOrderStatusLabel(order.status)}</div>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Источник</div>
-            <div className="mt-1">{formatSourceLabel(order.source)}</div>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Создан</div>
-            <div className="mt-1">{formatAdminDateTime(order.created_at)}</div>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Обновлён</div>
-            <div className="mt-1">{formatAdminDateTime(order.updated_at)}</div>
-          </div>
-        </div>
-      </section>
-
       <div className="grid gap-4 lg:grid-cols-2">
         {[{ title: "Доходы", itemType: "revenue" as const, items: revenueItems, draft: newRevenueItem, setDraft: setNewRevenueItem }, { title: "Расходы", itemType: "cost" as const, items: costItems, draft: newCostItem, setDraft: setNewCostItem }].map((group) => (
           <section key={group.itemType} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-lg font-semibold text-slate-950">{group.title}</div>
 
-            <div className="mt-4 space-y-2">
-              {group.items.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-                  <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_120px_auto_auto]">
-                    <Input
-                      value={itemDrafts[item.id]?.title ?? item.title}
-                      onChange={(event) =>
-                        setItemDrafts((current) => ({
-                          ...current,
-                          [item.id]: {
-                            ...(current[item.id] ?? { title: item.title, amount: item.amount }),
-                            title: event.target.value,
-                          },
-                        }))
-                      }
-                      className="h-9 bg-white text-sm"
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={itemDrafts[item.id]?.amount ?? item.amount}
-                      onChange={(event) =>
-                        setItemDrafts((current) => ({
-                          ...current,
-                          [item.id]: {
-                            ...(current[item.id] ?? { title: item.title, amount: item.amount }),
-                            amount: event.target.value,
-                          },
-                        }))
-                      }
-                      className="h-9 bg-white text-right text-sm"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn("h-9 px-3 text-sm", secondaryButtonClass)}
-                      onClick={() => updateItemMutation.mutate({ itemId: item.id })}
-                      disabled={updateItemMutation.isPending}
-                    >
-                      Сохранить
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-9 border-rose-200 bg-white px-3 text-sm text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                      onClick={() => {
-                        if (confirmDelete(`Удалить строку «${item.title}»?`)) {
-                          deleteItemMutation.mutate({ itemId: item.id });
+            <div className={cn("mt-4 grid gap-3", group.itemType === "revenue" ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+              {group.items.map((item) => {
+                const fixedLabel = item.category_code ? FIXED_ITEM_LABELS[item.category_code] : undefined;
+
+                return (
+                  <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                    {fixedLabel ? (
+                      <div className="text-[11px] font-medium leading-snug text-slate-500">{fixedLabel}</div>
+                    ) : (
+                      <Input
+                        value={itemDrafts[item.id]?.title ?? item.title}
+                        onChange={(event) =>
+                          setItemDrafts((current) => ({
+                            ...current,
+                            [item.id]: {
+                              ...(current[item.id] ?? { title: item.title, amount: item.amount }),
+                              title: event.target.value,
+                            },
+                          }))
                         }
-                      }}
-                      disabled={deleteItemMutation.isPending}
-                    >
-                      Удалить
-                    </Button>
+                        className="h-8 bg-white text-sm"
+                      />
+                    )}
+                    <div className="mt-2 grid gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={itemDrafts[item.id]?.amount ?? item.amount}
+                        onChange={(event) =>
+                          setItemDrafts((current) => ({
+                            ...current,
+                            [item.id]: {
+                              ...(current[item.id] ?? { title: item.title, amount: item.amount }),
+                              amount: event.target.value,
+                            },
+                          }))
+                        }
+                        className="h-9 bg-white text-right text-sm"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn("h-8 px-2 text-xs", fixedLabel ? "col-span-2" : "", secondaryButtonClass)}
+                          onClick={() => updateItemMutation.mutate({ itemId: item.id })}
+                          disabled={updateItemMutation.isPending}
+                        >
+                          Сохранить
+                        </Button>
+                        {!fixedLabel ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-8 border-rose-200 bg-white px-2 text-xs text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            onClick={() => {
+                              if (confirmDelete(`Удалить строку «${item.title}»?`)) {
+                                deleteItemMutation.mutate({ itemId: item.id });
+                              }
+                            }}
+                            disabled={deleteItemMutation.isPending}
+                          >
+                            Удалить
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2.5">
-              <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_120px_auto]">
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_120px_auto]">
                 <Input
                   value={group.draft.title}
                   onChange={(event) => group.setDraft((current) => ({ ...current, title: event.target.value }))}
