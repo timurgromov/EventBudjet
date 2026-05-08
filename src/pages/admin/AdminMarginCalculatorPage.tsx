@@ -192,9 +192,9 @@ const fieldGroups: Array<{
     fields: [
       { key: "basePackage", label: "Ведущий + DJ" },
       { key: "extraEquipment", label: "Оборудование" },
+      { key: "upsell", label: "Апсейл" },
       { key: "extraHours", label: "Доп. часы", step: "1" },
       { key: "extraHourRate", label: "Стоимость часа" },
-      { key: "upsell", label: "Апсейл" },
     ],
   },
   {
@@ -438,9 +438,15 @@ const AdminMarginCalculatorPage = () => {
             <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="text-lg font-semibold text-slate-950">{group.title}</div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className={cn("mt-4 grid gap-3", group.title === "Доходы" ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
                 {group.fields.map((field) => (
-                  <div key={field.key} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                  <div
+                    key={field.key}
+                    className={cn(
+                      "rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5",
+                      group.title === "Доходы" && (field.key === "extraHours" || field.key === "extraHourRate") ? "sm:col-span-1" : "",
+                    )}
+                  >
                     <div className="text-[11px] font-medium leading-snug text-slate-500">{field.label}</div>
                     <Input
                       id={field.key}
@@ -450,7 +456,7 @@ const AdminMarginCalculatorPage = () => {
                       inputMode="decimal"
                       value={values[field.key]}
                       onChange={(event) => handleFieldChange(field.key, event.target.value)}
-                      className="mt-2 h-10 w-full max-w-[180px] bg-white text-right text-base"
+                      className={cn("mt-2 h-10 w-full bg-white text-right text-base", group.title === "Доходы" ? "max-w-[132px]" : "max-w-[180px]")}
                       placeholder="0"
                     />
                   </div>
