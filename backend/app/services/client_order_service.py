@@ -154,23 +154,24 @@ class ClientOrderService:
         order.order_code = self._build_order_code(order)
 
         rows = [
-            (ClientOrderItemType.REVENUE, 'base_package', 'Ведущий + DJ', payload.base_package),
-            (ClientOrderItemType.REVENUE, 'extra_equipment', 'Оборудование', payload.extra_equipment),
+            (ClientOrderItemType.REVENUE, 'base_package', 'Ведущий + DJ', payload.base_package, 1, True),
+            (ClientOrderItemType.REVENUE, 'extra_equipment', 'Оборудование', payload.extra_equipment, 2, True),
+            (ClientOrderItemType.REVENUE, 'upsell', 'Апсейл', payload.upsell, 3, True),
             (
                 ClientOrderItemType.REVENUE,
                 'extra_hours',
                 f'Доп. часы ({self._format_decimal(payload.extra_hours)} x {self._format_decimal(payload.extra_hour_rate)})',
                 payload.extra_hours * payload.extra_hour_rate,
+                4,
+                False,
             ),
-            (ClientOrderItemType.REVENUE, 'upsell', 'Апсейл', payload.upsell),
-            (ClientOrderItemType.COST, 'dj_payout', 'Выплата DJ', payload.dj_payout),
-            (ClientOrderItemType.COST, 'ads_cost', 'Реклама', payload.ads_cost),
-            (ClientOrderItemType.COST, 'other_costs', 'Прочие расходы', payload.other_costs),
+            (ClientOrderItemType.COST, 'dj_payout', 'Выплата DJ', payload.dj_payout, 101, True),
+            (ClientOrderItemType.COST, 'ads_cost', 'Реклама', payload.ads_cost, 102, True),
+            (ClientOrderItemType.COST, 'other_costs', 'Прочие расходы', payload.other_costs, 103, False),
         ]
 
-        position = 1
-        for item_type, category_code, title, amount in rows:
-            if amount <= 0:
+        for item_type, category_code, title, amount, position, keep_when_zero in rows:
+            if amount <= 0 and not keep_when_zero:
                 continue
             self.orders.create_item(
                 order.id,
@@ -182,7 +183,6 @@ class ClientOrderService:
                     'position': position,
                 },
             )
-            position += 1
 
         self.db.commit()
         self.db.refresh(order)

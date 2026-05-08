@@ -8,7 +8,7 @@ class ClientOrderItemBase(BaseModel):
     item_type: str
     category_code: str | None = None
     title: str
-    amount: Decimal = Field(gt=0)
+    amount: Decimal = Field(ge=0)
     position: int | None = Field(default=None, ge=0)
 
 
@@ -19,7 +19,7 @@ class ClientOrderItemCreate(ClientOrderItemBase):
 class ClientOrderItemUpdate(BaseModel):
     category_code: str | None = None
     title: str | None = None
-    amount: Decimal | None = Field(default=None, gt=0)
+    amount: Decimal | None = Field(default=None, ge=0)
     position: int | None = Field(default=None, ge=0)
 
     @model_validator(mode='after')

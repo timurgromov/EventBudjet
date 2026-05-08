@@ -62,6 +62,19 @@ const parseDecimal = (value?: string | null): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const formatAmountInputValue = (value?: string | null): string => {
+  if (!value) return "0";
+  const parsed = Number.parseFloat(value.replace(",", "."));
+  if (!Number.isFinite(parsed)) return value;
+  return String(Math.round(parsed));
+};
+
+const normalizeAmountForPayload = (value: string): string => {
+  const parsed = Number.parseFloat(value.replace(",", "."));
+  if (!Number.isFinite(parsed)) return "0";
+  return String(Math.round(parsed));
+};
+
 const getProfitStatus = (profit: number): { label: string; description: string; tone: MarginTone } => {
   if (profit < 60000) {
     return {
@@ -178,7 +191,7 @@ const buildItemDrafts = (items: ClientOrderItem[]) =>
       item.id,
       {
         title: item.title,
-        amount: item.amount,
+        amount: formatAmountInputValue(item.amount),
       },
     ]),
   );
@@ -246,7 +259,7 @@ const AdminClientOrderDetailPage = () => {
       if (!draft) throw new Error("Черновик строки не найден");
       return updateClientOrderItem(adminToken, numericOrderId, itemId, {
         title: draft.title.trim(),
-        amount: draft.amount,
+        amount: normalizeAmountForPayload(draft.amount),
       });
     },
     onSuccess: async () => {
@@ -299,10 +312,18 @@ const AdminClientOrderDetailPage = () => {
 
   const handleCreateItem = (itemType: "revenue" | "cost") => {
     const draft = itemType === "revenue" ? newRevenueItem : newCostItem;
+    const title = draft.title.trim();
+    const amount = normalizeAmountForPayload(draft.amount);
+
+    if (!title || Number(amount) <= 0) {
+      setStatusMessage("Для новой строки нужно название и сумма больше нуля.");
+      return;
+    }
+
     createItemMutation.mutate({
       item_type: itemType,
-      title: draft.title.trim(),
-      amount: draft.amount,
+      title,
+      amount,
     });
   };
 
@@ -476,7 +497,7 @@ const AdminClientOrderDetailPage = () => {
                         type="number"
                         min="0"
                         step="1"
-                        value={itemDrafts[item.id]?.amount ?? item.amount}
+                        value={itemDrafts[item.id]?.amount ?? formatAmountInputValue(item.amount)}
                         onChange={(event) =>
                           setItemDrafts((current) => ({
                             ...current,
@@ -486,6 +507,7 @@ const AdminClientOrderDetailPage = () => {
                             },
                           }))
                         }
+                        inputMode="numeric"
                         className="h-9 bg-white text-right text-sm"
                       />
                       <div className="grid grid-cols-2 gap-2">
