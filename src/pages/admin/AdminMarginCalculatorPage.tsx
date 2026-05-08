@@ -511,8 +511,8 @@ const AdminMarginCalculatorPage = () => {
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className={cn("rounded-xl border bg-slate-50/70 px-3 py-2.5", validationErrors.clientName ? "border-rose-300" : "border-slate-200")}>
+        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+          <div className={cn("rounded-xl border bg-slate-50/70 px-3 py-2.5 lg:col-span-2", validationErrors.clientName ? "border-rose-300" : "border-slate-200")}>
             <div className="text-[11px] font-medium text-slate-500">Имя клиента</div>
             <Input
               value={orderForm.clientName}
@@ -522,7 +522,7 @@ const AdminMarginCalculatorPage = () => {
             />
             {validationErrors.clientName ? <div className="mt-2 text-xs text-rose-700">{validationErrors.clientName}</div> : null}
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 lg:col-span-2">
             <div className="text-[11px] font-medium text-slate-500">Название события</div>
             <Input
               value={orderForm.eventTitle}
@@ -552,7 +552,7 @@ const AdminMarginCalculatorPage = () => {
             {validationErrors.contractDate ? <div className="mt-2 text-xs text-rose-700">{validationErrors.contractDate}</div> : null}
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-            <div className="text-[11px] font-medium text-slate-500">Источник заявки</div>
+            <div className="text-[11px] font-medium text-slate-500">Источник</div>
             <Input
               value={orderForm.source}
               onChange={(event) => handleOrderFieldChange("source", event.target.value)}
@@ -561,7 +561,7 @@ const AdminMarginCalculatorPage = () => {
             />
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-            <div className="text-[11px] font-medium text-slate-500">Статус заказа</div>
+            <div className="text-[11px] font-medium text-slate-500">Статус</div>
             <select
               value={orderForm.status}
               onChange={(event) => handleOrderFieldChange("status", event.target.value)}
@@ -574,7 +574,7 @@ const AdminMarginCalculatorPage = () => {
               ))}
             </select>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 md:col-span-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 lg:col-span-4">
             <div className="text-[11px] font-medium text-slate-500">Комментарий</div>
             <Textarea
               value={orderForm.comment}
