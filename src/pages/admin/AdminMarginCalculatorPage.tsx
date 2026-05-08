@@ -359,12 +359,6 @@ const AdminMarginCalculatorPage = () => {
     }));
   };
 
-  const handleReset = () => {
-    setValues(INITIAL_VALUES);
-    setOrderForm(getDefaultOrderForm());
-    setStatusMessage(null);
-  };
-
   const profitStatus = getProfitStatus(calculations.profit);
   const marginStatus = getMarginStatus(calculations.margin);
   const profitTone = toneClasses[profitStatus.tone];
@@ -438,13 +432,6 @@ const AdminMarginCalculatorPage = () => {
               Быстрый расчёт маржи, создание реальных заказов и управленческая картина по периоду на одной странице.
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-          >
-            Сбросить всё
-          </Button>
         </div>
       </section>
 
