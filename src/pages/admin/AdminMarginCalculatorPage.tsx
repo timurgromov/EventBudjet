@@ -585,11 +585,9 @@ const AdminMarginCalculatorPage = () => {
           </div>
         </div>
 
-        {validationErrors.revenue ? (
-          <div className="mt-3 text-sm text-rose-700">{validationErrors.revenue}</div>
-        ) : (
+        {calculations.revenue > 0 ? (
           <div className="mt-3 text-sm text-slate-500">Если расчёт устраивает, можно сразу зафиксировать его как заказ.</div>
-        )}
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
