@@ -15,6 +15,7 @@ import {
   type ClientOrderItem,
   type ClientOrderItemCreatePayload,
 } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 import { formatAdminDate, formatAdminDateTime, formatAdminMoney, formatOrderStatusLabel, formatSourceLabel } from "./admin-format";
 
@@ -37,6 +38,8 @@ interface NewItemState {
   amount: string;
 }
 
+type MarginTone = "red" | "yellow" | "green" | "teal" | "violet";
+
 const ORDER_STATUS_OPTIONS = [
   { value: "signed", label: "Подписан" },
   { value: "in_progress", label: "В работе" },
@@ -52,6 +55,95 @@ const formatMargin = (value?: string | null): string => {
   if (!Number.isFinite(parsed)) return value;
   return `${parsed.toFixed(1)}%`;
 };
+
+const parseDecimal = (value?: string | null): number => {
+  if (!value) return 0;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getProfitStatus = (profit: number): { label: string; description: string; tone: MarginTone } => {
+  if (profit < 60000) {
+    return {
+      label: "Низкая прибыль",
+      description: "Заказ ниже минимально комфортного уровня. Брать только осознанно / как исключение.",
+      tone: "red",
+    };
+  }
+  if (profit < 75000) {
+    return {
+      label: "Компромиссная прибыль",
+      description: "Экономика допустимая, но слот неидеален.",
+      tone: "yellow",
+    };
+  }
+  if (profit < 95000) {
+    return {
+      label: "Хорошая прибыль",
+      description: "Соответствует сильной рабочей модели.",
+      tone: "green",
+    };
+  }
+  if (profit < 120000) {
+    return {
+      label: "Высокая прибыль",
+      description: "Сильный коммерческий слот.",
+      tone: "teal",
+    };
+  }
+  return {
+    label: "Выдающаяся прибыль",
+    description: "Топовый слот / премиум-экономика.",
+    tone: "violet",
+  };
+};
+
+const getMarginStatus = (margin: number): { label: string; description: string; tone: MarginTone } => {
+  if (margin < 35) {
+    return { label: "Низкая маржа", description: "Ниже целевого диапазона, заказ требует пересмотра.", tone: "red" };
+  }
+  if (margin < 45) {
+    return { label: "Компромиссная маржа", description: "На границе нормы, стоит проверить цену и расходы.", tone: "yellow" };
+  }
+  if (margin <= 60) {
+    return { label: "Хорошая маржа", description: "Заказ выглядит здоровым по текущей модели.", tone: "green" };
+  }
+  if (margin <= 75) {
+    return { label: "Высокая маржа", description: "Заказ даёт сильный запас по прибыльности.", tone: "teal" };
+  }
+  return { label: "Выдающаяся маржа", description: "Премиальный уровень рентабельности, заказ выглядит максимально сильным.", tone: "violet" };
+};
+
+const toneClasses: Record<MarginTone, { badge: string; panel: string; value: string; effect?: string }> = {
+  red: {
+    badge: "border border-red-200 bg-red-50 text-red-600",
+    panel: "border-red-200 bg-red-50/70",
+    value: "text-red-600",
+  },
+  yellow: {
+    badge: "border border-yellow-200 bg-yellow-50 text-yellow-700",
+    panel: "border-yellow-200 bg-yellow-50/70",
+    value: "text-yellow-700",
+  },
+  green: {
+    badge: "border border-green-200 bg-green-50 text-green-600",
+    panel: "border-green-200 bg-green-50/70",
+    value: "text-green-600",
+  },
+  teal: {
+    badge: "border border-cyan-200 bg-cyan-50 text-cyan-700",
+    panel: "border-cyan-200 bg-cyan-50/70",
+    value: "text-cyan-700",
+  },
+  violet: {
+    badge: "border border-violet-300 bg-violet-50 text-violet-700",
+    panel: "border-violet-300 bg-violet-50/80",
+    value: "text-violet-700",
+    effect: "ring-1 ring-violet-200/80 shadow-[0_0_0_1px_rgba(139,92,246,0.08),0_18px_40px_rgba(139,92,246,0.14)]",
+  },
+};
+
+const secondaryButtonClass = "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900";
 
 const buildOrderForm = (order: {
   client_name: string;
@@ -209,6 +301,12 @@ const AdminClientOrderDetailPage = () => {
   const items = query.data?.items ?? [];
   const revenueItems = useMemo(() => items.filter((item) => item.item_type === "revenue"), [items]);
   const costItems = useMemo(() => items.filter((item) => item.item_type === "cost"), [items]);
+  const profitValue = parseDecimal(order?.profit);
+  const marginValue = parseDecimal(order?.margin);
+  const profitStatus = getProfitStatus(profitValue);
+  const marginStatus = getMarginStatus(marginValue);
+  const profitTone = toneClasses[profitStatus.tone];
+  const marginTone = toneClasses[marginStatus.tone];
 
   if (!adminToken.trim()) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть карточку заказа.</div>;
@@ -251,7 +349,11 @@ const AdminClientOrderDetailPage = () => {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="text-lg font-semibold text-slate-950">Шапка заказа</div>
-          <Button onClick={() => updateOrderMutation.mutate()} disabled={updateOrderMutation.isPending}>
+          <Button
+            onClick={() => updateOrderMutation.mutate()}
+            disabled={updateOrderMutation.isPending}
+            className="bg-[#E6BF3A] text-slate-950 hover:bg-[#d7b236]"
+          >
             {updateOrderMutation.isPending ? "Сохраняю..." : "Сохранить карточку"}
           </Button>
         </div>
@@ -307,13 +409,25 @@ const AdminClientOrderDetailPage = () => {
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Расходы</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(order.total_costs)}</div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Прибыль</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(order.profit)}</div>
+        <div className={cn("rounded-2xl border p-4 shadow-sm", profitTone.panel, profitTone.effect)}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Прибыль</div>
+              <div className={cn("mt-2 text-2xl font-semibold", profitTone.value)}>{formatAdminMoney(order.profit)}</div>
+            </div>
+            <div className={cn("inline-flex shrink-0 rounded-full px-3 py-1 text-sm font-medium", profitTone.badge)}>{profitStatus.label}</div>
+          </div>
+          <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-950">{formatMargin(order.margin)}</div>
+        <div className={cn("rounded-2xl border p-4 shadow-sm", marginTone.panel, marginTone.effect)}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа</div>
+              <div className={cn("mt-2 text-2xl font-semibold", marginTone.value)}>{formatMargin(order.margin)}</div>
+            </div>
+            <div className={cn("inline-flex shrink-0 rounded-full px-3 py-1 text-sm font-medium", marginTone.badge)}>{marginStatus.label}</div>
+          </div>
+          <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
         </div>
       </div>
 
@@ -377,7 +491,13 @@ const AdminClientOrderDetailPage = () => {
                       }
                       className="bg-white text-right"
                     />
-                    <Button type="button" variant="outline" onClick={() => updateItemMutation.mutate({ itemId: item.id })} disabled={updateItemMutation.isPending}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={secondaryButtonClass}
+                      onClick={() => updateItemMutation.mutate({ itemId: item.id })}
+                      disabled={updateItemMutation.isPending}
+                    >
                       Сохранить
                     </Button>
                     <Button
@@ -415,7 +535,11 @@ const AdminClientOrderDetailPage = () => {
                   placeholder="0"
                   className="bg-white text-right"
                 />
-                <Button onClick={() => handleCreateItem(group.itemType)} disabled={createItemMutation.isPending}>
+                <Button
+                  onClick={() => handleCreateItem(group.itemType)}
+                  disabled={createItemMutation.isPending}
+                  className="bg-[#E6BF3A] text-slate-950 hover:bg-[#d7b236]"
+                >
                   Добавить
                 </Button>
               </div>
