@@ -453,15 +453,15 @@ const AdminClientOrderDetailPage = () => {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {[{ title: "Доходы", itemType: "revenue" as const, items: revenueItems, draft: newRevenueItem, setDraft: setNewRevenueItem }, { title: "Расходы", itemType: "cost" as const, items: costItems, draft: newCostItem, setDraft: setNewCostItem }].map((group) => (
-          <section key={group.itemType} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section key={group.itemType} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-lg font-semibold text-slate-950">{group.title}</div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-2">
               {group.items.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                  <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_120px_auto_auto]">
                     <Input
                       value={itemDrafts[item.id]?.title ?? item.title}
                       onChange={(event) =>
@@ -473,7 +473,7 @@ const AdminClientOrderDetailPage = () => {
                           },
                         }))
                       }
-                      className="bg-white"
+                      className="h-9 bg-white text-sm"
                     />
                     <Input
                       type="number"
@@ -489,12 +489,12 @@ const AdminClientOrderDetailPage = () => {
                           },
                         }))
                       }
-                      className="bg-white text-right"
+                      className="h-9 bg-white text-right text-sm"
                     />
                     <Button
                       type="button"
                       variant="outline"
-                      className={secondaryButtonClass}
+                      className={cn("h-9 px-3 text-sm", secondaryButtonClass)}
                       onClick={() => updateItemMutation.mutate({ itemId: item.id })}
                       disabled={updateItemMutation.isPending}
                     >
@@ -503,7 +503,7 @@ const AdminClientOrderDetailPage = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                      className="h-9 border-rose-200 bg-white px-3 text-sm text-rose-700 hover:bg-rose-50 hover:text-rose-800"
                       onClick={() => {
                         if (confirmDelete(`Удалить строку «${item.title}»?`)) {
                           deleteItemMutation.mutate({ itemId: item.id });
@@ -518,13 +518,13 @@ const AdminClientOrderDetailPage = () => {
               ))}
             </div>
 
-            <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+            <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2.5">
+              <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_120px_auto]">
                 <Input
                   value={group.draft.title}
                   onChange={(event) => group.setDraft((current) => ({ ...current, title: event.target.value }))}
                   placeholder={group.itemType === "revenue" ? "Новый апсейл или доход" : "Новая расходная статья"}
-                  className="bg-white"
+                  className="h-9 bg-white text-sm"
                 />
                 <Input
                   type="number"
@@ -533,12 +533,12 @@ const AdminClientOrderDetailPage = () => {
                   value={group.draft.amount}
                   onChange={(event) => group.setDraft((current) => ({ ...current, amount: event.target.value }))}
                   placeholder="0"
-                  className="bg-white text-right"
+                  className="h-9 bg-white text-right text-sm"
                 />
                 <Button
                   onClick={() => handleCreateItem(group.itemType)}
                   disabled={createItemMutation.isPending}
-                  className="bg-[#E6BF3A] text-slate-950 hover:bg-[#d7b236]"
+                  className="h-9 bg-[#E6BF3A] px-3 text-sm text-slate-950 hover:bg-[#d7b236]"
                 >
                   Добавить
                 </Button>
