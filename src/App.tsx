@@ -12,6 +12,7 @@ import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 import AdminSourcesPage from "./pages/admin/AdminSourcesPage";
 import AdminClientOrderDetailPage from "./pages/admin/AdminClientOrderDetailPage";
 import AdminMarginCalculatorPage from "./pages/admin/AdminMarginCalculatorPage";
+import AdminRequestsPage from "./pages/admin/AdminRequestsPage";
 import AdminWeddingCalculatorLayout from "./pages/admin/AdminWeddingCalculatorLayout";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="leads/:leadId" element={<LegacyLeadDetailRedirect />} />
             <Route path="sources" element={<Navigate to="/admin/wedding-calculator/sources" replace />} />
             <Route path="notifications" element={<Navigate to="/admin/wedding-calculator/notifications" replace />} />
+            <Route path="requests" element={<AdminRequestsPage />} />
             <Route path="margin-calculator" element={<AdminMarginCalculatorPage />} />
             <Route path="margin-calculator/orders/:orderId" element={<AdminClientOrderDetailPage />} />
           </Route>

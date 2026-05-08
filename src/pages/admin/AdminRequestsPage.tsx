@@ -1,0 +1,399 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Save, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  createIncomingRequest,
+  deleteIncomingRequest,
+  listIncomingRequests,
+  updateIncomingRequest,
+  type IncomingRequest,
+  type IncomingRequestCreatePayload,
+  type IncomingRequestUpdatePayload,
+} from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+import { formatAdminDate, formatAdminDateTime } from "./admin-format";
+
+type RequestStatus = "in_work" | "signed" | "rejected";
+
+interface AdminOutletContext {
+  adminToken: string;
+}
+
+interface RequestFormState {
+  source: string;
+  eventDate: string;
+  lastContactDate: string;
+  comment: string;
+  status: RequestStatus;
+}
+
+const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
+  { value: "in_work", label: "В работе" },
+  { value: "signed", label: "Подписался" },
+  { value: "rejected", label: "Отказ" },
+];
+
+const EMPTY_FORM: RequestFormState = {
+  source: "",
+  eventDate: "",
+  lastContactDate: "",
+  comment: "",
+  status: "in_work",
+};
+
+const getStatusLabel = (status: string): string => STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+
+const getRowTone = (status: string, needsFollowUp: boolean): string => {
+  if (status === "signed") return "border-emerald-200 bg-emerald-50/80";
+  if (status === "rejected") return "border-rose-200 bg-rose-50/80";
+  if (needsFollowUp) return "border-amber-200 bg-amber-50/80";
+  return "border-slate-200 bg-white";
+};
+
+const toFormState = (request: IncomingRequest): RequestFormState => ({
+  source: request.source,
+  eventDate: request.event_date ?? "",
+  lastContactDate: request.last_contact_date ?? "",
+  comment: request.comment ?? "",
+  status: request.status === "signed" || request.status === "rejected" ? request.status : "in_work",
+});
+
+const toPayload = (form: RequestFormState): IncomingRequestCreatePayload => ({
+  source: form.source.trim(),
+  event_date: form.eventDate || null,
+  last_contact_date: form.lastContactDate || null,
+  comment: form.comment.trim() || null,
+  status: form.status,
+});
+
+const AdminRequestsPage = () => {
+  const { adminToken } = useOutletContext<AdminOutletContext>();
+  const queryClient = useQueryClient();
+  const [newRequest, setNewRequest] = useState<RequestFormState>(EMPTY_FORM);
+  const [drafts, setDrafts] = useState<Record<number, RequestFormState>>({});
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | RequestStatus | "attention">("all");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const requestsQuery = useQuery({
+    queryKey: ["incoming-requests", adminToken],
+    queryFn: () => listIncomingRequests(adminToken),
+    enabled: adminToken.trim().length > 0,
+  });
+
+  const requests = useMemo(() => requestsQuery.data?.requests ?? [], [requestsQuery.data?.requests]);
+
+  const visibleRequests = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    return requests.filter((request) => {
+      if (statusFilter === "attention" && !request.needs_follow_up) return false;
+      if (statusFilter !== "all" && statusFilter !== "attention" && request.status !== statusFilter) return false;
+      if (!normalizedSearch) return true;
+      return [request.source, request.comment, request.event_date, request.last_contact_date]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+    });
+  }, [requests, search, statusFilter]);
+
+  const attentionCount = requests.filter((request) => request.needs_follow_up).length;
+
+  const createMutation = useMutation({
+    mutationFn: (payload: IncomingRequestCreatePayload) => createIncomingRequest(adminToken, payload),
+    onSuccess: async () => {
+      setNewRequest(EMPTY_FORM);
+      setStatusMessage("Заявка добавлена.");
+      await queryClient.invalidateQueries({ queryKey: ["incoming-requests"] });
+    },
+    onError: (error) => {
+      setStatusMessage(error instanceof Error ? `Ошибка создания: ${error.message}` : "Ошибка создания заявки.");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ requestId, payload }: { requestId: number; payload: IncomingRequestUpdatePayload }) =>
+      updateIncomingRequest(adminToken, requestId, payload),
+    onSuccess: async (updated) => {
+      setDrafts((current) => {
+        const next = { ...current };
+        delete next[updated.id];
+        return next;
+      });
+      setStatusMessage("Заявка сохранена.");
+      await queryClient.invalidateQueries({ queryKey: ["incoming-requests"] });
+    },
+    onError: (error) => {
+      setStatusMessage(error instanceof Error ? `Ошибка сохранения: ${error.message}` : "Ошибка сохранения заявки.");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (requestId: number) => deleteIncomingRequest(adminToken, requestId),
+    onSuccess: async () => {
+      setStatusMessage("Заявка удалена.");
+      await queryClient.invalidateQueries({ queryKey: ["incoming-requests"] });
+    },
+    onError: (error) => {
+      setStatusMessage(error instanceof Error ? `Ошибка удаления: ${error.message}` : "Ошибка удаления заявки.");
+    },
+  });
+
+  const handleNewFieldChange = (field: keyof RequestFormState, value: string) => {
+    setNewRequest((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleDraftChange = (request: IncomingRequest, field: keyof RequestFormState, value: string) => {
+    setDrafts((current) => ({
+      ...current,
+      [request.id]: {
+        ...(current[request.id] ?? toFormState(request)),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleCreate = () => {
+    const payload = toPayload(newRequest);
+    if (!payload.source) {
+      setStatusMessage("Добавь источник заявки.");
+      return;
+    }
+    createMutation.mutate(payload);
+  };
+
+  const handleSave = (request: IncomingRequest) => {
+    const draft = drafts[request.id] ?? toFormState(request);
+    const payload = toPayload(draft);
+    if (!payload.source) {
+      setStatusMessage("Источник не может быть пустым.");
+      return;
+    }
+    updateMutation.mutate({ requestId: request.id, payload });
+  };
+
+  const handleDelete = (request: IncomingRequest) => {
+    if (window.confirm(`Удалить заявку "${request.source}"?`)) {
+      deleteMutation.mutate(request.id);
+    }
+  };
+
+  if (!adminToken.trim()) {
+    return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть раздел заявок.</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="text-lg font-semibold text-slate-950">Все заявки</div>
+            <div className="mt-1 max-w-3xl text-sm text-slate-600">
+              Короткий реестр вместо Excel: источник, дата мероприятия, последний контакт и живой комментарий.
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm text-slate-500">
+            <span>{requests.length} всего</span>
+            <span>•</span>
+            <span>{attentionCount} требуют внимания</span>
+          </div>
+        </div>
+      </section>
+
+      {statusMessage ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+          {statusMessage}
+        </div>
+      ) : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[1fr_160px_160px_1.5fr_140px_auto]">
+          <Input
+            value={newRequest.source}
+            onChange={(event) => handleNewFieldChange("source", event.target.value)}
+            placeholder="Источник"
+            className="bg-white"
+          />
+          <Input
+            type="date"
+            value={newRequest.eventDate}
+            onChange={(event) => handleNewFieldChange("eventDate", event.target.value)}
+            className="bg-white text-slate-950 [color-scheme:light]"
+          />
+          <Input
+            type="date"
+            value={newRequest.lastContactDate}
+            onChange={(event) => handleNewFieldChange("lastContactDate", event.target.value)}
+            className="bg-white text-slate-950 [color-scheme:light]"
+          />
+          <Input
+            value={newRequest.comment}
+            onChange={(event) => handleNewFieldChange("comment", event.target.value)}
+            placeholder="Комментарий: имя, телефон, история"
+            className="bg-white"
+          />
+          <select
+            value={newRequest.status}
+            onChange={(event) => handleNewFieldChange("status", event.target.value)}
+            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Button onClick={handleCreate} disabled={createMutation.isPending}>
+            <Plus className="mr-2 h-4 w-4" />
+            Добавить
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid gap-2 sm:grid-cols-[minmax(220px,320px)_180px]">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Поиск по источнику и комментарию"
+              className="bg-white"
+            />
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as "all" | RequestStatus | "attention")}
+              className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              <option value="all">Все статусы</option>
+              <option value="attention">Требуют внимания</option>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="text-sm text-slate-500">Показано: {visibleRequests.length}</div>
+        </div>
+
+        {requestsQuery.isLoading ? (
+          <div className="mt-4 text-sm text-slate-600">Загружаю заявки...</div>
+        ) : requestsQuery.isError ? (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {requestsQuery.error instanceof Error ? requestsQuery.error.message : "Не удалось загрузить заявки"}
+          </div>
+        ) : visibleRequests.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+            Заявок пока нет.
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left text-sm">
+              <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Источник</th>
+                  <th className="px-3 py-2 font-semibold">Дата</th>
+                  <th className="px-3 py-2 font-semibold">Последний контакт</th>
+                  <th className="px-3 py-2 font-semibold">Комментарий</th>
+                  <th className="px-3 py-2 font-semibold">Статус</th>
+                  <th className="px-3 py-2 font-semibold">Обновлено</th>
+                  <th className="px-3 py-2 font-semibold"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRequests.map((request) => {
+                  const draft = drafts[request.id] ?? toFormState(request);
+                  return (
+                    <tr key={request.id} className={cn("align-top shadow-sm", getRowTone(request.status, request.needs_follow_up))}>
+                      <td className="w-[190px] rounded-l-xl border-y border-l px-2 py-2">
+                        <Input
+                          value={draft.source}
+                          onChange={(event) => handleDraftChange(request, "source", event.target.value)}
+                          className="h-9 bg-white"
+                        />
+                      </td>
+                      <td className="w-[150px] border-y px-2 py-2">
+                        <Input
+                          type="date"
+                          value={draft.eventDate}
+                          onChange={(event) => handleDraftChange(request, "eventDate", event.target.value)}
+                          className="h-9 bg-white text-slate-950 [color-scheme:light]"
+                          title={formatAdminDate(request.event_date)}
+                        />
+                      </td>
+                      <td className="w-[150px] border-y px-2 py-2">
+                        <Input
+                          type="date"
+                          value={draft.lastContactDate}
+                          onChange={(event) => handleDraftChange(request, "lastContactDate", event.target.value)}
+                          className="h-9 bg-white text-slate-950 [color-scheme:light]"
+                          title={formatAdminDate(request.last_contact_date)}
+                        />
+                        {request.needs_follow_up ? <div className="mt-1 text-xs font-medium text-amber-700">нужно вспомнить</div> : null}
+                      </td>
+                      <td className="min-w-[360px] border-y px-2 py-2">
+                        <Textarea
+                          value={draft.comment}
+                          onChange={(event) => handleDraftChange(request, "comment", event.target.value)}
+                          className="min-h-[44px] bg-white text-sm"
+                        />
+                      </td>
+                      <td className="w-[140px] border-y px-2 py-2">
+                        <select
+                          value={draft.status}
+                          onChange={(event) => handleDraftChange(request, "status", event.target.value)}
+                          className="h-9 w-full rounded-md border border-input bg-white px-2 py-1 text-sm"
+                          title={getStatusLabel(request.status)}
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="w-[150px] border-y px-2 py-2 text-xs text-slate-500">
+                        {formatAdminDateTime(request.updated_at)}
+                      </td>
+                      <td className="w-[112px] rounded-r-xl border-y border-r px-2 py-2">
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleSave(request)}
+                            disabled={updateMutation.isPending}
+                            title="Сохранить"
+                            className="h-9 px-2"
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(request)}
+                            disabled={deleteMutation.isPending}
+                            title="Удалить"
+                            className="h-9 border-slate-200 bg-white px-2 text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};
+
+export default AdminRequestsPage;

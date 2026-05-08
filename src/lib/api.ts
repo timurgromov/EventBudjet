@@ -209,6 +209,38 @@ export interface ClientOrderSummaryResponse {
   average_profit_per_order: string;
 }
 
+export interface IncomingRequest {
+  id: number;
+  source: string;
+  event_date: string | null;
+  last_contact_date: string | null;
+  comment: string | null;
+  status: "in_work" | "signed" | "rejected" | string;
+  created_at: string;
+  updated_at: string;
+  needs_follow_up: boolean;
+}
+
+export interface IncomingRequestListResponse {
+  requests: IncomingRequest[];
+}
+
+export interface IncomingRequestCreatePayload {
+  source: string;
+  event_date?: string | null;
+  last_contact_date?: string | null;
+  comment?: string | null;
+  status?: string | null;
+}
+
+export interface IncomingRequestUpdatePayload {
+  source?: string;
+  event_date?: string | null;
+  last_contact_date?: string | null;
+  comment?: string | null;
+  status?: string | null;
+}
+
 export interface MarginCalculatorOrderPayload {
   client_name: string;
   event_title?: string | null;
@@ -525,6 +557,37 @@ export function listClientOrders(
   if (params?.dateTo) query.set("date_to", params.dateTo);
   const suffix = query.toString() ? `?${query.toString()}` : "";
   return adminRequest<ClientOrderListResponse>(`/admin/client-orders${suffix}`, adminToken);
+}
+
+export function listIncomingRequests(adminToken: string): Promise<IncomingRequestListResponse> {
+  return adminRequest<IncomingRequestListResponse>("/admin/requests", adminToken);
+}
+
+export function createIncomingRequest(
+  adminToken: string,
+  payload: IncomingRequestCreatePayload,
+): Promise<IncomingRequest> {
+  return adminRequest<IncomingRequest>("/admin/requests", adminToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateIncomingRequest(
+  adminToken: string,
+  requestId: number,
+  payload: IncomingRequestUpdatePayload,
+): Promise<IncomingRequest> {
+  return adminRequest<IncomingRequest>(`/admin/requests/${requestId}`, adminToken, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteIncomingRequest(adminToken: string, requestId: number): Promise<void> {
+  return adminRequest<void>(`/admin/requests/${requestId}`, adminToken, {
+    method: "DELETE",
+  });
 }
 
 export function getClientOrderSummary(

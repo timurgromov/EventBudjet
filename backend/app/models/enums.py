@@ -32,3 +32,9 @@ class ClientOrderStatus(str, Enum):
 class ClientOrderItemType(str, Enum):
     REVENUE = 'revenue'
     COST = 'cost'
+
+
+class IncomingRequestStatus(str, Enum):
+    IN_WORK = 'in_work'
+    SIGNED = 'signed'
+    REJECTED = 'rejected'

@@ -177,6 +177,13 @@ const AdminLayout = () => {
                 </span>
               </NavLink>
               <NavLink
+                to="/admin/requests"
+                className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors"
+                activeClassName="bg-slate-950 text-white"
+              >
+                Все заявки
+              </NavLink>
+              <NavLink
                 to="/admin/margin-calculator"
                 className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors"
                 activeClassName="bg-slate-950 text-white"

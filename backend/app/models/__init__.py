@@ -5,11 +5,13 @@ from app.models.client_order_item import ClientOrderItem
 from app.models.enums import (
     ClientOrderItemType,
     ClientOrderStatus,
+    IncomingRequestStatus,
     LeadStatus,
     NotificationStatus,
     ScheduledMessageStatus,
 )
 from app.models.expense import Expense
+from app.models.incoming_request import IncomingRequest
 from app.models.lead import Lead
 from app.models.lead_event import LeadEvent
 from app.models.lead_source import LeadSource
@@ -21,6 +23,7 @@ __all__ = [
     'Base',
     'ClientOrderStatus',
     'ClientOrderItemType',
+    'IncomingRequestStatus',
     'LeadStatus',
     'NotificationStatus',
     'ScheduledMessageStatus',
@@ -28,6 +31,7 @@ __all__ = [
     'Lead',
     'ClientOrder',
     'ClientOrderItem',
+    'IncomingRequest',
     'LeadSource',
     'Expense',
     'LeadEvent',

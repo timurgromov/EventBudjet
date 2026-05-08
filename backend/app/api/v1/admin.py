@@ -28,8 +28,15 @@ from app.schemas.client_order import (
     ClientOrderUpdate,
     MarginCalculatorOrderCreateRequest,
 )
+from app.schemas.incoming_request import (
+    IncomingRequestCreate,
+    IncomingRequestListResponse,
+    IncomingRequestRead,
+    IncomingRequestUpdate,
+)
 from app.services.admin_service import AdminService
 from app.services.client_order_service import ClientOrderService
+from app.services.incoming_request_service import IncomingRequestService
 
 router = APIRouter(prefix='/admin', tags=['admin'], dependencies=[Depends(require_admin_access)])
 
@@ -112,6 +119,44 @@ def mark_admin_lead_chat_read(
 @router.get('/notifications', response_model=AdminNotificationsResponse)
 def list_admin_notifications(db: Session = Depends(get_db)) -> AdminNotificationsResponse:
     return AdminService(db).list_notifications()
+
+
+@router.get('/requests', response_model=IncomingRequestListResponse)
+def list_admin_requests(db: Session = Depends(get_db)) -> IncomingRequestListResponse:
+    return IncomingRequestService(db).list_requests()
+
+
+@router.post('/requests', response_model=IncomingRequestRead)
+def create_admin_request(
+    payload: IncomingRequestCreate,
+    db: Session = Depends(get_db),
+) -> IncomingRequestRead:
+    try:
+        return IncomingRequestService(db).create_request(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.patch('/requests/{request_id}', response_model=IncomingRequestRead)
+def update_admin_request(
+    request_id: int,
+    payload: IncomingRequestUpdate,
+    db: Session = Depends(get_db),
+) -> IncomingRequestRead:
+    try:
+        result = IncomingRequestService(db).update_request(request_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Request not found')
+    return result
+
+
+@router.delete('/requests/{request_id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_request(request_id: int, db: Session = Depends(get_db)) -> None:
+    deleted = IncomingRequestService(db).delete_request(request_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Request not found')
 
 
 @router.get('/client-orders/summary', response_model=ClientOrderSummaryResponse)
