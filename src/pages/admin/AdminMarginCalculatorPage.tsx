@@ -11,6 +11,7 @@ import {
   createClientOrderFromMarginCalculator,
   getClientOrderSummary,
   listClientOrders,
+  type ClientOrder,
   type MarginCalculatorOrderPayload,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -126,6 +127,36 @@ const getEventTiming = (eventDate?: string | null): { label: string; description
   if (diffDays === 0) return { label: "Сегодня", description: "мероприятие сегодня", tone: "soon" };
   if (diffDays <= 14) return { label: "Скоро", description: `через ${diffDays} ${pluralDays(diffDays)}`, tone: "soon" };
   return { label: "Впереди", description: `через ${diffDays} ${pluralDays(diffDays)}`, tone: "future" };
+};
+
+const sortOrdersByEventDate = (orders: ClientOrder[]): ClientOrder[] => {
+  const now = new Date();
+  const todayTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+  return [...orders].sort((left, right) => {
+    const leftEventTime = parseDateOnly(left.event_date)?.getTime();
+    const rightEventTime = parseDateOnly(right.event_date)?.getTime();
+
+    const leftGroup = leftEventTime == null ? 2 : leftEventTime >= todayTime ? 0 : 1;
+    const rightGroup = rightEventTime == null ? 2 : rightEventTime >= todayTime ? 0 : 1;
+    if (leftGroup !== rightGroup) return leftGroup - rightGroup;
+
+    if (leftEventTime != null && rightEventTime != null && leftEventTime !== rightEventTime) {
+      return leftGroup === 1 ? rightEventTime - leftEventTime : leftEventTime - rightEventTime;
+    }
+
+    const leftContractTime = parseDateOnly(left.contract_date)?.getTime() ?? 0;
+    const rightContractTime = parseDateOnly(right.contract_date)?.getTime() ?? 0;
+    if (leftContractTime !== rightContractTime) return rightContractTime - leftContractTime;
+
+    const leftUpdatedTime = Date.parse(left.updated_at);
+    const rightUpdatedTime = Date.parse(right.updated_at);
+    if (Number.isFinite(leftUpdatedTime) && Number.isFinite(rightUpdatedTime) && leftUpdatedTime !== rightUpdatedTime) {
+      return rightUpdatedTime - leftUpdatedTime;
+    }
+
+    return right.id - left.id;
+  });
 };
 
 const eventTimingClasses: Record<EventTimingTone, { card: string; stripe: string; badge: string; text: string }> = {
@@ -430,6 +461,7 @@ const AdminMarginCalculatorPage = () => {
   const profitTone = toneClasses[profitStatus.tone];
   const tone = toneClasses[marginStatus.tone];
   const orders = ordersQuery.data?.orders ?? [];
+  const sortedOrders = useMemo(() => sortOrdersByEventDate(orders), [orders]);
   const summary = summaryQuery.data;
   const validationErrors = useMemo(() => {
     const nextErrors: Partial<Record<OrderCreateFieldKey | "revenue", string>> = {};
@@ -804,7 +836,7 @@ const AdminMarginCalculatorPage = () => {
             <div className="text-lg font-semibold text-slate-950">Список заказов</div>
             <div className="mt-1 text-sm text-slate-600">Все созданные заказы, которые попадают в выбранный период по дате договора.</div>
           </div>
-          <div className="text-sm text-slate-500">{orders.length} шт.</div>
+          <div className="text-sm text-slate-500">{sortedOrders.length} шт.</div>
         </div>
 
         {ordersQuery.isLoading ? (
@@ -813,13 +845,13 @@ const AdminMarginCalculatorPage = () => {
           <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {ordersQuery.error instanceof Error ? ordersQuery.error.message : "Не удалось загрузить заказы"}
           </div>
-        ) : orders.length === 0 ? (
+        ) : sortedOrders.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
             Заказов в выбранном периоде пока нет.
           </div>
         ) : (
           <div className="mt-4 space-y-3">
-            {orders.map((order) => {
+            {sortedOrders.map((order) => {
               const eventTiming = getEventTiming(order.event_date);
               const eventTimingStyle = eventTimingClasses[eventTiming.tone];
 
