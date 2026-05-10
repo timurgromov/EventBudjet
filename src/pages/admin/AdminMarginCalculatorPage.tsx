@@ -31,6 +31,7 @@ type MarginFormValues = Record<MarginFieldKey, string>;
 type MarginTone = "red" | "yellow" | "green" | "teal" | "violet";
 type PeriodFilter = "currentYear" | "previousYear" | "custom";
 type OrderCreateFieldKey = keyof OrderCreateFormState;
+type EventTimingTone = "future" | "soon" | "past" | "unknown";
 
 interface AdminOutletContext {
   adminToken: string;
@@ -89,6 +90,70 @@ const formatMargin = (value: number): string => `${MARGIN_FORMATTER.format(value
 const formatDecimalString = (value: string): string => (value.trim() ? value : "0");
 const formatSignedMoney = (value: number): string => (value > 0 ? `+${formatMoney(value)}` : value < 0 ? `-${formatMoney(Math.abs(value))}` : formatMoney(0));
 const formatSignedMargin = (value: number): string => (value > 0 ? `+${formatMargin(value)}` : value < 0 ? `-${formatMargin(Math.abs(value))}` : formatMargin(0));
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const pluralDays = (value: number): string => {
+  const abs = Math.abs(value);
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return "дней";
+  if (last === 1) return "день";
+  if (last >= 2 && last <= 4) return "дня";
+  return "дней";
+};
+
+const parseDateOnly = (value?: string | null): Date | null => {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getEventTiming = (eventDate?: string | null): { label: string; description: string; tone: EventTimingTone } => {
+  const parsed = parseDateOnly(eventDate);
+  if (!parsed) return { label: "Без даты", description: "Дата мероприятия не указана", tone: "unknown" };
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const diffDays = Math.round((eventDay.getTime() - today.getTime()) / DAY_MS);
+
+  if (diffDays < 0) {
+    const daysAgo = Math.abs(diffDays);
+    return { label: "Прошло", description: `было ${daysAgo} ${pluralDays(daysAgo)} назад`, tone: "past" };
+  }
+  if (diffDays === 0) return { label: "Сегодня", description: "мероприятие сегодня", tone: "soon" };
+  if (diffDays <= 14) return { label: "Скоро", description: `через ${diffDays} ${pluralDays(diffDays)}`, tone: "soon" };
+  return { label: "Впереди", description: `через ${diffDays} ${pluralDays(diffDays)}`, tone: "future" };
+};
+
+const eventTimingClasses: Record<EventTimingTone, { card: string; stripe: string; badge: string; text: string }> = {
+  future: {
+    card: "border-emerald-200 bg-emerald-50/45 hover:border-emerald-300 hover:bg-emerald-50/65",
+    stripe: "bg-emerald-400",
+    badge: "border-emerald-200 bg-emerald-100 text-emerald-700",
+    text: "text-emerald-700",
+  },
+  soon: {
+    card: "border-amber-200 bg-amber-50/70 hover:border-amber-300 hover:bg-amber-50",
+    stripe: "bg-amber-400",
+    badge: "border-amber-200 bg-amber-100 text-amber-800",
+    text: "text-amber-700",
+  },
+  past: {
+    card: "border-slate-200 bg-slate-50/70 opacity-80 hover:border-slate-300 hover:bg-white hover:opacity-100",
+    stripe: "bg-slate-300",
+    badge: "border-slate-200 bg-slate-100 text-slate-600",
+    text: "text-slate-500",
+  },
+  unknown: {
+    card: "border-slate-200 bg-slate-50/60 hover:border-slate-300 hover:bg-white",
+    stripe: "bg-slate-300",
+    badge: "border-slate-200 bg-white text-slate-500",
+    text: "text-slate-500",
+  },
+};
 
 const getDefaultOrderForm = (): OrderCreateFormState => {
   const now = new Date();
@@ -754,37 +819,53 @@ const AdminMarginCalculatorPage = () => {
           </div>
         ) : (
           <div className="mt-4 space-y-3">
-            {orders.map((order) => (
-              <Link
-                key={order.id}
-                to={`/admin/margin-calculator/orders/${order.id}`}
-                className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-colors hover:border-slate-300 hover:bg-white md:grid-cols-[1.25fr_0.85fr_0.85fr_0.9fr_0.8fr]"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-slate-950">{order.client_name}</div>
-                  <div className="mt-1 text-xs text-slate-500">{order.order_code ?? `order #${order.id}`}</div>
-                  <div className="mt-1 text-xs text-slate-500">{order.event_title || "Без названия события"}</div>
-                  <div className="mt-2 text-xs text-slate-500">Источник: {formatSourceLabel(order.source)}</div>
-                </div>
-                <div className="text-sm text-slate-700">
-                  <div>Договор: {formatAdminDate(order.contract_date)}</div>
-                  <div className="mt-1 text-xs text-slate-500">Мероприятие: {formatAdminDate(order.event_date)}</div>
-                </div>
-                <div className="text-sm text-slate-700">
-                  <div className="font-medium text-slate-950">{formatAdminMoney(order.revenue)}</div>
-                  <div className="mt-1 text-xs text-slate-500">Выручка</div>
-                </div>
-                <div className="text-sm text-slate-700">
-                  <div className="font-medium text-slate-950">{formatAdminMoney(order.profit)}</div>
-                  <div className="mt-1 text-xs text-slate-500">Прибыль • {formatMargin(Number(order.margin))}</div>
-                </div>
-                <div className="text-sm text-slate-700">
-                  <div className="font-medium text-slate-950">{formatOrderStatusLabel(order.status)}</div>
-                  <div className="mt-1 text-xs text-slate-500">Подписание: {formatAdminDate(order.contract_date)}</div>
-                  <div className="mt-1 text-xs text-slate-500">Изменено: {formatAdminDateTime(order.updated_at)}</div>
-                </div>
-              </Link>
-            ))}
+            {orders.map((order) => {
+              const eventTiming = getEventTiming(order.event_date);
+              const eventTimingStyle = eventTimingClasses[eventTiming.tone];
+
+              return (
+                <Link
+                  key={order.id}
+                  to={`/admin/margin-calculator/orders/${order.id}`}
+                  className={cn(
+                    "relative grid overflow-hidden rounded-2xl border p-4 pl-5 transition-colors md:grid-cols-[1.25fr_0.85fr_0.85fr_0.9fr_0.8fr]",
+                    "gap-3",
+                    eventTimingStyle.card,
+                  )}
+                >
+                  <span className={cn("absolute inset-y-0 left-0 w-1.5", eventTimingStyle.stripe)} />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="truncate text-sm font-semibold text-slate-950">{order.client_name}</div>
+                      <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", eventTimingStyle.badge)}>
+                        {eventTiming.label}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">{order.order_code ?? `order #${order.id}`}</div>
+                    <div className="mt-1 text-xs text-slate-500">{order.event_title || "Без названия события"}</div>
+                    <div className="mt-2 text-xs text-slate-500">Источник: {formatSourceLabel(order.source)}</div>
+                  </div>
+                  <div className="text-sm text-slate-700">
+                    <div>Договор: {formatAdminDate(order.contract_date)}</div>
+                    <div className="mt-1 text-xs text-slate-500">Мероприятие: {formatAdminDate(order.event_date)}</div>
+                    <div className={cn("mt-1 text-xs font-medium", eventTimingStyle.text)}>{eventTiming.description}</div>
+                  </div>
+                  <div className="text-sm text-slate-700">
+                    <div className="font-medium text-slate-950">{formatAdminMoney(order.revenue)}</div>
+                    <div className="mt-1 text-xs text-slate-500">Выручка</div>
+                  </div>
+                  <div className="text-sm text-slate-700">
+                    <div className="font-medium text-slate-950">{formatAdminMoney(order.profit)}</div>
+                    <div className="mt-1 text-xs text-slate-500">Прибыль • {formatMargin(Number(order.margin))}</div>
+                  </div>
+                  <div className="text-sm text-slate-700">
+                    <div className="font-medium text-slate-950">{formatOrderStatusLabel(order.status)}</div>
+                    <div className="mt-1 text-xs text-slate-500">Подписание: {formatAdminDate(order.contract_date)}</div>
+                    <div className="mt-1 text-xs text-slate-500">Изменено: {formatAdminDateTime(order.updated_at)}</div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
