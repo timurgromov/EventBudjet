@@ -32,6 +32,11 @@ from app.schemas.incoming_request import (
     IncomingRequestCreate,
     IncomingRequestListResponse,
     IncomingRequestRead,
+    IncomingRequestSourceActionResponse,
+    IncomingRequestSourceCreate,
+    IncomingRequestSourceRead,
+    IncomingRequestSourcesResponse,
+    IncomingRequestSummaryResponse,
     IncomingRequestUpdate,
 )
 from app.services.admin_service import AdminService
@@ -126,6 +131,11 @@ def list_admin_requests(db: Session = Depends(get_db)) -> IncomingRequestListRes
     return IncomingRequestService(db).list_requests()
 
 
+@router.get('/requests/summary', response_model=IncomingRequestSummaryResponse)
+def get_admin_requests_summary(db: Session = Depends(get_db)) -> IncomingRequestSummaryResponse:
+    return IncomingRequestService(db).get_summary()
+
+
 @router.post('/requests', response_model=IncomingRequestRead)
 def create_admin_request(
     payload: IncomingRequestCreate,
@@ -157,6 +167,38 @@ def delete_admin_request(request_id: int, db: Session = Depends(get_db)) -> None
     deleted = IncomingRequestService(db).delete_request(request_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Request not found')
+
+
+@router.get('/request-sources', response_model=IncomingRequestSourcesResponse)
+def list_admin_request_sources(db: Session = Depends(get_db)) -> IncomingRequestSourcesResponse:
+    return IncomingRequestService(db).list_sources()
+
+
+@router.post('/request-sources', response_model=IncomingRequestSourceRead)
+def create_admin_request_source(
+    payload: IncomingRequestSourceCreate,
+    db: Session = Depends(get_db),
+) -> IncomingRequestSourceRead:
+    try:
+        return IncomingRequestService(db).create_source(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.post('/request-sources/{source_id}/archive', response_model=IncomingRequestSourceActionResponse)
+def archive_admin_request_source(source_id: int, db: Session = Depends(get_db)) -> IncomingRequestSourceActionResponse:
+    result = IncomingRequestService(db).archive_source(source_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Request source not found')
+    return result
+
+
+@router.post('/request-sources/{source_id}/restore', response_model=IncomingRequestSourceActionResponse)
+def restore_admin_request_source(source_id: int, db: Session = Depends(get_db)) -> IncomingRequestSourceActionResponse:
+    result = IncomingRequestService(db).restore_source(source_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Request source not found')
+    return result
 
 
 @router.get('/client-orders/summary', response_model=ClientOrderSummaryResponse)

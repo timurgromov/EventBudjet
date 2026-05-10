@@ -3,7 +3,42 @@ from datetime import date, datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 
+class IncomingRequestSourceBase(BaseModel):
+    name: str | None = None
+    source_type: str | None = None
+    description: str | None = None
+
+
+class IncomingRequestSourceCreate(IncomingRequestSourceBase):
+    name: str
+
+
+class IncomingRequestSourceRead(BaseModel):
+    id: int
+    name: str
+    source_type: str
+    description: str | None = None
+    is_archived: bool
+    requests_count: int
+    signed_count: int
+    rejected_count: int
+    in_work_count: int
+    conversion_rate: float
+    created_at: datetime
+    updated_at: datetime
+
+
+class IncomingRequestSourcesResponse(BaseModel):
+    sources: list[IncomingRequestSourceRead]
+
+
+class IncomingRequestSourceActionResponse(BaseModel):
+    source_id: int
+    status: str
+
+
 class IncomingRequestBase(BaseModel):
+    source_id: int | None = None
     source: str | None = None
     event_date: date | None = None
     last_contact_date: date | None = None
@@ -43,7 +78,10 @@ class IncomingRequestUpdate(IncomingRequestBase):
 
 class IncomingRequestRead(BaseModel):
     id: int
+    source_id: int | None = None
     source: str
+    source_name: str
+    source_type: str | None = None
     event_date: date | None = None
     last_contact_date: date | None = None
     comment: str | None = None
@@ -55,3 +93,24 @@ class IncomingRequestRead(BaseModel):
 
 class IncomingRequestListResponse(BaseModel):
     requests: list[IncomingRequestRead]
+
+
+class IncomingRequestSourceSummaryItem(BaseModel):
+    source_id: int | None = None
+    source_name: str
+    source_type: str | None = None
+    total_count: int
+    signed_count: int
+    rejected_count: int
+    in_work_count: int
+    conversion_rate: float
+
+
+class IncomingRequestSummaryResponse(BaseModel):
+    total_count: int
+    signed_count: int
+    rejected_count: int
+    in_work_count: int
+    attention_count: int
+    conversion_rate: float
+    sources: list[IncomingRequestSourceSummaryItem]

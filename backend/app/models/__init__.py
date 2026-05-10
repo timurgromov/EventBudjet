@@ -12,6 +12,7 @@ from app.models.enums import (
 )
 from app.models.expense import Expense
 from app.models.incoming_request import IncomingRequest
+from app.models.incoming_request_source import IncomingRequestSource
 from app.models.lead import Lead
 from app.models.lead_event import LeadEvent
 from app.models.lead_source import LeadSource
@@ -32,6 +33,7 @@ __all__ = [
     'ClientOrder',
     'ClientOrderItem',
     'IncomingRequest',
+    'IncomingRequestSource',
     'LeadSource',
     'Expense',
     'LeadEvent',

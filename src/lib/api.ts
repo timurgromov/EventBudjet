@@ -211,7 +211,10 @@ export interface ClientOrderSummaryResponse {
 
 export interface IncomingRequest {
   id: number;
+  source_id: number | null;
   source: string;
+  source_name: string;
+  source_type: string | null;
   event_date: string | null;
   last_contact_date: string | null;
   comment: string | null;
@@ -225,7 +228,59 @@ export interface IncomingRequestListResponse {
   requests: IncomingRequest[];
 }
 
+export interface IncomingRequestSource {
+  id: number;
+  name: string;
+  source_type: string;
+  description: string | null;
+  is_archived: boolean;
+  requests_count: number;
+  signed_count: number;
+  rejected_count: number;
+  in_work_count: number;
+  conversion_rate: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IncomingRequestSourcesResponse {
+  sources: IncomingRequestSource[];
+}
+
+export interface IncomingRequestSourceCreatePayload {
+  name: string;
+  source_type?: string | null;
+  description?: string | null;
+}
+
+export interface IncomingRequestSourceActionResponse {
+  source_id: number;
+  status: "archived" | "restored" | string;
+}
+
+export interface IncomingRequestSourceSummaryItem {
+  source_id: number | null;
+  source_name: string;
+  source_type: string | null;
+  total_count: number;
+  signed_count: number;
+  rejected_count: number;
+  in_work_count: number;
+  conversion_rate: number;
+}
+
+export interface IncomingRequestSummaryResponse {
+  total_count: number;
+  signed_count: number;
+  rejected_count: number;
+  in_work_count: number;
+  attention_count: number;
+  conversion_rate: number;
+  sources: IncomingRequestSourceSummaryItem[];
+}
+
 export interface IncomingRequestCreatePayload {
+  source_id?: number | null;
   source: string;
   event_date?: string | null;
   last_contact_date?: string | null;
@@ -234,6 +289,7 @@ export interface IncomingRequestCreatePayload {
 }
 
 export interface IncomingRequestUpdatePayload {
+  source_id?: number | null;
   source?: string;
   event_date?: string | null;
   last_contact_date?: string | null;
@@ -561,6 +617,36 @@ export function listClientOrders(
 
 export function listIncomingRequests(adminToken: string): Promise<IncomingRequestListResponse> {
   return adminRequest<IncomingRequestListResponse>("/admin/requests", adminToken);
+}
+
+export function getIncomingRequestSummary(adminToken: string): Promise<IncomingRequestSummaryResponse> {
+  return adminRequest<IncomingRequestSummaryResponse>("/admin/requests/summary", adminToken);
+}
+
+export function listIncomingRequestSources(adminToken: string): Promise<IncomingRequestSourcesResponse> {
+  return adminRequest<IncomingRequestSourcesResponse>("/admin/request-sources", adminToken);
+}
+
+export function createIncomingRequestSource(
+  adminToken: string,
+  payload: IncomingRequestSourceCreatePayload,
+): Promise<IncomingRequestSource> {
+  return adminRequest<IncomingRequestSource>("/admin/request-sources", adminToken, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function archiveIncomingRequestSource(adminToken: string, sourceId: number): Promise<IncomingRequestSourceActionResponse> {
+  return adminRequest<IncomingRequestSourceActionResponse>(`/admin/request-sources/${sourceId}/archive`, adminToken, {
+    method: "POST",
+  });
+}
+
+export function restoreIncomingRequestSource(adminToken: string, sourceId: number): Promise<IncomingRequestSourceActionResponse> {
+  return adminRequest<IncomingRequestSourceActionResponse>(`/admin/request-sources/${sourceId}/restore`, adminToken, {
+    method: "POST",
+  });
 }
 
 export function createIncomingRequest(

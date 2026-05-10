@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Archive, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
@@ -7,9 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  archiveIncomingRequestSource,
   createIncomingRequest,
+  createIncomingRequestSource,
   deleteIncomingRequest,
+  getIncomingRequestSummary,
   listIncomingRequests,
+  listIncomingRequestSources,
+  restoreIncomingRequestSource,
   updateIncomingRequest,
   type IncomingRequest,
   type IncomingRequestCreatePayload,
@@ -26,11 +31,16 @@ interface AdminOutletContext {
 }
 
 interface RequestFormState {
-  source: string;
+  sourceId: string;
   eventDate: string;
   lastContactDate: string;
   comment: string;
   status: RequestStatus;
+}
+
+interface SourceFormState {
+  name: string;
+  sourceType: string;
 }
 
 const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
@@ -39,15 +49,29 @@ const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "rejected", label: "Отказ" },
 ];
 
+const SOURCE_TYPE_OPTIONS = [
+  { value: "partner", label: "Партнёр" },
+  { value: "ads", label: "Реклама" },
+  { value: "webinar", label: "Вебинар" },
+  { value: "personal", label: "Личный" },
+  { value: "other", label: "Другое" },
+];
+
 const EMPTY_FORM: RequestFormState = {
-  source: "",
+  sourceId: "",
   eventDate: "",
   lastContactDate: "",
   comment: "",
   status: "in_work",
 };
 
+const EMPTY_SOURCE_FORM: SourceFormState = {
+  name: "",
+  sourceType: "partner",
+};
+
 const getStatusLabel = (status: string): string => STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+const getSourceTypeLabel = (type?: string | null): string => SOURCE_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? "Другое";
 
 const getRowTone = (status: string, needsFollowUp: boolean): string => {
   if (status === "signed") return "border-emerald-200 bg-emerald-50/80";
@@ -57,7 +81,7 @@ const getRowTone = (status: string, needsFollowUp: boolean): string => {
 };
 
 const toFormState = (request: IncomingRequest): RequestFormState => ({
-  source: request.source,
+  sourceId: request.source_id ? String(request.source_id) : "",
   eventDate: request.event_date ?? "",
   lastContactDate: request.last_contact_date ?? "",
   comment: request.comment ?? "",
@@ -65,7 +89,8 @@ const toFormState = (request: IncomingRequest): RequestFormState => ({
 });
 
 const toPayload = (form: RequestFormState): IncomingRequestCreatePayload => ({
-  source: form.source.trim(),
+  source_id: form.sourceId ? Number(form.sourceId) : null,
+  source: "",
   event_date: form.eventDate || null,
   last_contact_date: form.lastContactDate || null,
   comment: form.comment.trim() || null,
@@ -76,9 +101,11 @@ const AdminRequestsPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
   const queryClient = useQueryClient();
   const [newRequest, setNewRequest] = useState<RequestFormState>(EMPTY_FORM);
+  const [newSource, setNewSource] = useState<SourceFormState>(EMPTY_SOURCE_FORM);
   const [drafts, setDrafts] = useState<Record<number, RequestFormState>>({});
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | RequestStatus | "attention">("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const requestsQuery = useQuery({
@@ -87,28 +114,81 @@ const AdminRequestsPage = () => {
     enabled: adminToken.trim().length > 0,
   });
 
+  const sourcesQuery = useQuery({
+    queryKey: ["incoming-request-sources", adminToken],
+    queryFn: () => listIncomingRequestSources(adminToken),
+    enabled: adminToken.trim().length > 0,
+  });
+
+  const summaryQuery = useQuery({
+    queryKey: ["incoming-request-summary", adminToken],
+    queryFn: () => getIncomingRequestSummary(adminToken),
+    enabled: adminToken.trim().length > 0,
+  });
+
   const requests = useMemo(() => requestsQuery.data?.requests ?? [], [requestsQuery.data?.requests]);
+  const sources = useMemo(() => sourcesQuery.data?.sources ?? [], [sourcesQuery.data?.sources]);
+  const activeSources = sources.filter((source) => !source.is_archived);
+  const summary = summaryQuery.data;
 
   const visibleRequests = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     return requests.filter((request) => {
       if (statusFilter === "attention" && !request.needs_follow_up) return false;
       if (statusFilter !== "all" && statusFilter !== "attention" && request.status !== statusFilter) return false;
+      if (sourceFilter !== "all" && String(request.source_id ?? "") !== sourceFilter) return false;
       if (!normalizedSearch) return true;
-      return [request.source, request.comment, request.event_date, request.last_contact_date]
+      return [request.source_name, request.comment, request.event_date, request.last_contact_date]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedSearch));
     });
-  }, [requests, search, statusFilter]);
+  }, [requests, search, sourceFilter, statusFilter]);
 
-  const attentionCount = requests.filter((request) => request.needs_follow_up).length;
+  const attentionCount = summary?.attention_count ?? requests.filter((request) => request.needs_follow_up).length;
+
+  const invalidateRequests = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["incoming-requests"] }),
+      queryClient.invalidateQueries({ queryKey: ["incoming-request-sources"] }),
+      queryClient.invalidateQueries({ queryKey: ["incoming-request-summary"] }),
+    ]);
+  };
+
+  const createSourceMutation = useMutation({
+    mutationFn: () =>
+      createIncomingRequestSource(adminToken, {
+        name: newSource.name.trim(),
+        source_type: newSource.sourceType,
+      }),
+    onSuccess: async (source) => {
+      setNewSource(EMPTY_SOURCE_FORM);
+      setNewRequest((current) => ({ ...current, sourceId: String(source.id) }));
+      setStatusMessage("Источник добавлен.");
+      await invalidateRequests();
+    },
+    onError: (error) => {
+      setStatusMessage(error instanceof Error ? `Ошибка источника: ${error.message}` : "Ошибка создания источника.");
+    },
+  });
+
+  const archiveSourceMutation = useMutation({
+    mutationFn: ({ sourceId, archived }: { sourceId: number; archived: boolean }) =>
+      archived ? restoreIncomingRequestSource(adminToken, sourceId) : archiveIncomingRequestSource(adminToken, sourceId),
+    onSuccess: async () => {
+      setStatusMessage("Источник обновлён.");
+      await invalidateRequests();
+    },
+    onError: (error) => {
+      setStatusMessage(error instanceof Error ? `Ошибка источника: ${error.message}` : "Ошибка обновления источника.");
+    },
+  });
 
   const createMutation = useMutation({
     mutationFn: (payload: IncomingRequestCreatePayload) => createIncomingRequest(adminToken, payload),
     onSuccess: async () => {
       setNewRequest(EMPTY_FORM);
       setStatusMessage("Заявка добавлена.");
-      await queryClient.invalidateQueries({ queryKey: ["incoming-requests"] });
+      await invalidateRequests();
     },
     onError: (error) => {
       setStatusMessage(error instanceof Error ? `Ошибка создания: ${error.message}` : "Ошибка создания заявки.");
@@ -125,7 +205,7 @@ const AdminRequestsPage = () => {
         return next;
       });
       setStatusMessage("Заявка сохранена.");
-      await queryClient.invalidateQueries({ queryKey: ["incoming-requests"] });
+      await invalidateRequests();
     },
     onError: (error) => {
       setStatusMessage(error instanceof Error ? `Ошибка сохранения: ${error.message}` : "Ошибка сохранения заявки.");
@@ -136,7 +216,7 @@ const AdminRequestsPage = () => {
     mutationFn: (requestId: number) => deleteIncomingRequest(adminToken, requestId),
     onSuccess: async () => {
       setStatusMessage("Заявка удалена.");
-      await queryClient.invalidateQueries({ queryKey: ["incoming-requests"] });
+      await invalidateRequests();
     },
     onError: (error) => {
       setStatusMessage(error instanceof Error ? `Ошибка удаления: ${error.message}` : "Ошибка удаления заявки.");
@@ -157,10 +237,18 @@ const AdminRequestsPage = () => {
     }));
   };
 
+  const handleCreateSource = () => {
+    if (!newSource.name.trim()) {
+      setStatusMessage("Добавь название источника.");
+      return;
+    }
+    createSourceMutation.mutate();
+  };
+
   const handleCreate = () => {
     const payload = toPayload(newRequest);
-    if (!payload.source) {
-      setStatusMessage("Добавь источник заявки.");
+    if (!payload.source_id) {
+      setStatusMessage("Выбери источник заявки.");
       return;
     }
     createMutation.mutate(payload);
@@ -169,7 +257,7 @@ const AdminRequestsPage = () => {
   const handleSave = (request: IncomingRequest) => {
     const draft = drafts[request.id] ?? toFormState(request);
     const payload = toPayload(draft);
-    if (!payload.source) {
+    if (!payload.source_id) {
       setStatusMessage("Источник не может быть пустым.");
       return;
     }
@@ -177,7 +265,7 @@ const AdminRequestsPage = () => {
   };
 
   const handleDelete = (request: IncomingRequest) => {
-    if (window.confirm(`Удалить заявку "${request.source}"?`)) {
+    if (window.confirm(`Удалить заявку "${request.source_name}"?`)) {
       deleteMutation.mutate(request.id);
     }
   };
@@ -193,11 +281,11 @@ const AdminRequestsPage = () => {
           <div>
             <div className="text-lg font-semibold text-slate-950">Все заявки</div>
             <div className="mt-1 max-w-3xl text-sm text-slate-600">
-              Короткий реестр вместо Excel: источник, дата мероприятия, последний контакт и живой комментарий.
+              Реестр заявок с фиксированными источниками и быстрой статистикой по конверсии.
             </div>
           </div>
           <div className="flex flex-wrap gap-2 text-sm text-slate-500">
-            <span>{requests.length} всего</span>
+            <span>{summary?.total_count ?? requests.length} всего</span>
             <span>•</span>
             <span>{attentionCount} требуют внимания</span>
           </div>
@@ -211,13 +299,122 @@ const AdminRequestsPage = () => {
       ) : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[1fr_160px_160px_1.5fr_140px_auto]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Всего</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-950">{summary?.total_count ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Подписались</div>
+            <div className="mt-2 text-2xl font-semibold text-emerald-800">{summary?.signed_count ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">Отказ</div>
+            <div className="mt-2 text-2xl font-semibold text-rose-800">{summary?.rejected_count ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">В работе</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-950">{summary?.in_work_count ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">Конверсия</div>
+            <div className="mt-2 text-2xl font-semibold text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
+              <tr>
+                <th className="border-b border-slate-200 px-3 py-2 font-semibold">Источник</th>
+                <th className="border-b border-slate-200 px-3 py-2 font-semibold">Тип</th>
+                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Всего</th>
+                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Подписались</th>
+                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Отказ</th>
+                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">В работе</th>
+                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Конверсия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(summary?.sources ?? []).slice(0, 8).map((source) => (
+                <tr key={source.source_id ?? source.source_name}>
+                  <td className="border-b border-slate-100 px-3 py-2 font-medium text-slate-950">{source.source_name}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-slate-600">{getSourceTypeLabel(source.source_type)}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{source.total_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-right text-emerald-700">{source.signed_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-right text-rose-700">{source.rejected_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{source.in_work_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-right font-medium text-slate-950">{source.conversion_rate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[1fr_150px_auto]">
           <Input
-            value={newRequest.source}
-            onChange={(event) => handleNewFieldChange("source", event.target.value)}
-            placeholder="Источник"
+            value={newSource.name}
+            onChange={(event) => setNewSource((current) => ({ ...current, name: event.target.value }))}
+            placeholder="Новый источник: Московское небо"
             className="bg-white"
           />
+          <select
+            value={newSource.sourceType}
+            onChange={(event) => setNewSource((current) => ({ ...current, sourceType: event.target.value }))}
+            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+          >
+            {SOURCE_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Button onClick={handleCreateSource} disabled={createSourceMutation.isPending}>
+            <Plus className="mr-2 h-4 w-4" />
+            Источник
+          </Button>
+        </div>
+
+        {sources.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {sources.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => archiveSourceMutation.mutate({ sourceId: source.id, archived: source.is_archived })}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors",
+                  source.is_archived
+                    ? "border-slate-200 bg-slate-100 text-slate-500"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                )}
+                title={source.is_archived ? "Вернуть источник" : "Архивировать источник"}
+              >
+                {source.is_archived ? <RotateCcw className="h-3 w-3" /> : <Archive className="h-3 w-3" />}
+                {source.name}
+                <span className="text-slate-400">{source.requests_count}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[1.2fr_160px_160px_1.5fr_140px_auto]">
+          <select
+            value={newRequest.sourceId}
+            onChange={(event) => handleNewFieldChange("sourceId", event.target.value)}
+            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+          >
+            <option value="">Источник</option>
+            {activeSources.map((source) => (
+              <option key={source.id} value={source.id}>
+                {source.name}
+              </option>
+            ))}
+          </select>
           <Input
             type="date"
             value={newRequest.eventDate}
@@ -256,13 +453,25 @@ const AdminRequestsPage = () => {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="grid gap-2 sm:grid-cols-[minmax(220px,320px)_180px]">
+          <div className="grid gap-2 lg:grid-cols-[minmax(220px,320px)_190px_180px]">
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Поиск по источнику и комментарию"
               className="bg-white"
             />
+            <select
+              value={sourceFilter}
+              onChange={(event) => setSourceFilter(event.target.value)}
+              className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              <option value="all">Все источники</option>
+              {sources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.name}
+                </option>
+              ))}
+            </select>
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as "all" | RequestStatus | "attention")}
@@ -280,11 +489,15 @@ const AdminRequestsPage = () => {
           <div className="text-sm text-slate-500">Показано: {visibleRequests.length}</div>
         </div>
 
-        {requestsQuery.isLoading ? (
+        {requestsQuery.isLoading || sourcesQuery.isLoading ? (
           <div className="mt-4 text-sm text-slate-600">Загружаю заявки...</div>
-        ) : requestsQuery.isError ? (
+        ) : requestsQuery.isError || sourcesQuery.isError ? (
           <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {requestsQuery.error instanceof Error ? requestsQuery.error.message : "Не удалось загрузить заявки"}
+            {requestsQuery.error instanceof Error
+              ? requestsQuery.error.message
+              : sourcesQuery.error instanceof Error
+                ? sourcesQuery.error.message
+                : "Не удалось загрузить заявки"}
           </div>
         ) : visibleRequests.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
@@ -309,12 +522,20 @@ const AdminRequestsPage = () => {
                   const draft = drafts[request.id] ?? toFormState(request);
                   return (
                     <tr key={request.id} className={cn("align-top shadow-sm", getRowTone(request.status, request.needs_follow_up))}>
-                      <td className="w-[190px] rounded-l-xl border-y border-l px-2 py-2">
-                        <Input
-                          value={draft.source}
-                          onChange={(event) => handleDraftChange(request, "source", event.target.value)}
-                          className="h-9 bg-white"
-                        />
+                      <td className="w-[220px] rounded-l-xl border-y border-l px-2 py-2">
+                        <select
+                          value={draft.sourceId}
+                          onChange={(event) => handleDraftChange(request, "sourceId", event.target.value)}
+                          className="h-9 w-full rounded-md border border-input bg-white px-2 py-1 text-sm"
+                        >
+                          <option value="">Источник</option>
+                          {activeSources.map((source) => (
+                            <option key={source.id} value={source.id}>
+                              {source.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="mt-1 text-xs text-slate-500">{getSourceTypeLabel(request.source_type)}</div>
                       </td>
                       <td className="w-[150px] border-y px-2 py-2">
                         <Input
