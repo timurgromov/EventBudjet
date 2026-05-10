@@ -298,53 +298,53 @@ const AdminRequestsPage = () => {
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Всего</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-950">{summary?.total_count ?? 0}</div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="flex min-h-12 items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Всего</div>
+            <div className="text-xl font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
           </div>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Подписались</div>
-            <div className="mt-2 text-2xl font-semibold text-emerald-800">{summary?.signed_count ?? 0}</div>
+          <div className="flex min-h-12 items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">Подписались</div>
+            <div className="text-xl font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
           </div>
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">Отказ</div>
-            <div className="mt-2 text-2xl font-semibold text-rose-800">{summary?.rejected_count ?? 0}</div>
+          <div className="flex min-h-12 items-center justify-between rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-700">Отказ</div>
+            <div className="text-xl font-semibold leading-none text-rose-800">{summary?.rejected_count ?? 0}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">В работе</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-950">{summary?.in_work_count ?? 0}</div>
+          <div className="flex min-h-12 items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">В работе</div>
+            <div className="text-xl font-semibold leading-none text-slate-950">{summary?.in_work_count ?? 0}</div>
           </div>
-          <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">Конверсия</div>
-            <div className="mt-2 text-2xl font-semibold text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
+          <div className="flex min-h-12 items-center justify-between rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-700">Конверсия</div>
+            <div className="text-xl font-semibold leading-none text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
           </div>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
               <tr>
-                <th className="border-b border-slate-200 px-3 py-2 font-semibold">Источник</th>
-                <th className="border-b border-slate-200 px-3 py-2 font-semibold">Тип</th>
-                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Всего</th>
-                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Подписались</th>
-                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Отказ</th>
-                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">В работе</th>
-                <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold">Конверсия</th>
+                <th className="border-b border-slate-200 px-3 py-1.5 font-semibold">Источник</th>
+                <th className="border-b border-slate-200 px-3 py-1.5 font-semibold">Тип</th>
+                <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Всего</th>
+                <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Подписались</th>
+                <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Отказ</th>
+                <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">В работе</th>
+                <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Конверсия</th>
               </tr>
             </thead>
             <tbody>
               {(summary?.sources ?? []).slice(0, 8).map((source) => (
                 <tr key={source.source_id ?? source.source_name}>
-                  <td className="border-b border-slate-100 px-3 py-2 font-medium text-slate-950">{source.source_name}</td>
-                  <td className="border-b border-slate-100 px-3 py-2 text-slate-600">{getSourceTypeLabel(source.source_type)}</td>
-                  <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{source.total_count}</td>
-                  <td className="border-b border-slate-100 px-3 py-2 text-right text-emerald-700">{source.signed_count}</td>
-                  <td className="border-b border-slate-100 px-3 py-2 text-right text-rose-700">{source.rejected_count}</td>
-                  <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{source.in_work_count}</td>
-                  <td className="border-b border-slate-100 px-3 py-2 text-right font-medium text-slate-950">{source.conversion_rate}%</td>
+                  <td className="border-b border-slate-100 px-3 py-1.5 font-medium text-slate-950">{source.source_name}</td>
+                  <td className="border-b border-slate-100 px-3 py-1.5 text-slate-600">{getSourceTypeLabel(source.source_type)}</td>
+                  <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-700">{source.total_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-1.5 text-right text-emerald-700">{source.signed_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-1.5 text-right text-rose-700">{source.rejected_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-700">{source.in_work_count}</td>
+                  <td className="border-b border-slate-100 px-3 py-1.5 text-right font-medium text-slate-950">{source.conversion_rate}%</td>
                 </tr>
               ))}
             </tbody>
