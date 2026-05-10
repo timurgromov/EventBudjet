@@ -15,7 +15,7 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { formatAdminDate, formatAdminMoney, formatOrderStatusLabel, formatSourceLabel } from "./admin-format";
+import { formatAdminDate, formatAdminDateTime, formatAdminMoney, formatOrderStatusLabel, formatSourceLabel } from "./admin-format";
 
 type MarginFieldKey =
   | "basePackage"
@@ -779,7 +779,8 @@ const AdminMarginCalculatorPage = () => {
                 </div>
                 <div className="text-sm text-slate-700">
                   <div className="font-medium text-slate-950">{formatOrderStatusLabel(order.status)}</div>
-                  <div className="mt-1 text-xs text-slate-500">Статус заказа</div>
+                  <div className="mt-1 text-xs text-slate-500">Подписание: {formatAdminDate(order.contract_date)}</div>
+                  <div className="mt-1 text-xs text-slate-500">Изменено: {formatAdminDateTime(order.updated_at)}</div>
                 </div>
               </Link>
             ))}
