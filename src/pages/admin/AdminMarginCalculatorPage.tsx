@@ -54,7 +54,7 @@ const INITIAL_VALUES: MarginFormValues = {
   upsell: "",
   djPayout: "",
   adsCost: "",
-  otherCosts: "5000",
+  otherCosts: "0",
 };
 
 const ORDER_STATUS_OPTIONS = [
