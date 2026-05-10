@@ -332,6 +332,7 @@ const AdminMarginCalculatorPage = () => {
           </div>
         ),
         {
+          className: "!border-0 !bg-transparent !p-0 !shadow-none",
           duration: 3200,
           position: "top-center",
         },
