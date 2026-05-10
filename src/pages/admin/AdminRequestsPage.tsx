@@ -38,23 +38,10 @@ interface RequestFormState {
   status: RequestStatus;
 }
 
-interface SourceFormState {
-  name: string;
-  sourceType: string;
-}
-
 const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "in_work", label: "В работе" },
   { value: "signed", label: "Подписался" },
   { value: "rejected", label: "Отказ" },
-];
-
-const SOURCE_TYPE_OPTIONS = [
-  { value: "partner", label: "Партнёр" },
-  { value: "ads", label: "Реклама" },
-  { value: "webinar", label: "Вебинар" },
-  { value: "personal", label: "Личный" },
-  { value: "other", label: "Другое" },
 ];
 
 const EMPTY_FORM: RequestFormState = {
@@ -65,13 +52,7 @@ const EMPTY_FORM: RequestFormState = {
   status: "in_work",
 };
 
-const EMPTY_SOURCE_FORM: SourceFormState = {
-  name: "",
-  sourceType: "partner",
-};
-
 const getStatusLabel = (status: string): string => STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
-const getSourceTypeLabel = (type?: string | null): string => SOURCE_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? "Другое";
 
 const getRowTone = (status: string, needsFollowUp: boolean): string => {
   if (status === "signed") return "border-emerald-200 bg-emerald-50/80";
@@ -101,7 +82,7 @@ const AdminRequestsPage = () => {
   const { adminToken } = useOutletContext<AdminOutletContext>();
   const queryClient = useQueryClient();
   const [newRequest, setNewRequest] = useState<RequestFormState>(EMPTY_FORM);
-  const [newSource, setNewSource] = useState<SourceFormState>(EMPTY_SOURCE_FORM);
+  const [newSourceName, setNewSourceName] = useState("");
   const [drafts, setDrafts] = useState<Record<number, RequestFormState>>({});
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | RequestStatus | "attention">("all");
@@ -157,11 +138,10 @@ const AdminRequestsPage = () => {
   const createSourceMutation = useMutation({
     mutationFn: () =>
       createIncomingRequestSource(adminToken, {
-        name: newSource.name.trim(),
-        source_type: newSource.sourceType,
+        name: newSourceName.trim(),
       }),
     onSuccess: async (source) => {
-      setNewSource(EMPTY_SOURCE_FORM);
+      setNewSourceName("");
       setNewRequest((current) => ({ ...current, sourceId: String(source.id) }));
       setStatusMessage("Источник добавлен.");
       await invalidateRequests();
@@ -238,7 +218,7 @@ const AdminRequestsPage = () => {
   };
 
   const handleCreateSource = () => {
-    if (!newSource.name.trim()) {
+    if (!newSourceName.trim()) {
       setStatusMessage("Добавь название источника.");
       return;
     }
@@ -327,7 +307,6 @@ const AdminRequestsPage = () => {
             <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
               <tr>
                 <th className="border-b border-slate-200 px-3 py-1.5 font-semibold">Источник</th>
-                <th className="border-b border-slate-200 px-3 py-1.5 font-semibold">Тип</th>
                 <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Всего</th>
                 <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Подписались</th>
                 <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Отказ</th>
@@ -339,7 +318,6 @@ const AdminRequestsPage = () => {
               {(summary?.sources ?? []).slice(0, 8).map((source) => (
                 <tr key={source.source_id ?? source.source_name}>
                   <td className="border-b border-slate-100 px-3 py-1.5 font-medium text-slate-950">{source.source_name}</td>
-                  <td className="border-b border-slate-100 px-3 py-1.5 text-slate-600">{getSourceTypeLabel(source.source_type)}</td>
                   <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-700">{source.total_count}</td>
                   <td className="border-b border-slate-100 px-3 py-1.5 text-right text-emerald-700">{source.signed_count}</td>
                   <td className="border-b border-slate-100 px-3 py-1.5 text-right text-rose-700">{source.rejected_count}</td>
@@ -353,24 +331,13 @@ const AdminRequestsPage = () => {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[1fr_150px_auto]">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
           <Input
-            value={newSource.name}
-            onChange={(event) => setNewSource((current) => ({ ...current, name: event.target.value }))}
+            value={newSourceName}
+            onChange={(event) => setNewSourceName(event.target.value)}
             placeholder="Новый источник: Московское небо"
             className="bg-white"
           />
-          <select
-            value={newSource.sourceType}
-            onChange={(event) => setNewSource((current) => ({ ...current, sourceType: event.target.value }))}
-            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
-          >
-            {SOURCE_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
           <Button onClick={handleCreateSource} disabled={createSourceMutation.isPending}>
             <Plus className="mr-2 h-4 w-4" />
             Источник
@@ -535,7 +502,6 @@ const AdminRequestsPage = () => {
                             </option>
                           ))}
                         </select>
-                        <div className="mt-1 text-xs text-slate-500">{getSourceTypeLabel(request.source_type)}</div>
                       </td>
                       <td className="w-[150px] border-y px-2 py-2">
                         <Input
