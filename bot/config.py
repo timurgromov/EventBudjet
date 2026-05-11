@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,10 +19,23 @@ class Settings(BaseSettings):
     bot_reminder_timezone: str = 'Europe/Moscow'
     bot_reminder_send_hour_start: int = Field(default=10, ge=0, le=23)
     bot_reminder_send_hour_end: int = Field(default=22, ge=0, le=23)
+    incoming_request_digest_enabled: bool = False
+    incoming_request_digest_chat_id: int | None = None
+    incoming_request_digest_interval_days: int = Field(default=3, ge=1)
+    incoming_request_digest_check_interval_seconds: int = Field(default=300, ge=30)
+    incoming_request_digest_send_hour: int = Field(default=11, ge=0, le=23)
+    incoming_request_digest_timezone: str = 'Europe/Moscow'
 
     database_url: str = 'postgresql+psycopg://postgres:postgres@postgres:5432/wedding_calculator'
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
+
+    @field_validator('incoming_request_digest_chat_id', mode='before')
+    @classmethod
+    def normalize_optional_chat_id(cls, value: object) -> object:
+        if value is None or value == '':
+            return None
+        return value
 
 
 settings = Settings()

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -11,7 +11,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramRetryAfter
 
 from bot.config import settings
-from bot.db import BotRepository, LeadSnapshot, PendingLeadEvent, PendingLeadEventBatch, ReminderCandidate
+from bot.db import BotRepository, IncomingRequestDigestItem, LeadSnapshot, PendingLeadEvent, PendingLeadEventBatch, ReminderCandidate
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +118,110 @@ class AdminNotificationService:
                 },
             )
         return result.sent
+
+    async def send_incoming_request_digest(self, items: list[IncomingRequestDigestItem]) -> bool:
+        chat_id = settings.incoming_request_digest_chat_id
+        if chat_id is None:
+            logger.warning('incoming_request_digest_chat_id_missing')
+            self.repository.log_incoming_request_digest(
+                chat_id=0,
+                status='failed',
+                requests_count=len(items),
+                error='incoming_request_digest_chat_id_missing',
+            )
+            return False
+
+        messages = self._render_incoming_request_digest_messages(items)
+        error: str | None = None
+        if settings.bot_dry_run:
+            for message in messages:
+                logger.info('bot_dry_run_incoming_request_digest chat_id=%s text=%s', chat_id, message)
+            self.repository.log_incoming_request_digest(
+                chat_id=chat_id,
+                status='sent',
+                requests_count=len(items),
+            )
+            return True
+
+        for message in messages:
+            result = await _safe_send_message(bot=self.bot, chat_id=chat_id, text=message)
+            if not result.sent:
+                error = result.error or 'send_failed'
+                logger.warning('incoming_request_digest_send_failed chat_id=%s error=%s', chat_id, error)
+                self.repository.log_incoming_request_digest(
+                    chat_id=chat_id,
+                    status='failed',
+                    requests_count=len(items),
+                    error=error,
+                )
+                return False
+            await asyncio.sleep(0)
+
+        self.repository.log_incoming_request_digest(
+            chat_id=chat_id,
+            status='sent',
+            requests_count=len(items),
+        )
+        return True
+
+    def _render_incoming_request_digest_messages(self, items: list[IncomingRequestDigestItem]) -> list[str]:
+        today = datetime.now(ZoneInfo(settings.incoming_request_digest_timezone)).date()
+        lines = [
+            'Заявки в работе',
+            f'Всего: {len(items)}',
+            '',
+        ]
+
+        if not items:
+            lines.append('Сейчас нет заявок в работе.')
+            return ['\n'.join(lines)]
+
+        for index, item in enumerate(items, start=1):
+            event_date = self._format_incoming_request_event_date(item.event_date, today)
+            meeting = 'встреча была' if item.meeting_held else 'без встречи'
+            comment = self._compact_text(item.comment, 260)
+            lines.append(f'{index}. {event_date} — {item.source} — {meeting}')
+            if comment:
+                lines.append(comment)
+            lines.append(f'id {item.id}')
+            lines.append('')
+
+        return self._split_telegram_messages(lines)
+
+    @staticmethod
+    def _format_incoming_request_event_date(event_date: date | None, today: date) -> str:
+        if event_date is None:
+            return 'без даты'
+        delta_days = (event_date - today).days
+        formatted = event_date.strftime('%d.%m.%Y')
+        if delta_days == 0:
+            return f'{formatted}, сегодня'
+        if delta_days > 0:
+            return f'{formatted}, через {delta_days} дн.'
+        return f'{formatted}, было {abs(delta_days)} дн. назад'
+
+    @staticmethod
+    def _compact_text(value: str | None, limit: int) -> str:
+        text = ' '.join((value or '').split())
+        if len(text) <= limit:
+            return text
+        return f'{text[: max(0, limit - 1)].rstrip()}…'
+
+    @staticmethod
+    def _split_telegram_messages(lines: list[str], limit: int = 3800) -> list[str]:
+        messages: list[str] = []
+        current = ''
+        for line in lines:
+            candidate = f'{current}\n{line}' if current else line
+            if len(candidate) <= limit:
+                current = candidate
+                continue
+            if current:
+                messages.append(current)
+            current = line[:limit]
+        if current:
+            messages.append(current)
+        return messages
 
     def _resolve_reminder_text(self, candidate: ReminderCandidate) -> str | None:
         variants = REMINDER_TEXTS.get(candidate.reminder_code)
@@ -716,12 +820,16 @@ async def run_lead_event_notifier(
     stop_event: asyncio.Event,
 ) -> None:
     next_reminder_check_at = 0.0
+    next_incoming_request_digest_check_at = 0.0
     while not stop_event.is_set():
         await process_pending_events_once(service, repository)
         now = time.monotonic()
         if now >= next_reminder_check_at:
             await process_due_reminders_once(service, repository)
             next_reminder_check_at = now + max(5, settings.bot_reminder_check_interval_seconds)
+        if now >= next_incoming_request_digest_check_at:
+            await process_due_incoming_request_digest_once(service, repository)
+            next_incoming_request_digest_check_at = now + max(30, settings.incoming_request_digest_check_interval_seconds)
         await asyncio.sleep(settings.bot_event_poll_interval_seconds)
 
 
@@ -753,6 +861,35 @@ async def process_due_reminders_once(service: AdminNotificationService, reposito
             sent += 1
         await asyncio.sleep(0)
     return sent
+
+
+async def process_due_incoming_request_digest_once(service: AdminNotificationService, repository: BotRepository) -> int:
+    if not settings.incoming_request_digest_enabled:
+        return 0
+    if settings.incoming_request_digest_chat_id is None:
+        logger.warning('incoming_request_digest_enabled_without_chat_id')
+        return 0
+    if not _is_incoming_request_digest_due(repository):
+        return 0
+
+    items = repository.list_in_work_incoming_requests_for_digest()
+    logger.info('incoming_request_digest_due count=%s', len(items))
+    sent = await service.send_incoming_request_digest(items)
+    return 1 if sent else 0
+
+
+def _is_incoming_request_digest_due(repository: BotRepository) -> bool:
+    now_local = datetime.now(ZoneInfo(settings.incoming_request_digest_timezone))
+    if now_local.hour < settings.incoming_request_digest_send_hour:
+        return False
+
+    latest_sent_at = repository.get_latest_successful_incoming_request_digest_at()
+    if latest_sent_at is None:
+        return True
+
+    latest_local = latest_sent_at.astimezone(ZoneInfo(settings.incoming_request_digest_timezone))
+    next_allowed_at = latest_local + timedelta(days=settings.incoming_request_digest_interval_days)
+    return now_local >= next_allowed_at and now_local.hour >= settings.incoming_request_digest_send_hour
 
 
 def _is_reminder_send_window_open() -> bool:

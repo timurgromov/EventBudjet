@@ -12,7 +12,12 @@ from aiogram.types import ChatMemberUpdated, FSInputFile, InlineKeyboardButton, 
 
 from bot.config import settings
 from bot.db import BotRepository, PendingLeadEvent
-from bot.notifications import AdminNotificationService, process_pending_events_once, run_lead_event_notifier
+from bot.notifications import (
+    AdminNotificationService,
+    process_due_incoming_request_digest_once,
+    process_pending_events_once,
+    run_lead_event_notifier,
+)
 
 logging.basicConfig(level=logging.INFO, format='time=%(asctime)s level=%(levelname)s logger=%(name)s message=%(message)s')
 logger = logging.getLogger(__name__)
@@ -253,8 +258,11 @@ async def main() -> None:
         logger.info('bot_running_in_dry_mode')
         while True:
             processed = await process_pending_events_once(notification_service, repository)
+            digest_processed = await process_due_incoming_request_digest_once(notification_service, repository)
             if processed:
                 logger.info('bot_dry_run_processed_events=%s', processed)
+            if digest_processed:
+                logger.info('bot_dry_run_processed_incoming_request_digest=%s', digest_processed)
             await asyncio.sleep(60)
 
     while True:

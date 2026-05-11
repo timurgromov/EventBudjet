@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 import json
@@ -67,6 +67,16 @@ class ReminderCandidate:
     reminder_code: str
     reason: str
     variant_index: int = 0
+
+
+@dataclass
+class IncomingRequestDigestItem:
+    id: int
+    source: str
+    event_date: date | None
+    meeting_held: bool
+    comment: str | None
+    updated_at: datetime | None
 
 
 class BotRepository:
@@ -394,6 +404,86 @@ class BotRepository:
                     if len(candidates) >= limit:
                         break
             return candidates
+
+    def get_latest_successful_incoming_request_digest_at(self) -> datetime | None:
+        with SessionLocal.begin() as db:
+            value = db.execute(
+                text(
+                    """
+                    SELECT MAX(sent_at)
+                    FROM incoming_request_digest_logs
+                    WHERE status = 'sent';
+                    """
+                )
+            ).scalar_one_or_none()
+            if value is not None and value.tzinfo is None:
+                return value.replace(tzinfo=timezone.utc)
+            return value
+
+    def list_in_work_incoming_requests_for_digest(self) -> list[IncomingRequestDigestItem]:
+        with SessionLocal.begin() as db:
+            rows = db.execute(
+                text(
+                    """
+                    SELECT
+                      r.id,
+                      COALESCE(s.name, r.source) AS source,
+                      r.event_date,
+                      r.meeting_held,
+                      r.comment,
+                      r.updated_at
+                    FROM incoming_requests r
+                    LEFT JOIN incoming_request_sources s ON s.id = r.source_id
+                    WHERE r.status = 'in_work'
+                    ORDER BY
+                      CASE WHEN r.event_date IS NULL THEN 1 ELSE 0 END ASC,
+                      r.event_date ASC,
+                      r.updated_at DESC,
+                      r.id DESC;
+                    """
+                )
+            ).mappings().all()
+            return [
+                IncomingRequestDigestItem(
+                    id=int(row['id']),
+                    source=str(row['source']),
+                    event_date=row['event_date'],
+                    meeting_held=bool(row['meeting_held']),
+                    comment=row['comment'],
+                    updated_at=row['updated_at'],
+                )
+                for row in rows
+            ]
+
+    def log_incoming_request_digest(
+        self,
+        chat_id: int,
+        status: str,
+        requests_count: int,
+        error: str | None = None,
+    ) -> None:
+        with SessionLocal.begin() as db:
+            db.execute(
+                text(
+                    """
+                    INSERT INTO incoming_request_digest_logs (chat_id, status, requests_count, error, sent_at, created_at)
+                    VALUES (
+                      :chat_id,
+                      :status,
+                      :requests_count,
+                      :error,
+                      CASE WHEN :status = 'sent' THEN now() ELSE NULL END,
+                      now()
+                    );
+                    """
+                ),
+                {
+                    'chat_id': str(chat_id),
+                    'status': status,
+                    'requests_count': requests_count,
+                    'error': error[:2000] if error else None,
+                },
+            )
 
     def get_lead_snapshot(self, lead_id: int) -> LeadSnapshot | None:
         with SessionLocal.begin() as db:
