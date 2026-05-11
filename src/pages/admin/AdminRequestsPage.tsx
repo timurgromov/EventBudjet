@@ -318,7 +318,7 @@ const AdminRequestsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {(summary?.sources ?? []).slice(0, 8).map((source) => (
+                {(summary?.sources ?? []).map((source) => (
                   <tr key={source.source_id ?? source.source_name}>
                     <td className="border-b border-slate-100 px-3 py-1.5 font-medium text-slate-950">{source.source_name}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-700">{source.total_count}</td>
