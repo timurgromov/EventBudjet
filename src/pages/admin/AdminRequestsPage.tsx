@@ -305,41 +305,41 @@ const AdminRequestsPage = () => {
       ) : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="overflow-x-auto">
-          <div className="grid min-w-[760px] grid-cols-7 gap-1.5">
-            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
-              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Всего</div>
-              <div className="text-lg font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
-            </div>
-            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2">
-              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">Договор</div>
-              <div className="text-lg font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
-            </div>
-            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2">
-              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700">Отказ</div>
-              <div className="text-lg font-semibold leading-none text-rose-800">{summary?.rejected_count ?? 0}</div>
-            </div>
-            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
-              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">В работе</div>
-              <div className="text-lg font-semibold leading-none text-slate-950">{summary?.in_work_count ?? 0}</div>
-            </div>
-            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-2 py-2">
-              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-700">Встречи</div>
-              <div className="text-lg font-semibold leading-none text-violet-800">{summary?.meeting_count ?? 0}</div>
-            </div>
-            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-2">
-              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-700">Конверсия</div>
-              <div className="text-lg font-semibold leading-none text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
-            </div>
-            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-2">
-              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-700">Встречи %</div>
-              <div className="text-lg font-semibold leading-none text-indigo-800">{summary?.meeting_conversion_rate ?? 0}%</div>
-            </div>
+        <div className="grid grid-cols-7 gap-1">
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-slate-500">Всего</div>
+            <div className="text-base font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-emerald-700">Договор</div>
+            <div className="text-base font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-rose-700">Отказ</div>
+            <div className="text-base font-semibold leading-none text-rose-800">{summary?.rejected_count ?? 0}</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-slate-500">В работе</div>
+            <div className="text-base font-semibold leading-none text-slate-950">{summary?.in_work_count ?? 0}</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-violet-700">Встречи</div>
+            <div className="text-base font-semibold leading-none text-violet-800">{summary?.meeting_count ?? 0}</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-cyan-700">Конверсия</div>
+            <div className="text-base font-semibold leading-none text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-indigo-700">Встречи %</div>
+            <div className="text-base font-semibold leading-none text-indigo-800">{summary?.meeting_conversion_rate ?? 0}%</div>
           </div>
         </div>
+      </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         {(summary?.sources ?? []).length > 0 ? (
-          <div className="mt-3 overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
@@ -413,61 +413,66 @@ const AdminRequestsPage = () => {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[1.2fr_150px_150px_auto_1.5fr_130px_auto]">
-          <select
-            value={newRequest.sourceId}
-            onChange={(event) => handleNewFieldChange("sourceId", event.target.value)}
-            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
-          >
-            <option value="">Источник</option>
-            {activeSources.map((source) => (
-              <option key={source.id} value={source.id}>
-                {source.name}
-              </option>
-            ))}
-          </select>
-          <Input
-            type="date"
-            value={newRequest.eventDate}
-            onChange={(event) => handleNewFieldChange("eventDate", event.target.value)}
-            className="bg-white text-slate-950 [color-scheme:light]"
-          />
-          <Input
-            type="date"
-            value={newRequest.lastContactDate}
-            onChange={(event) => handleNewFieldChange("lastContactDate", event.target.value)}
-            className="bg-white text-slate-950 [color-scheme:light]"
-          />
-          <label className="flex h-10 items-center gap-2 rounded-md border border-input bg-white px-3 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={newRequest.meetingHeld}
-              onChange={(event) => handleNewFieldChange("meetingHeld", event.target.checked)}
-              className="h-4 w-4"
+        <div className="grid gap-3">
+          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_150px_150px_130px_120px_auto]">
+            <select
+              value={newRequest.sourceId}
+              onChange={(event) => handleNewFieldChange("sourceId", event.target.value)}
+              className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              <option value="">Источник</option>
+              {activeSources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.name}
+                </option>
+              ))}
+            </select>
+            <Input
+              type="date"
+              value={newRequest.eventDate}
+              onChange={(event) => handleNewFieldChange("eventDate", event.target.value)}
+              className="bg-white text-slate-950 [color-scheme:light]"
             />
-            Встреча
-          </label>
+            <Input
+              type="date"
+              value={newRequest.lastContactDate}
+              onChange={(event) => handleNewFieldChange("lastContactDate", event.target.value)}
+              className="bg-white text-slate-950 [color-scheme:light]"
+            />
+            <select
+              value={newRequest.status}
+              onChange={(event) => handleNewStatusChange(event.target.value as RequestStatus)}
+              className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <label
+              className="flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-white px-3 text-sm text-slate-700"
+              title="Отметка влияет на счётчик встреч и конверсию встреч."
+            >
+              <input
+                type="checkbox"
+                checked={newRequest.meetingHeld}
+                onChange={(event) => handleNewFieldChange("meetingHeld", event.target.checked)}
+                className="h-4 w-4"
+              />
+              Встреча
+            </label>
+            <Button onClick={handleCreate} disabled={createMutation.isPending}>
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить
+            </Button>
+          </div>
           <Input
             value={newRequest.comment}
             onChange={(event) => handleNewFieldChange("comment", event.target.value)}
             placeholder="Комментарий: имя, телефон, история"
             className="bg-white"
           />
-          <select
-            value={newRequest.status}
-            onChange={(event) => handleNewStatusChange(event.target.value as RequestStatus)}
-            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <Button onClick={handleCreate} disabled={createMutation.isPending}>
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить
-          </Button>
         </div>
       </section>
 
