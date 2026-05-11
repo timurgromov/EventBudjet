@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, ChevronDown, ChevronUp, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   archiveIncomingRequestSource,
   createIncomingRequest,
@@ -74,11 +75,33 @@ const getEventDateDistance = (eventDate: string | null, todayTime: number): numb
   return Math.abs(eventTime - todayTime);
 };
 
-const getRowTone = (status: string, needsFollowUp: boolean): string => {
-  if (status === "signed") return "border-emerald-200 bg-emerald-50/80";
-  if (status === "rejected") return "border-rose-200 bg-rose-50/80";
-  if (needsFollowUp) return "border-amber-200 bg-amber-50/80";
-  return "border-slate-200 bg-white";
+const getRequestCardTone = (status: string, needsFollowUp: boolean): { card: string; stripe: string; badge: string } => {
+  if (status === "signed") {
+    return {
+      card: "border-emerald-200 bg-emerald-50/70",
+      stripe: "bg-emerald-400",
+      badge: "border-emerald-200 bg-emerald-100 text-emerald-800",
+    };
+  }
+  if (status === "rejected") {
+    return {
+      card: "border-rose-200 bg-rose-50/70",
+      stripe: "bg-rose-400",
+      badge: "border-rose-200 bg-rose-100 text-rose-800",
+    };
+  }
+  if (needsFollowUp) {
+    return {
+      card: "border-amber-200 bg-amber-50/70",
+      stripe: "bg-amber-400",
+      badge: "border-amber-200 bg-amber-100 text-amber-800",
+    };
+  }
+  return {
+    card: "border-slate-200 bg-slate-50/80",
+    stripe: "bg-slate-300",
+    badge: "border-slate-200 bg-white text-slate-700",
+  };
 };
 
 const toFormState = (request: IncomingRequest): RequestFormState => ({
@@ -110,6 +133,7 @@ const AdminRequestsPage = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | RequestStatus | "attention">("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [expandedRequestIds, setExpandedRequestIds] = useState<Record<number, boolean>>({});
   const autosaveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   const requestsQuery = useQuery({
@@ -294,6 +318,13 @@ const AdminRequestsPage = () => {
       };
     });
     queueAutosave(request.id, nextDraft);
+  };
+
+  const toggleRequestExpanded = (requestId: number) => {
+    setExpandedRequestIds((current) => ({
+      ...current,
+      [requestId]: !current[requestId],
+    }));
   };
 
   const handleCreateSource = () => {
@@ -572,83 +603,52 @@ const AdminRequestsPage = () => {
             Заявок пока нет.
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[1060px] border-separate border-spacing-y-2 text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
-                <tr>
-                  <th className="px-3 py-2 font-semibold">Источник</th>
-                  <th className="px-3 py-2 font-semibold">Дата мероприятия</th>
-                  <th className="px-3 py-2 font-semibold">Последний контакт</th>
-                  <th className="px-3 py-2 font-semibold">Встреча была</th>
-                  <th className="px-3 py-2 font-semibold">Комментарий</th>
-                  <th className="px-3 py-2 font-semibold">Статус</th>
-                  <th className="px-3 py-2 font-semibold">Обновлено</th>
-                  <th className="px-3 py-2 font-semibold"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRequests.map((request) => {
-                  const draft = drafts[request.id] ?? toFormState(request);
-                  return (
-                    <tr key={request.id} className={cn("align-top shadow-sm", getRowTone(request.status, request.needs_follow_up))}>
-                      <td className="w-[220px] rounded-l-xl border-y border-l px-2 py-2">
-                        <select
-                          value={draft.sourceId}
-                          onChange={(event) => handleDraftChange(request, "sourceId", event.target.value)}
-                          className="h-9 w-full rounded-md border border-input bg-white px-2 py-1 text-sm"
-                        >
-                          <option value="">Источник</option>
-                          {activeSources.map((source) => (
-                            <option key={source.id} value={source.id}>
-                              {source.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="w-[150px] border-y px-2 py-2">
-                        <Input
-                          type="date"
-                          value={draft.eventDate}
-                          onChange={(event) => handleDraftChange(request, "eventDate", event.target.value)}
-                          className="h-9 bg-white text-slate-950 [color-scheme:light]"
-                          title={formatAdminDate(request.event_date)}
-                        />
-                      </td>
-                      <td className="w-[150px] border-y px-2 py-2">
-                        <Input
-                          type="date"
-                          value={draft.lastContactDate}
-                          onChange={(event) => handleDraftChange(request, "lastContactDate", event.target.value)}
-                          className="h-9 bg-white text-slate-950 [color-scheme:light]"
-                          title={formatAdminDate(request.last_contact_date)}
-                        />
-                        {request.needs_follow_up ? <div className="mt-1 text-xs font-medium text-amber-700">нужно вспомнить</div> : null}
-                      </td>
-                      <td className="w-[92px] border-y px-2 py-2">
+          <TooltipProvider delayDuration={250}>
+            <div className="mt-4 space-y-3">
+              {visibleRequests.map((request) => {
+                const draft = drafts[request.id] ?? toFormState(request);
+                const cardTone = getRequestCardTone(draft.status, request.needs_follow_up);
+                const isExpanded = Boolean(expandedRequestIds[request.id]);
+                const comment = draft.comment.trim();
+
+                return (
+                  <article
+                    key={request.id}
+                    className={cn("relative overflow-hidden rounded-2xl border p-4 pl-5 transition-colors", cardTone.card)}
+                  >
+                    <span className={cn("absolute inset-y-0 left-0 w-1.5", cardTone.stripe)} />
+                    <div className="grid gap-3 lg:grid-cols-[0.9fr_0.8fr_0.85fr_1.15fr_0.95fr]">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="truncate text-sm font-semibold text-slate-950">{request.source_name}</div>
+                          <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", cardTone.badge)}>
+                            {getStatusLabel(draft.status)}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">Заявка #{request.id}</div>
+                        <div className="mt-1 text-xs text-slate-500">Изменено: {formatAdminDateTime(request.updated_at)}</div>
+                        {request.needs_follow_up ? <div className="mt-2 text-xs font-medium text-amber-700">Нужно вспомнить</div> : null}
+                      </div>
+
+                      <div className="text-sm text-slate-700">
+                        <div>Мероприятие: {formatAdminDate(draft.eventDate)}</div>
+                        <div className="mt-1 text-xs text-slate-500">Последний контакт: {formatAdminDate(draft.lastContactDate)}</div>
+                      </div>
+
+                      <div className="space-y-2">
                         <label className="flex h-9 items-center gap-2 rounded-md border border-input bg-white px-2 text-sm text-slate-700">
                           <input
                             type="checkbox"
                             checked={draft.meetingHeld}
                             onChange={(event) => handleDraftChange(request, "meetingHeld", event.target.checked)}
                             className="h-4 w-4"
-                            title="Встреча была"
                           />
-                          Была
+                          Встреча была
                         </label>
-                      </td>
-                      <td className="min-w-[360px] border-y px-2 py-2">
-                        <Textarea
-                          value={draft.comment}
-                          onChange={(event) => handleDraftChange(request, "comment", event.target.value)}
-                          className="min-h-[44px] bg-white text-sm"
-                        />
-                      </td>
-                      <td className="w-[140px] border-y px-2 py-2">
                         <select
                           value={draft.status}
                           onChange={(event) => handleDraftStatusChange(request, event.target.value as RequestStatus)}
                           className="h-9 w-full rounded-md border border-input bg-white px-2 py-1 text-sm"
-                          title={getStatusLabel(request.status)}
                         >
                           {STATUS_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -656,31 +656,115 @@ const AdminRequestsPage = () => {
                             </option>
                           ))}
                         </select>
-                      </td>
-                      <td className="w-[150px] border-y px-2 py-2 text-xs text-slate-500">
-                        {formatAdminDateTime(request.updated_at)}
-                      </td>
-                      <td className="w-[64px] rounded-r-xl border-y border-r px-2 py-2">
-                        <div className="flex gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(request)}
-                            disabled={deleteMutation.isPending}
-                            title="Удалить"
-                            className="h-9 border-slate-200 bg-white px-2 text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                      </div>
+
+                      <div className="min-w-0 text-sm text-slate-700">
+                        <div className="mb-1 text-xs font-medium text-slate-500">Комментарий</div>
+                        {comment ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="line-clamp-2 w-full text-left leading-snug text-slate-950">
+                                {comment}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xl whitespace-pre-wrap bg-white p-3 text-sm leading-relaxed text-slate-800 shadow-lg">
+                              {comment}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <div className="text-xs text-slate-400">Комментарий не заполнен</div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-start justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => toggleRequestExpanded(request.id)}
+                          className="h-9 border-slate-200 bg-white px-2 text-slate-700 hover:bg-slate-50"
+                        >
+                          {isExpanded ? <ChevronUp className="mr-1 h-4 w-4" /> : <ChevronDown className="mr-1 h-4 w-4" />}
+                          Править
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(request)}
+                          disabled={deleteMutation.isPending}
+                          title="Удалить"
+                          className="h-9 border-slate-200 bg-white px-2 text-slate-700 hover:bg-rose-50 hover:text-rose-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {isExpanded ? (
+                      <div className="mt-4 grid gap-3 border-t border-slate-200 pt-4 lg:grid-cols-[minmax(220px,1fr)_160px_160px_140px]">
+                        <label className="min-w-0">
+                          <span className="mb-1 block text-[11px] font-medium text-slate-500">Источник</span>
+                          <select
+                            value={draft.sourceId}
+                            onChange={(event) => handleDraftChange(request, "sourceId", event.target.value)}
+                            className="h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <option value="">Источник</option>
+                            {activeSources.map((source) => (
+                              <option key={source.id} value={source.id}>
+                                {source.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="min-w-0">
+                          <span className="mb-1 block text-[11px] font-medium text-slate-500">Дата мероприятия</span>
+                          <Input
+                            type="date"
+                            value={draft.eventDate}
+                            onChange={(event) => handleDraftChange(request, "eventDate", event.target.value)}
+                            className="bg-white text-slate-950 [color-scheme:light]"
+                          />
+                        </label>
+                        <label className="min-w-0">
+                          <span className="mb-1 block text-[11px] font-medium text-slate-500">Последний контакт</span>
+                          <Input
+                            type="date"
+                            value={draft.lastContactDate}
+                            onChange={(event) => handleDraftChange(request, "lastContactDate", event.target.value)}
+                            className="bg-white text-slate-950 [color-scheme:light]"
+                          />
+                        </label>
+                        <label className="min-w-0">
+                          <span className="mb-1 block text-[11px] font-medium text-slate-500">Статус</span>
+                          <select
+                            value={draft.status}
+                            onChange={(event) => handleDraftStatusChange(request, event.target.value as RequestStatus)}
+                            className="h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                          >
+                            {STATUS_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="min-w-0 lg:col-span-4">
+                          <span className="mb-1 block text-[11px] font-medium text-slate-500">Комментарий</span>
+                          <Textarea
+                            value={draft.comment}
+                            onChange={(event) => handleDraftChange(request, "comment", event.target.value)}
+                            className="min-h-[92px] bg-white text-sm"
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          </TooltipProvider>
         )}
       </section>
     </div>
