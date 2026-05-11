@@ -225,7 +225,6 @@ const AdminRequestsPage = () => {
     setNewRequest((current) => ({
       ...current,
       status,
-      meetingHeld: status === "signed" ? true : current.meetingHeld,
     }));
   };
 
@@ -237,7 +236,6 @@ const AdminRequestsPage = () => {
         [request.id]: {
           ...draft,
           status,
-          meetingHeld: status === "signed" ? true : draft.meetingHeld,
         },
       };
     });
@@ -414,55 +412,55 @@ const AdminRequestsPage = () => {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3">
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_150px_150px_130px_120px_auto]">
-            <select
-              value={newRequest.sourceId}
-              onChange={(event) => handleNewFieldChange("sourceId", event.target.value)}
-              className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
-            >
-              <option value="">Источник</option>
-              {activeSources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.name}
-                </option>
-              ))}
-            </select>
-            <Input
-              type="date"
-              value={newRequest.eventDate}
-              onChange={(event) => handleNewFieldChange("eventDate", event.target.value)}
-              className="bg-white text-slate-950 [color-scheme:light]"
-            />
-            <Input
-              type="date"
-              value={newRequest.lastContactDate}
-              onChange={(event) => handleNewFieldChange("lastContactDate", event.target.value)}
-              className="bg-white text-slate-950 [color-scheme:light]"
-            />
-            <select
-              value={newRequest.status}
-              onChange={(event) => handleNewStatusChange(event.target.value as RequestStatus)}
-              className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <label
-              className="flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-white px-3 text-sm text-slate-700"
-              title="Отметка влияет на счётчик встреч и конверсию встреч."
-            >
-              <input
-                type="checkbox"
-                checked={newRequest.meetingHeld}
-                onChange={(event) => handleNewFieldChange("meetingHeld", event.target.checked)}
-                className="h-4 w-4"
-              />
-              Встреча
+          <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(220px,1fr)_160px_160px_140px_auto] lg:items-end">
+            <label className="min-w-0">
+              <span className="mb-1 block text-[11px] font-medium text-slate-500">Источник</span>
+              <select
+                value={newRequest.sourceId}
+                onChange={(event) => handleNewFieldChange("sourceId", event.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Выбрать источник</option>
+                {activeSources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.name}
+                  </option>
+                ))}
+              </select>
             </label>
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
+            <label className="min-w-0">
+              <span className="mb-1 block text-[11px] font-medium text-slate-500">Дата мероприятия</span>
+              <Input
+                type="date"
+                value={newRequest.eventDate}
+                onChange={(event) => handleNewFieldChange("eventDate", event.target.value)}
+                className="bg-white text-slate-950 [color-scheme:light]"
+              />
+            </label>
+            <label className="min-w-0">
+              <span className="mb-1 block text-[11px] font-medium text-slate-500">Последний контакт</span>
+              <Input
+                type="date"
+                value={newRequest.lastContactDate}
+                onChange={(event) => handleNewFieldChange("lastContactDate", event.target.value)}
+                className="bg-white text-slate-950 [color-scheme:light]"
+              />
+            </label>
+            <label className="min-w-0">
+              <span className="mb-1 block text-[11px] font-medium text-slate-500">Статус</span>
+              <select
+                value={newRequest.status}
+                onChange={(event) => handleNewStatusChange(event.target.value as RequestStatus)}
+                className="h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button onClick={handleCreate} disabled={createMutation.isPending} className="h-10">
               <Plus className="mr-2 h-4 w-4" />
               Добавить
             </Button>
@@ -536,7 +534,7 @@ const AdminRequestsPage = () => {
                   <th className="px-3 py-2 font-semibold">Источник</th>
                   <th className="px-3 py-2 font-semibold">Дата</th>
                   <th className="px-3 py-2 font-semibold">Последний контакт</th>
-                  <th className="px-3 py-2 font-semibold">Встреча</th>
+                  <th className="px-3 py-2 font-semibold">Встреча была</th>
                   <th className="px-3 py-2 font-semibold">Комментарий</th>
                   <th className="px-3 py-2 font-semibold">Статус</th>
                   <th className="px-3 py-2 font-semibold">Обновлено</th>
