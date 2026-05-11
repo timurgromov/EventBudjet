@@ -433,34 +433,32 @@ const AdminClientOrderDetailPage = () => {
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Выручка</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(order.revenue)}</div>
+      <div className="grid gap-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Выручка</div>
+          <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(order.revenue)}</div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Расходы</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(order.total_costs)}</div>
-        </div>
-        <div className={cn("rounded-2xl border p-4 shadow-sm", profitTone.panel, profitTone.effect)}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Прибыль</div>
-              <div className={cn("mt-2 text-2xl font-semibold", profitTone.value)}>{formatAdminMoney(order.profit)}</div>
+        <div className={cn("rounded-xl border px-3 py-2.5 shadow-sm", profitTone.panel, profitTone.effect)}>
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Прибыль</div>
+              <div className={cn("mt-1 text-xl font-semibold leading-none", profitTone.value)}>{formatAdminMoney(order.profit)}</div>
             </div>
-            <div className={cn("inline-flex shrink-0 rounded-full px-3 py-1 text-sm font-medium", profitTone.badge)}>{profitStatus.label}</div>
+            <div className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", profitTone.badge)}>{profitStatus.label}</div>
           </div>
-          <div className="mt-2 text-sm text-slate-700">{profitStatus.description}</div>
         </div>
-        <div className={cn("rounded-2xl border p-4 shadow-sm", marginTone.panel, marginTone.effect)}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Маржа</div>
-              <div className={cn("mt-2 text-2xl font-semibold", marginTone.value)}>{formatMargin(order.margin)}</div>
+        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Расходы</div>
+          <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(order.total_costs)}</div>
+        </div>
+        <div className={cn("rounded-xl border px-3 py-2.5 shadow-sm", marginTone.panel, marginTone.effect)}>
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Маржа</div>
+              <div className={cn("mt-1 text-xl font-semibold leading-none", marginTone.value)}>{formatMargin(order.margin)}</div>
             </div>
-            <div className={cn("inline-flex shrink-0 rounded-full px-3 py-1 text-sm font-medium", marginTone.badge)}>{marginStatus.label}</div>
+            <div className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", marginTone.badge)}>{marginStatus.label}</div>
           </div>
-          <div className="mt-2 text-sm text-slate-700">{marginStatus.description}</div>
         </div>
       </div>
 
