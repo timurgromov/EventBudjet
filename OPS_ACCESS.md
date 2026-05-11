@@ -82,6 +82,37 @@ sudo docker compose logs --tail=100 bot
 - `telegram_connection_ready`
 - `Run polling`
 
+## Telegram-канал для CRM-заявок
+
+Дайджест раздела `Все заявки` не использует отдельный bot token. Его отправляет текущий production бот, но в отдельный Telegram-канал по env-переменной `INCOMING_REQUEST_DIGEST_CHAT_ID`.
+
+Не путать адресаты:
+
+- `BOT_ADMIN_CHAT_ID` — текущие уведомления админки по свадебному калькулятору;
+- `INCOMING_REQUEST_DIGEST_CHAT_ID` — отдельный закрытый канал для дайджеста заявок.
+
+Подключение канала:
+
+1. Создать закрытый канал в Telegram.
+2. Добавить `@gromov_wedding_bot` админом с правом публиковать сообщения.
+3. Получить `chat_id` канала.
+4. На VPS прописать:
+
+```env
+INCOMING_REQUEST_DIGEST_ENABLED=true
+INCOMING_REQUEST_DIGEST_CHAT_ID=-100xxxxxxxxxx
+```
+
+5. Перезапустить bot:
+
+```bash
+cd /home/user1/EventBudjet
+sudo docker compose up -d bot
+sudo docker compose logs --tail=100 bot
+```
+
+Подробности и способы получения `chat_id`: [docs/INCOMING_REQUEST_TELEGRAM_DIGEST_PLAN.md](docs/INCOMING_REQUEST_TELEGRAM_DIGEST_PLAN.md).
+
 ## Рабочая схема дальше
 
 Локальный код и продовый код должны быть одинаковыми по структуре. `docker-compose.yml` в репозитории хранится полный, включая `bot`.

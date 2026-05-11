@@ -23,6 +23,7 @@
 | `TELEGRAM_BOT_TOKEN` | `backend`, `bot` | `/home/user1/EventBudjet/.env` на VPS | Через BotFather: `/token` |
 | `ADMIN_API_TOKEN` | `backend` admin API | `/home/user1/EventBudjet/.env` на VPS | Сгенерировать новый случайный токен и заменить в `.env` |
 | `BOT_ADMIN_CHAT_ID` | `bot` admin notifications | `/home/user1/EventBudjet/.env` на VPS | Определяется по целевому Telegram чату/группе |
+| `INCOMING_REQUEST_DIGEST_CHAT_ID` | `bot` digest по разделу `Все заявки` | `/home/user1/EventBudjet/.env` на VPS | Отдельный закрытый Telegram-канал; получить `chat.id` через диагностического бота или ссылку `t.me/c/...` |
 | `MINI_APP_URL` | `bot` start button | `/home/user1/EventBudjet/.env` на VPS | Обновить при смене домена mini app |
 | `BOT_TELEGRAM_PROXY_URL` | `bot` Telegram API transport | `/home/user1/EventBudjet/.env` на Cloud.ru VPS | Формат: `socks5://<user>:<password>@<host>:<port>`, обновить при ротации прокси |
 | `POSTGRES_DB` | `postgres`, `backend`, `bot` | `/home/user1/EventBudjet/.env` на VPS | Меняется только при явной смене БД |
@@ -44,6 +45,7 @@
 - `TELEGRAM_BOT_TOKEN`
 - `ADMIN_API_TOKEN`
 - `BOT_ADMIN_CHAT_ID`
+- `INCOMING_REQUEST_DIGEST_CHAT_ID`
 - `MINI_APP_URL`
 - `BOT_TELEGRAM_PROXY_URL`
 
@@ -54,6 +56,16 @@
 - Доступ к SOCKS5 ограничен IP источника `185.50.203.2`.
 - В git не хранить логин/пароль SOCKS5; хранить только в `.env` на Cloud.ru VPS.
 - Для проекта актуален только один Telegram proxy: `89.22.227.133:1080`.
+
+## Telegram-адресаты
+
+В проекте один production bot token, но несколько разных адресатов:
+
+- личные чаты пользователей Mini App;
+- `BOT_ADMIN_CHAT_ID` — текущие admin notifications по свадебному калькулятору;
+- `INCOMING_REQUEST_DIGEST_CHAT_ID` — отдельный закрытый канал для дайджеста CRM-заявок.
+
+Это разные Telegram-чаты/каналы. Не подменять `BOT_ADMIN_CHAT_ID` значением канала заявок и не отправлять CRM-дайджест в клиентские чаты.
 
 ## Быстрая ротация Telegram bot token
 
