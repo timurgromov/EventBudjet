@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Archive, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,8 @@ const STATUS_SORT_WEIGHT: Record<RequestStatus, number> = {
   signed: 1,
   rejected: 2,
 };
+
+const AUTOSAVE_DELAY_MS = 700;
 
 const EMPTY_FORM: RequestFormState = {
   sourceId: "",
@@ -108,6 +110,7 @@ const AdminRequestsPage = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | RequestStatus | "attention">("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const autosaveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   const requestsQuery = useQuery({
     queryKey: ["incoming-requests", adminToken],
@@ -212,13 +215,8 @@ const AdminRequestsPage = () => {
   const updateMutation = useMutation({
     mutationFn: ({ requestId, payload }: { requestId: number; payload: IncomingRequestUpdatePayload }) =>
       updateIncomingRequest(adminToken, requestId, payload),
-    onSuccess: async (updated) => {
-      setDrafts((current) => {
-        const next = { ...current };
-        delete next[updated.id];
-        return next;
-      });
-      setStatusMessage("Заявка сохранена.");
+    onSuccess: async () => {
+      setStatusMessage("Сохранено автоматически.");
       await invalidateRequests();
     },
     onError: (error) => {
@@ -237,18 +235,41 @@ const AdminRequestsPage = () => {
     },
   });
 
+  useEffect(() => {
+    const timers = autosaveTimersRef.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
+
+  const queueAutosave = (requestId: number, draft: RequestFormState) => {
+    const payload = toPayload(draft);
+    if (!payload.source_id) {
+      setStatusMessage("Источник не может быть пустым.");
+      return;
+    }
+
+    clearTimeout(autosaveTimersRef.current[requestId]);
+    autosaveTimersRef.current[requestId] = setTimeout(() => {
+      updateMutation.mutate({ requestId, payload });
+    }, AUTOSAVE_DELAY_MS);
+  };
+
   const handleNewFieldChange = <K extends keyof RequestFormState>(field: K, value: RequestFormState[K]) => {
     setNewRequest((current) => ({ ...current, [field]: value }));
   };
 
   const handleDraftChange = <K extends keyof RequestFormState>(request: IncomingRequest, field: K, value: RequestFormState[K]) => {
+    const nextDraft = {
+      ...(drafts[request.id] ?? toFormState(request)),
+      [field]: value,
+    };
+
     setDrafts((current) => ({
       ...current,
-      [request.id]: {
-        ...(current[request.id] ?? toFormState(request)),
-        [field]: value,
-      },
+      [request.id]: nextDraft,
     }));
+    queueAutosave(request.id, nextDraft);
   };
 
   const handleNewStatusChange = (status: RequestStatus) => {
@@ -259,16 +280,18 @@ const AdminRequestsPage = () => {
   };
 
   const handleDraftStatusChange = (request: IncomingRequest, status: RequestStatus) => {
+    const nextDraft = {
+      ...(drafts[request.id] ?? toFormState(request)),
+      status,
+    };
+
     setDrafts((current) => {
-      const draft = current[request.id] ?? toFormState(request);
       return {
         ...current,
-        [request.id]: {
-          ...draft,
-          status,
-        },
+        [request.id]: nextDraft,
       };
     });
+    queueAutosave(request.id, nextDraft);
   };
 
   const handleCreateSource = () => {
@@ -286,16 +309,6 @@ const AdminRequestsPage = () => {
       return;
     }
     createMutation.mutate(payload);
-  };
-
-  const handleSave = (request: IncomingRequest) => {
-    const draft = drafts[request.id] ?? toFormState(request);
-    const payload = toPayload(draft);
-    if (!payload.source_id) {
-      setStatusMessage("Источник не может быть пустым.");
-      return;
-    }
-    updateMutation.mutate({ requestId: request.id, payload });
   };
 
   const handleDelete = (request: IncomingRequest) => {
@@ -645,18 +658,8 @@ const AdminRequestsPage = () => {
                       <td className="w-[150px] border-y px-2 py-2 text-xs text-slate-500">
                         {formatAdminDateTime(request.updated_at)}
                       </td>
-                      <td className="w-[112px] rounded-r-xl border-y border-r px-2 py-2">
+                      <td className="w-[64px] rounded-r-xl border-y border-r px-2 py-2">
                         <div className="flex gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleSave(request)}
-                            disabled={updateMutation.isPending}
-                            title="Сохранить"
-                            className="h-9 px-2"
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
                           <Button
                             type="button"
                             size="sm"
