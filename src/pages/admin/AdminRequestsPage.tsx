@@ -577,7 +577,7 @@ const AdminRequestsPage = () => {
               <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Источник</th>
-                  <th className="px-3 py-2 font-semibold">Дата</th>
+                  <th className="px-3 py-2 font-semibold">Дата мероприятия</th>
                   <th className="px-3 py-2 font-semibold">Последний контакт</th>
                   <th className="px-3 py-2 font-semibold">Встреча была</th>
                   <th className="px-3 py-2 font-semibold">Комментарий</th>
