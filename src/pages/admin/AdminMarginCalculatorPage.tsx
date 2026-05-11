@@ -90,6 +90,7 @@ const formatMargin = (value: number): string => `${MARGIN_FORMATTER.format(value
 const formatDecimalString = (value: string): string => (value.trim() ? value : "0");
 const formatSignedMoney = (value: number): string => (value > 0 ? `+${formatMoney(value)}` : value < 0 ? `-${formatMoney(Math.abs(value))}` : formatMoney(0));
 const formatSignedMargin = (value: number): string => (value > 0 ? `+${formatMargin(value)}` : value < 0 ? `-${formatMargin(Math.abs(value))}` : formatMargin(0));
+const formatSignedCount = (value: number): string => (value > 0 ? `+${value}` : String(value));
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const pluralDays = (value: number): string => {
@@ -479,25 +480,38 @@ const AdminMarginCalculatorPage = () => {
 
     const currentOrdersCount = summary.orders_count;
     const currentTotalRevenue = parseNumericValue(summary.total_revenue);
+    const currentTotalCosts = parseNumericValue(summary.total_costs);
     const currentTotalProfit = parseNumericValue(summary.total_profit);
     const currentAverageMargin = parseNumericValue(summary.average_margin);
+    const currentAverageProfitPerOrder = parseNumericValue(summary.average_profit_per_order);
+    const currentLowMarginOrdersCount = summary.low_margin_orders_count;
     const nextOrdersCount = currentOrdersCount + 1;
     const nextTotalRevenue = currentTotalRevenue + calculations.revenue;
+    const nextTotalCosts = currentTotalCosts + calculations.totalCosts;
     const nextTotalProfit = currentTotalProfit + calculations.profit;
     const nextAverageMargin =
       nextOrdersCount > 0 ? (currentAverageMargin * currentOrdersCount + calculations.margin) / nextOrdersCount : calculations.margin;
+    const nextAverageProfitPerOrder = nextOrdersCount > 0 ? nextTotalProfit / nextOrdersCount : calculations.profit;
+    const nextLowMarginOrdersCount =
+      currentLowMarginOrdersCount + (calculations.revenue > 0 && calculations.margin < 35 ? 1 : 0);
 
     return {
       state: "ready" as const,
       nextOrdersCount,
       nextTotalRevenue,
+      nextTotalCosts,
       nextTotalProfit,
       nextAverageMargin,
+      nextAverageProfitPerOrder,
+      nextLowMarginOrdersCount,
       revenueDelta: calculations.revenue,
+      costsDelta: calculations.totalCosts,
       profitDelta: calculations.profit,
       marginDelta: nextAverageMargin - currentAverageMargin,
+      averageProfitDelta: nextAverageProfitPerOrder - currentAverageProfitPerOrder,
+      lowMarginOrdersDelta: nextLowMarginOrdersCount - currentLowMarginOrdersCount,
     };
-  }, [calculations.margin, calculations.profit, calculations.revenue, dateFrom, dateTo, orderForm.contractDate, summary]);
+  }, [calculations.margin, calculations.profit, calculations.revenue, calculations.totalCosts, dateFrom, dateTo, orderForm.contractDate, summary]);
 
   if (!adminToken.trim()) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-600">Сохраните admin token, чтобы открыть модуль маржи.</div>;
@@ -716,32 +730,58 @@ const AdminMarginCalculatorPage = () => {
 
         {summary && !summaryQuery.isLoading && !summaryQuery.isError ? (
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Если зафиксировать текущий сценарий</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">После создания заказа из текущего сценария</div>
             {previewSummary?.state === "ready" ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div>
-                  <div className="text-[11px] font-medium text-slate-500">Выручка периода</div>
-                  <div className="mt-1 font-semibold text-slate-950">{formatMoney(previewSummary.nextTotalRevenue)}</div>
-                  <div className="text-xs text-emerald-700">{formatSignedMoney(previewSummary.revenueDelta)}</div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общая выручка</div>
+                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMoney(previewSummary.nextTotalRevenue)}</div>
+                  <div className="mt-1 text-xs text-emerald-700">{formatSignedMoney(previewSummary.revenueDelta)}</div>
                 </div>
-                <div>
-                  <div className="text-[11px] font-medium text-slate-500">Прибыль периода</div>
-                  <div className="mt-1 font-semibold text-slate-950">{formatMoney(previewSummary.nextTotalProfit)}</div>
-                  <div className={cn("text-xs", previewSummary.profitDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общая прибыль</div>
+                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMoney(previewSummary.nextTotalProfit)}</div>
+                  <div className={cn("mt-1 text-xs", previewSummary.profitDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
                     {formatSignedMoney(previewSummary.profitDelta)}
                   </div>
                 </div>
-                <div>
-                  <div className="text-[11px] font-medium text-slate-500">Средняя маржа</div>
-                  <div className="mt-1 font-semibold text-slate-950">{formatMargin(previewSummary.nextAverageMargin)}</div>
-                  <div className={cn("text-xs", previewSummary.marginDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общие расходы</div>
+                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMoney(previewSummary.nextTotalCosts)}</div>
+                  <div className="mt-1 text-xs text-slate-500">{formatSignedMoney(previewSummary.costsDelta)}</div>
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Средняя маржа</div>
+                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMargin(previewSummary.nextAverageMargin)}</div>
+                  <div className={cn("mt-1 text-xs", previewSummary.marginDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
                     {formatSignedMargin(previewSummary.marginDelta)}
                   </div>
                 </div>
-                <div>
-                  <div className="text-[11px] font-medium text-slate-500">Количество заказов</div>
-                  <div className="mt-1 font-semibold text-slate-950">{previewSummary.nextOrdersCount}</div>
-                  <div className="text-xs text-slate-500">Сейчас: {summary.orders_count}</div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Количество заказов</div>
+                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{previewSummary.nextOrdersCount}</div>
+                  <div className="mt-1 text-xs text-emerald-700">{formatSignedCount(1)}</div>
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Средняя прибыль на заказ</div>
+                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMoney(previewSummary.nextAverageProfitPerOrder)}</div>
+                  <div className={cn("mt-1 text-xs", previewSummary.averageProfitDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                    {formatSignedMoney(previewSummary.averageProfitDelta)}
+                  </div>
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Низкомаржинальные</div>
+                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{previewSummary.nextLowMarginOrdersCount}</div>
+                  <div className={cn("mt-1 text-xs", previewSummary.lowMarginOrdersDelta > 0 ? "text-rose-700" : "text-slate-500")}>
+                    {formatSignedCount(previewSummary.lowMarginOrdersDelta)}
+                  </div>
+                </div>
+                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Период</div>
+                  <div className="mt-1.5 text-sm font-semibold leading-tight text-slate-950">
+                    {formatAdminDate(summary.date_from)} - {formatAdminDate(summary.date_to)}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">без изменений</div>
                 </div>
               </div>
             ) : (
