@@ -280,9 +280,11 @@ const AdminRequestsPage = () => {
   };
 
   const handleDraftStatusChange = (request: IncomingRequest, status: RequestStatus) => {
+    const currentDraft = drafts[request.id] ?? toFormState(request);
     const nextDraft = {
-      ...(drafts[request.id] ?? toFormState(request)),
+      ...currentDraft,
       status,
+      meetingHeld: status === "signed" ? true : currentDraft.meetingHeld,
     };
 
     setDrafts((current) => {
