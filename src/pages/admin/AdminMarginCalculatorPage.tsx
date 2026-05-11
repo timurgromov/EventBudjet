@@ -791,38 +791,38 @@ const AdminMarginCalculatorPage = () => {
             {summaryQuery.error instanceof Error ? summaryQuery.error.message : "Не удалось загрузить summary"}
           </div>
         ) : summary ? (
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общая выручка</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.total_revenue)}</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общая выручка</div>
+              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatAdminMoney(summary.total_revenue)}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общие расходы</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.total_costs)}</div>
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общая прибыль</div>
+              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatAdminMoney(summary.total_profit)}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Общая прибыль</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.total_profit)}</div>
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общие расходы</div>
+              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatAdminMoney(summary.total_costs)}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Средняя маржа</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatMargin(Number(summary.average_margin))}</div>
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Средняя маржа</div>
+              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMargin(Number(summary.average_margin))}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Количество заказов</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{summary.orders_count}</div>
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Количество заказов</div>
+              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{summary.orders_count}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Средняя прибыль на заказ</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{formatAdminMoney(summary.average_profit_per_order)}</div>
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Средняя прибыль на заказ</div>
+              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatAdminMoney(summary.average_profit_per_order)}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Низкомаржинальные</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-950">{summary.low_margin_orders_count}</div>
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Низкомаржинальные</div>
+              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{summary.low_margin_orders_count}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Период</div>
-              <div className="mt-2 text-base font-semibold text-slate-950">
+            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Период</div>
+              <div className="mt-1.5 text-sm font-semibold leading-tight text-slate-950">
                 {formatAdminDate(summary.date_from)} - {formatAdminDate(summary.date_to)}
               </div>
             </div>
