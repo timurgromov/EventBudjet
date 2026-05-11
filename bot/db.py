@@ -462,6 +462,7 @@ class BotRepository:
         requests_count: int,
         error: str | None = None,
     ) -> None:
+        is_sent = status == 'sent'
         with SessionLocal.begin() as db:
             db.execute(
                 text(
@@ -472,7 +473,7 @@ class BotRepository:
                       :status,
                       :requests_count,
                       :error,
-                      CASE WHEN :status = 'sent' THEN now() ELSE NULL END,
+                      CASE WHEN :is_sent THEN now() ELSE NULL END,
                       now()
                     );
                     """
@@ -482,6 +483,7 @@ class BotRepository:
                     'status': status,
                     'requests_count': requests_count,
                     'error': error[:2000] if error else None,
+                    'is_sent': is_sent,
                 },
             )
 
