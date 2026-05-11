@@ -41,7 +41,7 @@ interface RequestFormState {
 
 const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "in_work", label: "В работе" },
-  { value: "signed", label: "Подписался" },
+  { value: "signed", label: "Договор" },
   { value: "rejected", label: "Отказ" },
 ];
 
@@ -312,7 +312,7 @@ const AdminRequestsPage = () => {
               <div className="text-xl font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
             </div>
             <div className="flex min-h-12 items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">Подписались</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">Договор</div>
               <div className="text-xl font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
             </div>
             <div className="flex min-h-12 items-center justify-between rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
@@ -345,7 +345,7 @@ const AdminRequestsPage = () => {
                 <tr>
                   <th className="border-b border-slate-200 px-3 py-1.5 font-semibold">Источник</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Всего</th>
-                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Подписались</th>
+                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Договор</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Отказ</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">В работе</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Встречи</th>
