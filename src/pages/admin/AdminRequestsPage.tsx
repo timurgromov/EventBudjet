@@ -353,14 +353,6 @@ const AdminRequestsPage = () => {
             <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-slate-500">Всего</div>
             <div className="text-base font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
           </div>
-          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-1.5 py-1.5">
-            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-emerald-700">Договор</div>
-            <div className="text-base font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
-          </div>
-          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-1.5 py-1.5">
-            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-rose-700">Отказ</div>
-            <div className="text-base font-semibold leading-none text-rose-800">{summary?.rejected_count ?? 0}</div>
-          </div>
           <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-1.5">
             <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-slate-500">В работе</div>
             <div className="text-base font-semibold leading-none text-slate-950">{summary?.in_work_count ?? 0}</div>
@@ -368,6 +360,14 @@ const AdminRequestsPage = () => {
           <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-1.5 py-1.5">
             <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-violet-700">Встречи</div>
             <div className="text-base font-semibold leading-none text-violet-800">{summary?.meeting_count ?? 0}</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-rose-700">Отказ</div>
+            <div className="text-base font-semibold leading-none text-rose-800">{summary?.rejected_count ?? 0}</div>
+          </div>
+          <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-1.5 py-1.5">
+            <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-emerald-700">Договор</div>
+            <div className="text-base font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
           </div>
           <div className="flex min-h-11 min-w-0 flex-col items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-1.5 py-1.5">
             <div className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.04em] text-cyan-700">Конверсия</div>
@@ -388,10 +388,10 @@ const AdminRequestsPage = () => {
                 <tr>
                   <th className="border-b border-slate-200 px-3 py-1.5 font-semibold">Источник</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Всего</th>
-                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Договор</th>
-                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Отказ</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">В работе</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Встречи</th>
+                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Отказ</th>
+                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Договор</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Конверсия</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Встречи %</th>
                 </tr>
@@ -401,10 +401,10 @@ const AdminRequestsPage = () => {
                   <tr key={source.source_id ?? source.source_name}>
                     <td className="border-b border-slate-100 px-3 py-1.5 font-medium text-slate-950">{source.source_name}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-700">{source.total_count}</td>
-                    <td className="border-b border-slate-100 px-3 py-1.5 text-right text-emerald-700">{source.signed_count}</td>
-                    <td className="border-b border-slate-100 px-3 py-1.5 text-right text-rose-700">{source.rejected_count}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-700">{source.in_work_count}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right text-violet-700">{source.meeting_count}</td>
+                    <td className="border-b border-slate-100 px-3 py-1.5 text-right text-rose-700">{source.rejected_count}</td>
+                    <td className="border-b border-slate-100 px-3 py-1.5 text-right text-emerald-700">{source.signed_count}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right font-medium text-slate-950">{source.conversion_rate}%</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right font-medium text-indigo-700">
                       {source.meeting_conversion_rate}%
