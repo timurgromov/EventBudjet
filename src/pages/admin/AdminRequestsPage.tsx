@@ -45,6 +45,12 @@ const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
   { value: "rejected", label: "Отказ" },
 ];
 
+const STATUS_SORT_WEIGHT: Record<RequestStatus, number> = {
+  in_work: 0,
+  signed: 1,
+  rejected: 2,
+};
+
 const EMPTY_FORM: RequestFormState = {
   sourceId: "",
   eventDate: "",
@@ -55,6 +61,16 @@ const EMPTY_FORM: RequestFormState = {
 };
 
 const getStatusLabel = (status: string): string => STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+
+const getStatusSortWeight = (status: string): number =>
+  status === "signed" || status === "rejected" ? STATUS_SORT_WEIGHT[status] : STATUS_SORT_WEIGHT.in_work;
+
+const getEventDateDistance = (eventDate: string | null, todayTime: number): number => {
+  if (!eventDate) return Number.POSITIVE_INFINITY;
+  const eventTime = Date.parse(eventDate);
+  if (Number.isNaN(eventTime)) return Number.POSITIVE_INFINITY;
+  return Math.abs(eventTime - todayTime);
+};
 
 const getRowTone = (status: string, needsFollowUp: boolean): string => {
   if (status === "signed") return "border-emerald-200 bg-emerald-50/80";
@@ -118,15 +134,29 @@ const AdminRequestsPage = () => {
 
   const visibleRequests = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    return requests.filter((request) => {
-      if (statusFilter === "attention" && !request.needs_follow_up) return false;
-      if (statusFilter !== "all" && statusFilter !== "attention" && request.status !== statusFilter) return false;
-      if (sourceFilter !== "all" && String(request.source_id ?? "") !== sourceFilter) return false;
-      if (!normalizedSearch) return true;
-      return [request.source_name, request.comment, request.event_date, request.last_contact_date]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
-    });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTime = today.getTime();
+
+    return requests
+      .filter((request) => {
+        if (statusFilter === "attention" && !request.needs_follow_up) return false;
+        if (statusFilter !== "all" && statusFilter !== "attention" && request.status !== statusFilter) return false;
+        if (sourceFilter !== "all" && String(request.source_id ?? "") !== sourceFilter) return false;
+        if (!normalizedSearch) return true;
+        return [request.source_name, request.comment, request.event_date, request.last_contact_date]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+      })
+      .sort((left, right) => {
+        const statusDiff = getStatusSortWeight(left.status) - getStatusSortWeight(right.status);
+        if (statusDiff !== 0) return statusDiff;
+
+        const dateDiff = getEventDateDistance(left.event_date, todayTime) - getEventDateDistance(right.event_date, todayTime);
+        if (dateDiff !== 0) return dateDiff;
+
+        return Date.parse(right.updated_at) - Date.parse(left.updated_at);
+      });
   }, [requests, search, sourceFilter, statusFilter]);
 
   const attentionCount = summary?.attention_count ?? requests.filter((request) => request.needs_follow_up).length;
