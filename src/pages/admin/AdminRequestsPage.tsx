@@ -306,34 +306,34 @@ const AdminRequestsPage = () => {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="overflow-x-auto">
-          <div className="grid min-w-[980px] grid-cols-7 gap-2">
-            <div className="flex min-h-12 items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Всего</div>
-              <div className="text-xl font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
+          <div className="grid min-w-[760px] grid-cols-7 gap-1.5">
+            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Всего</div>
+              <div className="text-lg font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
             </div>
-            <div className="flex min-h-12 items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">Договор</div>
-              <div className="text-xl font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
+            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2">
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">Договор</div>
+              <div className="text-lg font-semibold leading-none text-emerald-800">{summary?.signed_count ?? 0}</div>
             </div>
-            <div className="flex min-h-12 items-center justify-between rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-700">Отказ</div>
-              <div className="text-xl font-semibold leading-none text-rose-800">{summary?.rejected_count ?? 0}</div>
+            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2">
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700">Отказ</div>
+              <div className="text-lg font-semibold leading-none text-rose-800">{summary?.rejected_count ?? 0}</div>
             </div>
-            <div className="flex min-h-12 items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">В работе</div>
-              <div className="text-xl font-semibold leading-none text-slate-950">{summary?.in_work_count ?? 0}</div>
+            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">В работе</div>
+              <div className="text-lg font-semibold leading-none text-slate-950">{summary?.in_work_count ?? 0}</div>
             </div>
-            <div className="flex min-h-12 items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-violet-700">Встречи</div>
-              <div className="text-xl font-semibold leading-none text-violet-800">{summary?.meeting_count ?? 0}</div>
+            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-2 py-2">
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-700">Встречи</div>
+              <div className="text-lg font-semibold leading-none text-violet-800">{summary?.meeting_count ?? 0}</div>
             </div>
-            <div className="flex min-h-12 items-center justify-between rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-700">Конверсия</div>
-              <div className="text-xl font-semibold leading-none text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
+            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-2">
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-700">Конверсия</div>
+              <div className="text-lg font-semibold leading-none text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
             </div>
-            <div className="flex min-h-12 items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-700">Встречи %</div>
-              <div className="text-xl font-semibold leading-none text-indigo-800">{summary?.meeting_conversion_rate ?? 0}%</div>
+            <div className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-2">
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-700">Встречи %</div>
+              <div className="text-lg font-semibold leading-none text-indigo-800">{summary?.meeting_conversion_rate ?? 0}%</div>
             </div>
           </div>
         </div>
