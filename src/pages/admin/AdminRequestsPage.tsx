@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { showAdminSuccessToast } from "@/lib/admin-toast";
 import {
   archiveIncomingRequestSource,
   createIncomingRequest,
@@ -205,6 +206,10 @@ const AdminRequestsPage = () => {
       setNewSourceName("");
       setNewRequest((current) => ({ ...current, sourceId: String(source.id) }));
       setStatusMessage("Источник добавлен.");
+      showAdminSuccessToast({
+        title: "Источник добавлен",
+        description: `${source.name} доступен для новых заявок.`,
+      });
       await invalidateRequests();
     },
     onError: (error) => {
@@ -217,6 +222,10 @@ const AdminRequestsPage = () => {
       archived ? restoreIncomingRequestSource(adminToken, sourceId) : archiveIncomingRequestSource(adminToken, sourceId),
     onSuccess: async () => {
       setStatusMessage("Источник обновлён.");
+      showAdminSuccessToast({
+        title: "Источник сохранён",
+        description: "Справочник заявок обновлён.",
+      });
       await invalidateRequests();
     },
     onError: (error) => {
@@ -229,6 +238,10 @@ const AdminRequestsPage = () => {
     onSuccess: async () => {
       setNewRequest(EMPTY_FORM);
       setStatusMessage("Заявка добавлена.");
+      showAdminSuccessToast({
+        title: "Заявка добавлена",
+        description: "Новая строка сохранена в CRM.",
+      });
       await invalidateRequests();
     },
     onError: (error) => {
@@ -241,6 +254,10 @@ const AdminRequestsPage = () => {
       updateIncomingRequest(adminToken, requestId, payload),
     onSuccess: async () => {
       setStatusMessage("Сохранено автоматически.");
+      showAdminSuccessToast({
+        title: "Заявка сохранена",
+        description: "Изменения применены в CRM.",
+      });
       await invalidateRequests();
     },
     onError: (error) => {

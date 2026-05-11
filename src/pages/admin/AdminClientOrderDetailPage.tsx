@@ -5,6 +5,7 @@ import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { showAdminSuccessToast } from "@/lib/admin-toast";
 import {
   createClientOrderItem,
   deleteClientOrder,
@@ -246,6 +247,10 @@ const AdminClientOrderDetailPage = () => {
     },
     onSuccess: async () => {
       setStatusMessage("Карточка заказа обновлена.");
+      showAdminSuccessToast({
+        title: "Карточка сохранена",
+        description: "Изменения по заказу применены.",
+      });
       await refreshOrder();
     },
     onError: (error) => {
@@ -264,6 +269,10 @@ const AdminClientOrderDetailPage = () => {
     },
     onSuccess: async () => {
       setStatusMessage("Финансовая строка обновлена.");
+      showAdminSuccessToast({
+        title: "Строка сохранена",
+        description: "Финансовые данные обновлены.",
+      });
       await refreshOrder();
     },
     onError: (error) => {
@@ -286,6 +295,10 @@ const AdminClientOrderDetailPage = () => {
     mutationFn: async (payload: ClientOrderItemCreatePayload) => createClientOrderItem(adminToken, numericOrderId, payload),
     onSuccess: async (_, variables) => {
       setStatusMessage("Строка добавлена.");
+      showAdminSuccessToast({
+        title: "Строка добавлена",
+        description: variables.item_type === "revenue" ? "Доход сохранён в заказе." : "Расход сохранён в заказе.",
+      });
       if (variables.item_type === "revenue") {
         setNewRevenueItem({ title: "", amount: "" });
       } else {

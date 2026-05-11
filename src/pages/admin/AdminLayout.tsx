@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NavLink } from "@/components/NavLink";
 import { toast } from "@/components/ui/sonner";
+import { showAdminSuccessToast } from "@/lib/admin-toast";
 import { listAdminLeads } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -115,6 +116,10 @@ const AdminLayout = () => {
     const normalized = draftToken.trim();
     window.localStorage.setItem(ADMIN_TOKEN_KEY, normalized);
     setSavedToken(normalized);
+    showAdminSuccessToast({
+      title: "Токен сохранён",
+      description: "Admin token обновлён локально в браузере.",
+    });
   };
 
   const handleReset = () => {

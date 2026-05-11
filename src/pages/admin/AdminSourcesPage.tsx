@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { showAdminSuccessToast } from "@/lib/admin-toast";
 import {
   archiveAdminSource,
   createAdminSource,
@@ -61,6 +62,10 @@ const AdminSourcesPage = () => {
       }),
     onSuccess: async (created) => {
       setStatus(`Источник создан: ${created.name} (${created.code})`);
+      showAdminSuccessToast({
+        title: "Источник создан",
+        description: `${created.name} сохранён в свадебном калькуляторе.`,
+      });
       setName("");
       setCode("");
       setDescription("");
@@ -75,6 +80,10 @@ const AdminSourcesPage = () => {
     mutationFn: async (sourceId: number) => archiveAdminSource(adminToken, sourceId),
     onSuccess: async () => {
       setStatus("Источник отправлен в архив.");
+      showAdminSuccessToast({
+        title: "Источник сохранён",
+        description: "Источник отправлен в архив.",
+      });
       await query.refetch();
     },
     onError: (error) => {
@@ -86,6 +95,10 @@ const AdminSourcesPage = () => {
     mutationFn: async (sourceId: number) => restoreAdminSource(adminToken, sourceId),
     onSuccess: async () => {
       setStatus("Источник восстановлен.");
+      showAdminSuccessToast({
+        title: "Источник сохранён",
+        description: "Источник снова активен.",
+      });
       await query.refetch();
     },
     onError: (error) => {
