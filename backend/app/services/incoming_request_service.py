@@ -85,6 +85,7 @@ class IncomingRequestService:
         signed_count = sum(1 for request in requests if request.status == IncomingRequestStatus.SIGNED)
         rejected_count = sum(1 for request in requests if request.status == IncomingRequestStatus.REJECTED)
         in_work_count = sum(1 for request in requests if request.status == IncomingRequestStatus.IN_WORK)
+        meeting_count = sum(1 for request in requests if request.meeting_held)
         attention_count = sum(1 for request in requests if self._needs_follow_up(request))
         stats_by_source = self._build_source_stats(requests)
 
@@ -99,7 +100,9 @@ class IncomingRequestService:
             rejected_count=rejected_count,
             in_work_count=in_work_count,
             attention_count=attention_count,
+            meeting_count=meeting_count,
             conversion_rate=self._conversion_rate(signed_count, total_count),
+            meeting_conversion_rate=self._conversion_rate(signed_count, meeting_count),
             sources=sources,
         )
 
@@ -149,6 +152,7 @@ class IncomingRequestService:
             source_type=source_type,
             event_date=request.event_date,
             last_contact_date=request.last_contact_date,
+            meeting_held=bool(request.meeting_held),
             comment=request.comment,
             status=request.status.value,
             created_at=request.created_at,
@@ -165,6 +169,7 @@ class IncomingRequestService:
         signed_count = stats.signed_count if stats is not None else 0
         rejected_count = stats.rejected_count if stats is not None else 0
         in_work_count = stats.in_work_count if stats is not None else 0
+        meeting_count = stats.meeting_count if stats is not None else 0
         return IncomingRequestSourceRead(
             id=source.id,
             name=source.name,
@@ -175,7 +180,9 @@ class IncomingRequestService:
             signed_count=signed_count,
             rejected_count=rejected_count,
             in_work_count=in_work_count,
+            meeting_count=meeting_count,
             conversion_rate=self._conversion_rate(signed_count, requests_count),
+            meeting_conversion_rate=self._conversion_rate(signed_count, meeting_count),
             created_at=source.created_at,
             updated_at=source.updated_at,
         )
@@ -218,11 +225,15 @@ class IncomingRequestService:
                     signed_count=0,
                     rejected_count=0,
                     in_work_count=0,
+                    meeting_count=0,
                     conversion_rate=0,
+                    meeting_conversion_rate=0,
                 )
                 stats[source_id] = current
 
             current.total_count += 1
+            if request.meeting_held:
+                current.meeting_count += 1
             if request.status == IncomingRequestStatus.SIGNED:
                 current.signed_count += 1
             elif request.status == IncomingRequestStatus.REJECTED:
@@ -230,6 +241,7 @@ class IncomingRequestService:
             else:
                 current.in_work_count += 1
             current.conversion_rate = self._conversion_rate(current.signed_count, current.total_count)
+            current.meeting_conversion_rate = self._conversion_rate(current.signed_count, current.meeting_count)
         return stats
 
     @staticmethod

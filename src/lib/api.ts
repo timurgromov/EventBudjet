@@ -217,6 +217,7 @@ export interface IncomingRequest {
   source_type: string | null;
   event_date: string | null;
   last_contact_date: string | null;
+  meeting_held: boolean;
   comment: string | null;
   status: "in_work" | "signed" | "rejected" | string;
   created_at: string;
@@ -238,7 +239,9 @@ export interface IncomingRequestSource {
   signed_count: number;
   rejected_count: number;
   in_work_count: number;
+  meeting_count: number;
   conversion_rate: number;
+  meeting_conversion_rate: number;
   created_at: string;
   updated_at: string;
 }
@@ -266,7 +269,9 @@ export interface IncomingRequestSourceSummaryItem {
   signed_count: number;
   rejected_count: number;
   in_work_count: number;
+  meeting_count: number;
   conversion_rate: number;
+  meeting_conversion_rate: number;
 }
 
 export interface IncomingRequestSummaryResponse {
@@ -275,7 +280,9 @@ export interface IncomingRequestSummaryResponse {
   rejected_count: number;
   in_work_count: number;
   attention_count: number;
+  meeting_count: number;
   conversion_rate: number;
+  meeting_conversion_rate: number;
   sources: IncomingRequestSourceSummaryItem[];
 }
 
@@ -284,6 +291,7 @@ export interface IncomingRequestCreatePayload {
   source: string;
   event_date?: string | null;
   last_contact_date?: string | null;
+  meeting_held?: boolean | null;
   comment?: string | null;
   status?: string | null;
 }
@@ -293,6 +301,7 @@ export interface IncomingRequestUpdatePayload {
   source?: string;
   event_date?: string | null;
   last_contact_date?: string | null;
+  meeting_held?: boolean | null;
   comment?: string | null;
   status?: string | null;
 }

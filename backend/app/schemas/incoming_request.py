@@ -42,6 +42,7 @@ class IncomingRequestBase(BaseModel):
     source: str | None = None
     event_date: date | None = None
     last_contact_date: date | None = None
+    meeting_held: bool | None = None
     comment: str | None = None
     status: str | None = None
 
@@ -84,6 +85,7 @@ class IncomingRequestRead(BaseModel):
     source_type: str | None = None
     event_date: date | None = None
     last_contact_date: date | None = None
+    meeting_held: bool
     comment: str | None = None
     status: str
     created_at: datetime
@@ -103,7 +105,9 @@ class IncomingRequestSourceSummaryItem(BaseModel):
     signed_count: int
     rejected_count: int
     in_work_count: int
+    meeting_count: int
     conversion_rate: float
+    meeting_conversion_rate: float
 
 
 class IncomingRequestSummaryResponse(BaseModel):
@@ -112,5 +116,7 @@ class IncomingRequestSummaryResponse(BaseModel):
     rejected_count: int
     in_work_count: int
     attention_count: int
+    meeting_count: int
     conversion_rate: float
+    meeting_conversion_rate: float
     sources: list[IncomingRequestSourceSummaryItem]

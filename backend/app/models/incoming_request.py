@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -15,6 +15,7 @@ class IncomingRequest(Base):
     source: Mapped[str] = mapped_column(String(255), nullable=False)
     event_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     last_contact_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    meeting_held: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default='false')
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[IncomingRequestStatus] = mapped_column(
         Enum(

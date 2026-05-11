@@ -34,6 +34,7 @@ interface RequestFormState {
   sourceId: string;
   eventDate: string;
   lastContactDate: string;
+  meetingHeld: boolean;
   comment: string;
   status: RequestStatus;
 }
@@ -48,6 +49,7 @@ const EMPTY_FORM: RequestFormState = {
   sourceId: "",
   eventDate: "",
   lastContactDate: "",
+  meetingHeld: false,
   comment: "",
   status: "in_work",
 };
@@ -65,6 +67,7 @@ const toFormState = (request: IncomingRequest): RequestFormState => ({
   sourceId: request.source_id ? String(request.source_id) : "",
   eventDate: request.event_date ?? "",
   lastContactDate: request.last_contact_date ?? "",
+  meetingHeld: Boolean(request.meeting_held),
   comment: request.comment ?? "",
   status: request.status === "signed" || request.status === "rejected" ? request.status : "in_work",
 });
@@ -74,6 +77,7 @@ const toPayload = (form: RequestFormState): IncomingRequestCreatePayload => ({
   source: "",
   event_date: form.eventDate || null,
   last_contact_date: form.lastContactDate || null,
+  meeting_held: form.meetingHeld,
   comment: form.comment.trim() || null,
   status: form.status,
 });
@@ -203,11 +207,11 @@ const AdminRequestsPage = () => {
     },
   });
 
-  const handleNewFieldChange = (field: keyof RequestFormState, value: string) => {
+  const handleNewFieldChange = <K extends keyof RequestFormState>(field: K, value: RequestFormState[K]) => {
     setNewRequest((current) => ({ ...current, [field]: value }));
   };
 
-  const handleDraftChange = (request: IncomingRequest, field: keyof RequestFormState, value: string) => {
+  const handleDraftChange = <K extends keyof RequestFormState>(request: IncomingRequest, field: K, value: RequestFormState[K]) => {
     setDrafts((current) => ({
       ...current,
       [request.id]: {
@@ -215,6 +219,28 @@ const AdminRequestsPage = () => {
         [field]: value,
       },
     }));
+  };
+
+  const handleNewStatusChange = (status: RequestStatus) => {
+    setNewRequest((current) => ({
+      ...current,
+      status,
+      meetingHeld: status === "signed" ? true : current.meetingHeld,
+    }));
+  };
+
+  const handleDraftStatusChange = (request: IncomingRequest, status: RequestStatus) => {
+    setDrafts((current) => {
+      const draft = current[request.id] ?? toFormState(request);
+      return {
+        ...current,
+        [request.id]: {
+          ...draft,
+          status,
+          meetingHeld: status === "signed" ? true : draft.meetingHeld,
+        },
+      };
+    });
   };
 
   const handleCreateSource = () => {
@@ -280,7 +306,7 @@ const AdminRequestsPage = () => {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="overflow-x-auto">
-          <div className="grid min-w-[820px] grid-cols-5 gap-2">
+          <div className="grid min-w-[980px] grid-cols-7 gap-2">
             <div className="flex min-h-12 items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Всего</div>
               <div className="text-xl font-semibold leading-none text-slate-950">{summary?.total_count ?? 0}</div>
@@ -297,16 +323,24 @@ const AdminRequestsPage = () => {
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">В работе</div>
               <div className="text-xl font-semibold leading-none text-slate-950">{summary?.in_work_count ?? 0}</div>
             </div>
+            <div className="flex min-h-12 items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-3 py-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-violet-700">Встречи</div>
+              <div className="text-xl font-semibold leading-none text-violet-800">{summary?.meeting_count ?? 0}</div>
+            </div>
             <div className="flex min-h-12 items-center justify-between rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2">
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-700">Конверсия</div>
               <div className="text-xl font-semibold leading-none text-cyan-800">{summary?.conversion_rate ?? 0}%</div>
+            </div>
+            <div className="flex min-h-12 items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-indigo-700">Встречи %</div>
+              <div className="text-xl font-semibold leading-none text-indigo-800">{summary?.meeting_conversion_rate ?? 0}%</div>
             </div>
           </div>
         </div>
 
         {(summary?.sources ?? []).length > 0 ? (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[860px] text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
                   <th className="border-b border-slate-200 px-3 py-1.5 font-semibold">Источник</th>
@@ -314,7 +348,9 @@ const AdminRequestsPage = () => {
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Подписались</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Отказ</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">В работе</th>
+                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Встречи</th>
                   <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Конверсия</th>
+                  <th className="border-b border-slate-200 px-3 py-1.5 text-right font-semibold">Встречи %</th>
                 </tr>
               </thead>
               <tbody>
@@ -325,7 +361,11 @@ const AdminRequestsPage = () => {
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right text-emerald-700">{source.signed_count}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right text-rose-700">{source.rejected_count}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-700">{source.in_work_count}</td>
+                    <td className="border-b border-slate-100 px-3 py-1.5 text-right text-violet-700">{source.meeting_count}</td>
                     <td className="border-b border-slate-100 px-3 py-1.5 text-right font-medium text-slate-950">{source.conversion_rate}%</td>
+                    <td className="border-b border-slate-100 px-3 py-1.5 text-right font-medium text-indigo-700">
+                      {source.meeting_conversion_rate}%
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -373,7 +413,7 @@ const AdminRequestsPage = () => {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[1.2fr_160px_160px_1.5fr_140px_auto]">
+        <div className="grid gap-3 lg:grid-cols-[1.2fr_150px_150px_auto_1.5fr_130px_auto]">
           <select
             value={newRequest.sourceId}
             onChange={(event) => handleNewFieldChange("sourceId", event.target.value)}
@@ -398,6 +438,15 @@ const AdminRequestsPage = () => {
             onChange={(event) => handleNewFieldChange("lastContactDate", event.target.value)}
             className="bg-white text-slate-950 [color-scheme:light]"
           />
+          <label className="flex h-10 items-center gap-2 rounded-md border border-input bg-white px-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={newRequest.meetingHeld}
+              onChange={(event) => handleNewFieldChange("meetingHeld", event.target.checked)}
+              className="h-4 w-4"
+            />
+            Встреча
+          </label>
           <Input
             value={newRequest.comment}
             onChange={(event) => handleNewFieldChange("comment", event.target.value)}
@@ -406,7 +455,7 @@ const AdminRequestsPage = () => {
           />
           <select
             value={newRequest.status}
-            onChange={(event) => handleNewFieldChange("status", event.target.value)}
+            onChange={(event) => handleNewStatusChange(event.target.value as RequestStatus)}
             className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm"
           >
             {STATUS_OPTIONS.map((option) => (
@@ -476,12 +525,13 @@ const AdminRequestsPage = () => {
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left text-sm">
+            <table className="w-full min-w-[1060px] border-separate border-spacing-y-2 text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Источник</th>
                   <th className="px-3 py-2 font-semibold">Дата</th>
                   <th className="px-3 py-2 font-semibold">Последний контакт</th>
+                  <th className="px-3 py-2 font-semibold">Встреча</th>
                   <th className="px-3 py-2 font-semibold">Комментарий</th>
                   <th className="px-3 py-2 font-semibold">Статус</th>
                   <th className="px-3 py-2 font-semibold">Обновлено</th>
@@ -526,6 +576,18 @@ const AdminRequestsPage = () => {
                         />
                         {request.needs_follow_up ? <div className="mt-1 text-xs font-medium text-amber-700">нужно вспомнить</div> : null}
                       </td>
+                      <td className="w-[92px] border-y px-2 py-2">
+                        <label className="flex h-9 items-center gap-2 rounded-md border border-input bg-white px-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={draft.meetingHeld}
+                            onChange={(event) => handleDraftChange(request, "meetingHeld", event.target.checked)}
+                            className="h-4 w-4"
+                            title="Встреча была"
+                          />
+                          Была
+                        </label>
+                      </td>
                       <td className="min-w-[360px] border-y px-2 py-2">
                         <Textarea
                           value={draft.comment}
@@ -536,7 +598,7 @@ const AdminRequestsPage = () => {
                       <td className="w-[140px] border-y px-2 py-2">
                         <select
                           value={draft.status}
-                          onChange={(event) => handleDraftChange(request, "status", event.target.value)}
+                          onChange={(event) => handleDraftStatusChange(request, event.target.value as RequestStatus)}
                           className="h-9 w-full rounded-md border border-input bg-white px-2 py-1 text-sm"
                           title={getStatusLabel(request.status)}
                         >
