@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { formatAdminDate, formatAdminDateTime } from "./admin-format";
 
 type RequestStatus = "in_work" | "signed" | "rejected";
+type EventTimingTone = "future" | "soon" | "past";
 
 interface AdminOutletContext {
   adminToken: string;
@@ -52,6 +53,7 @@ const STATUS_SORT_WEIGHT: Record<RequestStatus, number> = {
   signed: 1,
   rejected: 2,
 };
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const AUTOSAVE_DELAY_MS = 700;
 
@@ -74,6 +76,47 @@ const getEventDateDistance = (eventDate: string | null, todayTime: number): numb
   const eventTime = Date.parse(eventDate);
   if (Number.isNaN(eventTime)) return Number.POSITIVE_INFINITY;
   return Math.abs(eventTime - todayTime);
+};
+
+const pluralDays = (value: number): string => {
+  const abs = Math.abs(value);
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return "дней";
+  if (last === 1) return "день";
+  if (last >= 2 && last <= 4) return "дня";
+  return "дней";
+};
+
+const parseDateOnly = (value?: string | null): Date | null => {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getEventTiming = (eventDate?: string | null): { label: string; tone: EventTimingTone } | null => {
+  const parsed = parseDateOnly(eventDate);
+  if (!parsed) return null;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const diffDays = Math.round((eventDay.getTime() - today.getTime()) / DAY_MS);
+
+  if (diffDays < 0) {
+    const daysAgo = Math.abs(diffDays);
+    return { label: `было ${daysAgo} ${pluralDays(daysAgo)} назад`, tone: "past" };
+  }
+  if (diffDays === 0) return { label: "сегодня", tone: "soon" };
+  return { label: `через ${diffDays} ${pluralDays(diffDays)}`, tone: diffDays <= 14 ? "soon" : "future" };
+};
+
+const getEventTimingClassName = (tone: EventTimingTone): string => {
+  if (tone === "past") return "text-slate-500";
+  if (tone === "soon") return "font-medium text-amber-700";
+  return "text-slate-500";
 };
 
 const getRequestCardTone = (status: string, needsFollowUp: boolean): { card: string; stripe: string; badge: string } => {
@@ -627,6 +670,7 @@ const AdminRequestsPage = () => {
                 const cardTone = getRequestCardTone(draft.status, request.needs_follow_up);
                 const isExpanded = Boolean(expandedRequestIds[request.id]);
                 const comment = draft.comment.trim();
+                const eventTiming = getEventTiming(draft.eventDate);
 
                 return (
                   <article
@@ -649,6 +693,11 @@ const AdminRequestsPage = () => {
 
                       <div className="text-sm text-slate-700">
                         <div>Мероприятие: {formatAdminDate(draft.eventDate)}</div>
+                        {eventTiming ? (
+                          <div className={cn("mt-1 text-xs", getEventTimingClassName(eventTiming.tone))}>
+                            {eventTiming.label}
+                          </div>
+                        ) : null}
                         <div className="mt-1 text-xs text-slate-500">Последний контакт: {formatAdminDate(draft.lastContactDate)}</div>
                       </div>
 
