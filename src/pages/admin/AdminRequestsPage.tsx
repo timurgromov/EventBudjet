@@ -55,7 +55,7 @@ const STATUS_SORT_WEIGHT: Record<RequestStatus, number> = {
 };
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const AUTOSAVE_DELAY_MS = 700;
+const AUTOSAVE_DELAY_MS = 1200;
 
 const EMPTY_FORM: RequestFormState = {
   sourceId: "",
@@ -296,11 +296,7 @@ const AdminRequestsPage = () => {
     mutationFn: ({ requestId, payload }: { requestId: number; payload: IncomingRequestUpdatePayload }) =>
       updateIncomingRequest(adminToken, requestId, payload),
     onSuccess: async () => {
-      setStatusMessage("Сохранено автоматически.");
-      showAdminSuccessToast({
-        title: "Заявка сохранена",
-        description: "Изменения применены в CRM.",
-      });
+      setStatusMessage(null);
       await invalidateRequests();
     },
     onError: (error) => {
