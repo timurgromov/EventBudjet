@@ -134,18 +134,18 @@ const getRequestCardTone = (status: string, meetingHeld: boolean, needsFollowUp:
       badge: "border-rose-200 bg-rose-100 text-rose-800",
     };
   }
-  if (status === "in_work" && needsFollowUp) {
-    return {
-      card: "border-amber-200 bg-amber-50/70",
-      stripe: "bg-amber-400",
-      badge: "border-amber-200 bg-amber-100 text-amber-800",
-    };
-  }
   if (status === "in_work" && meetingHeld) {
     return {
       card: "border-sky-200 bg-sky-50/70",
       stripe: "bg-sky-400",
       badge: "border-sky-200 bg-sky-100 text-sky-800",
+    };
+  }
+  if (status === "in_work" && needsFollowUp) {
+    return {
+      card: "border-amber-200 bg-amber-50/70",
+      stripe: "bg-amber-400",
+      badge: "border-amber-200 bg-amber-100 text-amber-800",
     };
   }
   return {
