@@ -119,7 +119,7 @@ const getEventTimingClassName = (tone: EventTimingTone): string => {
   return "text-slate-500";
 };
 
-const getRequestCardTone = (status: string, needsFollowUp: boolean): { card: string; stripe: string; badge: string } => {
+const getRequestCardTone = (status: string, meetingHeld: boolean): { card: string; stripe: string; badge: string } => {
   if (status === "signed") {
     return {
       card: "border-emerald-200 bg-emerald-50/70",
@@ -134,7 +134,7 @@ const getRequestCardTone = (status: string, needsFollowUp: boolean): { card: str
       badge: "border-rose-200 bg-rose-100 text-rose-800",
     };
   }
-  if (needsFollowUp) {
+  if (status === "in_work" && meetingHeld) {
     return {
       card: "border-amber-200 bg-amber-50/70",
       stripe: "bg-amber-400",
@@ -663,7 +663,8 @@ const AdminRequestsPage = () => {
             <div className="mt-4 space-y-3">
               {visibleRequests.map((request) => {
                 const draft = drafts[request.id] ?? toFormState(request);
-                const cardTone = getRequestCardTone(draft.status, request.needs_follow_up);
+                const cardTone = getRequestCardTone(draft.status, draft.meetingHeld);
+                const isWaitingForDecision = draft.status === "in_work" && draft.meetingHeld;
                 const isExpanded = Boolean(expandedRequestIds[request.id]);
                 const comment = draft.comment.trim();
                 const eventTiming = getEventTiming(draft.eventDate);
@@ -684,7 +685,7 @@ const AdminRequestsPage = () => {
                         </div>
                         <div className="mt-1 text-xs text-slate-500">Заявка #{request.id}</div>
                         <div className="mt-1 text-xs text-slate-500">Изменено: {formatAdminDateTime(request.updated_at)}</div>
-                        {request.needs_follow_up ? <div className="mt-2 text-xs font-medium text-amber-700">Нужно вспомнить</div> : null}
+                        {isWaitingForDecision ? <div className="mt-2 text-xs font-medium text-amber-700">Ждём решение</div> : null}
                       </div>
 
                       <div className="text-sm text-slate-700">
