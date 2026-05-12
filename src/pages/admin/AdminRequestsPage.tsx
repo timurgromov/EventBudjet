@@ -119,7 +119,7 @@ const getEventTimingClassName = (tone: EventTimingTone): string => {
   return "text-slate-500";
 };
 
-const getRequestCardTone = (status: string, meetingHeld: boolean): { card: string; stripe: string; badge: string } => {
+const getRequestCardTone = (status: string, meetingHeld: boolean, needsFollowUp: boolean): { card: string; stripe: string; badge: string } => {
   if (status === "signed") {
     return {
       card: "border-emerald-200 bg-emerald-50/70",
@@ -134,11 +134,18 @@ const getRequestCardTone = (status: string, meetingHeld: boolean): { card: strin
       badge: "border-rose-200 bg-rose-100 text-rose-800",
     };
   }
-  if (status === "in_work" && meetingHeld) {
+  if (status === "in_work" && needsFollowUp) {
     return {
       card: "border-amber-200 bg-amber-50/70",
       stripe: "bg-amber-400",
       badge: "border-amber-200 bg-amber-100 text-amber-800",
+    };
+  }
+  if (status === "in_work" && meetingHeld) {
+    return {
+      card: "border-sky-200 bg-sky-50/70",
+      stripe: "bg-sky-400",
+      badge: "border-sky-200 bg-sky-100 text-sky-800",
     };
   }
   return {
@@ -663,7 +670,7 @@ const AdminRequestsPage = () => {
             <div className="mt-4 space-y-3">
               {visibleRequests.map((request) => {
                 const draft = drafts[request.id] ?? toFormState(request);
-                const cardTone = getRequestCardTone(draft.status, draft.meetingHeld);
+                const cardTone = getRequestCardTone(draft.status, draft.meetingHeld, request.needs_follow_up);
                 const isWaitingForDecision = draft.status === "in_work" && draft.meetingHeld;
                 const isExpanded = Boolean(expandedRequestIds[request.id]);
                 const comment = draft.comment.trim();
@@ -687,10 +694,10 @@ const AdminRequestsPage = () => {
                         <div className="mt-1 text-xs text-slate-500">Изменено: {formatAdminDateTime(request.updated_at)}</div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {isWaitingForDecision ? (
-                            <span className="text-xs font-medium text-amber-700">Ждём решение</span>
+                            <span className="text-xs font-medium text-sky-700">Ждём решение</span>
                           ) : null}
                           {request.needs_follow_up ? (
-                            <span className="text-xs font-medium text-rose-700">Требует внимания</span>
+                            <span className="text-xs font-medium text-amber-700">Требует внимания</span>
                           ) : null}
                         </div>
                       </div>
