@@ -685,7 +685,14 @@ const AdminRequestsPage = () => {
                         </div>
                         <div className="mt-1 text-xs text-slate-500">Заявка #{request.id}</div>
                         <div className="mt-1 text-xs text-slate-500">Изменено: {formatAdminDateTime(request.updated_at)}</div>
-                        {isWaitingForDecision ? <div className="mt-2 text-xs font-medium text-amber-700">Ждём решение</div> : null}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {isWaitingForDecision ? (
+                            <span className="text-xs font-medium text-amber-700">Ждём решение</span>
+                          ) : null}
+                          {request.needs_follow_up ? (
+                            <span className="text-xs font-medium text-rose-700">Требует внимания</span>
+                          ) : null}
+                        </div>
                       </div>
 
                       <div className="text-sm text-slate-700">
