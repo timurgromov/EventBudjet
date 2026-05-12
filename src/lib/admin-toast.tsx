@@ -7,7 +7,20 @@ interface AdminSuccessToastOptions {
   description?: string;
 }
 
+const SUCCESS_TOAST_COOLDOWN_MS = 30000;
+const lastSuccessToastAtByKey = new Map<string, number>();
+
 export const showAdminSuccessToast = ({ title, description }: AdminSuccessToastOptions) => {
+  const toastKey = `${title}:${description ?? ""}`;
+  const now = Date.now();
+  const lastShownAt = lastSuccessToastAtByKey.get(toastKey) ?? 0;
+
+  if (now - lastShownAt < SUCCESS_TOAST_COOLDOWN_MS) {
+    return;
+  }
+
+  lastSuccessToastAtByKey.set(toastKey, now);
+
   toast.custom(
     () => (
       <div className="w-[min(560px,calc(100vw-32px))] animate-in rounded-3xl border-2 border-emerald-200 bg-gradient-to-r from-emerald-500 to-green-500 px-6 py-5 text-white shadow-[0_24px_70px_rgba(16,185,129,0.42)] slide-in-from-top-6 zoom-in-95">
