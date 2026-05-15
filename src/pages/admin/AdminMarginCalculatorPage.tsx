@@ -760,11 +760,6 @@ const AdminMarginCalculatorPage = () => {
                   </div>
                 </div>
                 <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общие расходы</div>
-                  <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMoney(previewSummary.nextTotalCosts)}</div>
-                  <div className="mt-1 text-xs text-slate-500">{formatSignedMoney(previewSummary.costsDelta)}</div>
-                </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Средняя маржа</div>
                   <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatMargin(previewSummary.nextAverageMargin)}</div>
                   <div className={cn("mt-1 text-xs", previewSummary.marginDelta >= 0 ? "text-emerald-700" : "text-rose-700")}>
@@ -829,10 +824,6 @@ const AdminMarginCalculatorPage = () => {
             <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общая прибыль</div>
               <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatAdminMoney(summary.total_profit)}</div>
-            </div>
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Общие расходы</div>
-              <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{formatAdminMoney(summary.total_costs)}</div>
             </div>
             <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Средняя маржа</div>
