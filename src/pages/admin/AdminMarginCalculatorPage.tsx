@@ -695,36 +695,50 @@ const AdminMarginCalculatorPage = () => {
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-lg font-semibold text-slate-950">Панель периода</div>
             <div className="mt-1 text-sm text-slate-600">Сводка считается по дате договора и показывает текущую картину по заказам.</div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setPeriodFilter("currentYear")}
-              className={periodFilter === "currentYear" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
-            >
-              Текущий год
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setPeriodFilter("previousYear")}
-              className={periodFilter === "previousYear" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
-            >
-              Прошлый год
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setPeriodFilter("custom")}
-              className={periodFilter === "custom" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}
-            >
-              Свой период
-            </Button>
+          <div className="lg:text-right">
+            <div className="flex flex-nowrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPeriodFilter("currentYear")}
+                className={cn(
+                  "h-8 whitespace-nowrap px-3 text-xs",
+                  periodFilter === "currentYear" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                )}
+              >
+                Текущий год
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPeriodFilter("previousYear")}
+                className={cn(
+                  "h-8 whitespace-nowrap px-3 text-xs",
+                  periodFilter === "previousYear" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                )}
+              >
+                Прошлый год
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPeriodFilter("custom")}
+                className={cn(
+                  "h-8 whitespace-nowrap px-3 text-xs",
+                  periodFilter === "custom" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                )}
+              >
+                Свой период
+              </Button>
+            </div>
+            <div className="mt-2 text-xs font-medium text-slate-500">
+              Период: {summary ? `${formatAdminDate(summary.date_from)} - ${formatAdminDate(summary.date_to)}` : "загружается"}
+            </div>
           </div>
         </div>
 
@@ -775,13 +789,6 @@ const AdminMarginCalculatorPage = () => {
                   <div className={cn("mt-1 text-xs", previewSummary.lowMarginOrdersDelta > 0 ? "text-rose-700" : "text-slate-500")}>
                     {formatSignedCount(previewSummary.lowMarginOrdersDelta)}
                   </div>
-                </div>
-                <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Период</div>
-                  <div className="mt-1.5 text-sm font-semibold leading-tight text-slate-950">
-                    {formatAdminDate(summary.date_from)} - {formatAdminDate(summary.date_to)}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">без изменений</div>
                 </div>
               </div>
             ) : (
@@ -842,12 +849,6 @@ const AdminMarginCalculatorPage = () => {
             <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Низкомаржинальные</div>
               <div className="mt-1.5 text-xl font-semibold leading-tight text-slate-950">{summary.low_margin_orders_count}</div>
-            </div>
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Период</div>
-              <div className="mt-1.5 text-sm font-semibold leading-tight text-slate-950">
-                {formatAdminDate(summary.date_from)} - {formatAdminDate(summary.date_to)}
-              </div>
             </div>
           </div>
         ) : null}
