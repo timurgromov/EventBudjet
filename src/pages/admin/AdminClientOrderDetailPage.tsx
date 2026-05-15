@@ -82,6 +82,9 @@ const normalizeAmountForPayload = (value: string): string => {
   return String(Math.round(parsed));
 };
 
+const isSameAmount = (left: string, right?: string | null): boolean =>
+  normalizeAmountForPayload(left) === normalizeAmountForPayload(formatAmountInputValue(right));
+
 const getProfitStatus = (profit: number): { label: string; description: string; tone: MarginTone } => {
   if (profit < 60000) {
     return {
@@ -272,6 +275,50 @@ const AdminClientOrderDetailPage = () => {
     },
   });
 
+  const saveFullOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!orderForm) throw new Error("Форма заказа не готова");
+      let detail = await updateClientOrder(adminToken, numericOrderId, {
+        client_name: orderForm.clientName.trim(),
+        event_title: orderForm.eventTitle.trim() || null,
+        event_date: orderForm.eventDate || null,
+        contract_date: orderForm.contractDate || null,
+        source: orderForm.source.trim() || null,
+        status: orderForm.status,
+        comment: orderForm.comment.trim() || null,
+      });
+
+      const changedItems = detail.items.filter((item) => {
+        const draft = itemDrafts[item.id];
+        if (!draft) return false;
+        const titleChanged = draft.title.trim() !== item.title;
+        const amountChanged = !isSameAmount(draft.amount, item.amount);
+        return titleChanged || amountChanged;
+      });
+
+      for (const item of changedItems) {
+        const draft = itemDrafts[item.id];
+        detail = await updateClientOrderItem(adminToken, numericOrderId, item.id, {
+          title: draft.title.trim(),
+          amount: normalizeAmountForPayload(draft.amount),
+        });
+      }
+
+      return detail;
+    },
+    onSuccess: async (detail) => {
+      setStatusMessage("Карточка и финансовые строки сохранены.");
+      showAdminSuccessToast({
+        title: "Карточка сохранена",
+        description: "Шапка и финансовые строки обновлены.",
+      });
+      await applyOrderDetail(detail);
+    },
+    onError: (error) => {
+      setStatusMessage(error instanceof Error ? `Ошибка сохранения: ${error.message}` : "Ошибка сохранения заказа.");
+    },
+  });
+
   const updateItemMutation = useMutation({
     mutationFn: async ({ itemId }: { itemId: number }) => {
       const draft = itemDrafts[itemId];
@@ -429,11 +476,11 @@ const AdminClientOrderDetailPage = () => {
         <div className="flex items-center justify-between gap-3">
           <div className="text-lg font-semibold text-slate-950">Шапка заказа</div>
           <Button
-            onClick={() => updateOrderMutation.mutate()}
-            disabled={updateOrderMutation.isPending}
+            onClick={() => saveFullOrderMutation.mutate()}
+            disabled={saveFullOrderMutation.isPending}
             className="bg-[#E6BF3A] text-slate-950 hover:bg-[#d7b236]"
           >
-            {updateOrderMutation.isPending ? "Сохраняю..." : "Сохранить карточку"}
+            {saveFullOrderMutation.isPending ? "Сохраняю..." : "Сохранить карточку"}
           </Button>
         </div>
 
