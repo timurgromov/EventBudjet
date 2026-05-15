@@ -232,6 +232,14 @@ const AdminClientOrderDetailPage = () => {
     await queryClient.invalidateQueries({ queryKey: ["client-order-summary"] });
   };
 
+  const applyOrderDetail = async (detail: Awaited<ReturnType<typeof getClientOrder>>) => {
+    queryClient.setQueryData(["client-order", adminToken, numericOrderId], detail);
+    setOrderForm(buildOrderForm(detail.order));
+    setItemDrafts(buildItemDrafts(detail.items));
+    await queryClient.invalidateQueries({ queryKey: ["client-orders"] });
+    await queryClient.invalidateQueries({ queryKey: ["client-order-summary"] });
+  };
+
   const updateOrderMutation = useMutation({
     mutationFn: async () => {
       if (!orderForm) throw new Error("Форма заказа не готова");
@@ -245,13 +253,13 @@ const AdminClientOrderDetailPage = () => {
         comment: orderForm.comment.trim() || null,
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (detail) => {
       setStatusMessage("Карточка заказа обновлена.");
       showAdminSuccessToast({
         title: "Карточка сохранена",
         description: "Изменения по заказу применены.",
       });
-      await refreshOrder();
+      await applyOrderDetail(detail);
     },
     onError: (error) => {
       setStatusMessage(error instanceof Error ? `Ошибка обновления: ${error.message}` : "Ошибка обновления заказа.");
@@ -267,13 +275,13 @@ const AdminClientOrderDetailPage = () => {
         amount: normalizeAmountForPayload(draft.amount),
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (detail) => {
       setStatusMessage("Финансовая строка обновлена.");
       showAdminSuccessToast({
         title: "Строка сохранена",
         description: "Финансовые данные обновлены.",
       });
-      await refreshOrder();
+      await applyOrderDetail(detail);
     },
     onError: (error) => {
       setStatusMessage(error instanceof Error ? `Ошибка строки: ${error.message}` : "Ошибка обновления строки.");
@@ -282,9 +290,9 @@ const AdminClientOrderDetailPage = () => {
 
   const deleteItemMutation = useMutation({
     mutationFn: async ({ itemId }: { itemId: number }) => deleteClientOrderItem(adminToken, numericOrderId, itemId),
-    onSuccess: async () => {
+    onSuccess: async (detail) => {
       setStatusMessage("Строка удалена.");
-      await refreshOrder();
+      await applyOrderDetail(detail);
     },
     onError: (error) => {
       setStatusMessage(error instanceof Error ? `Ошибка удаления строки: ${error.message}` : "Ошибка удаления строки.");
@@ -293,7 +301,7 @@ const AdminClientOrderDetailPage = () => {
 
   const createItemMutation = useMutation({
     mutationFn: async (payload: ClientOrderItemCreatePayload) => createClientOrderItem(adminToken, numericOrderId, payload),
-    onSuccess: async (_, variables) => {
+    onSuccess: async (detail, variables) => {
       setStatusMessage("Строка добавлена.");
       showAdminSuccessToast({
         title: "Строка добавлена",
@@ -304,7 +312,7 @@ const AdminClientOrderDetailPage = () => {
       } else {
         setNewCostItem({ title: "", amount: "" });
       }
-      await refreshOrder();
+      await applyOrderDetail(detail);
     },
     onError: (error) => {
       setStatusMessage(error instanceof Error ? `Ошибка добавления строки: ${error.message}` : "Ошибка добавления строки.");

@@ -79,6 +79,7 @@ class ClientOrderService:
         data.setdefault('position', self.orders.get_next_position(order_id))
         self.orders.create_item(order_id, data)
         self.db.commit()
+        self.db.expire_all()
         return self.get_order_detail(order_id)
 
     def update_item(self, order_id: int, item_id: int, payload: ClientOrderItemUpdate) -> ClientOrderDetailResponse | None:
@@ -91,6 +92,7 @@ class ClientOrderService:
         data = payload.model_dump(exclude_unset=True)
         self.orders.update_item(item, data)
         self.db.commit()
+        self.db.expire_all()
         return self.get_order_detail(order_id)
 
     def delete_item(self, order_id: int, item_id: int) -> ClientOrderDetailResponse | None:
@@ -102,6 +104,7 @@ class ClientOrderService:
             return None
         self.orders.delete_item(item)
         self.db.commit()
+        self.db.expire_all()
         return self.get_order_detail(order_id)
 
     def get_summary(self, date_from: date | None = None, date_to: date | None = None) -> ClientOrderSummaryResponse:
