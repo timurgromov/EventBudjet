@@ -63,6 +63,12 @@ const parseDecimal = (value?: string | null): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const parseAmountInput = (value?: string | null): number => {
+  if (!value) return 0;
+  const parsed = Number.parseFloat(value.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const formatAmountInputValue = (value?: string | null): string => {
   if (!value) return "0";
   const parsed = Number.parseFloat(value.replace(",", "."));
@@ -352,8 +358,27 @@ const AdminClientOrderDetailPage = () => {
   const items = query.data?.items ?? [];
   const revenueItems = useMemo(() => items.filter((item) => item.item_type === "revenue"), [items]);
   const costItems = useMemo(() => items.filter((item) => item.item_type === "cost"), [items]);
-  const profitValue = parseDecimal(order?.profit);
-  const marginValue = parseDecimal(order?.margin);
+  const previewFinancials = useMemo(() => {
+    const sumItems = (groupItems: ClientOrderItem[]) =>
+      groupItems.reduce((sum, item) => {
+        const draftAmount = itemDrafts[item.id]?.amount ?? item.amount;
+        return sum + parseAmountInput(draftAmount);
+      }, 0);
+
+    const revenue = sumItems(revenueItems);
+    const totalCosts = sumItems(costItems);
+    const profit = revenue - totalCosts;
+    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+    return {
+      revenue,
+      totalCosts,
+      profit,
+      margin,
+    };
+  }, [costItems, itemDrafts, revenueItems]);
+  const profitValue = previewFinancials.profit;
+  const marginValue = previewFinancials.margin;
   const profitStatus = getProfitStatus(profitValue);
   const marginStatus = getMarginStatus(marginValue);
   const profitTone = toneClasses[profitStatus.tone];
@@ -457,26 +482,26 @@ const AdminClientOrderDetailPage = () => {
       <div className="grid gap-2 lg:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
           <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Выручка</div>
-          <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(order.revenue)}</div>
+          <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(String(previewFinancials.revenue))}</div>
         </div>
         <div className={cn("rounded-xl border px-3 py-2.5 shadow-sm", profitTone.panel, profitTone.effect)}>
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Прибыль</div>
-              <div className={cn("mt-1 text-xl font-semibold leading-none", profitTone.value)}>{formatAdminMoney(order.profit)}</div>
+              <div className={cn("mt-1 text-xl font-semibold leading-none", profitTone.value)}>{formatAdminMoney(String(previewFinancials.profit))}</div>
             </div>
             <div className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", profitTone.badge)}>{profitStatus.label}</div>
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
           <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Расходы</div>
-          <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(order.total_costs)}</div>
+          <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(String(previewFinancials.totalCosts))}</div>
         </div>
         <div className={cn("rounded-xl border px-3 py-2.5 shadow-sm", marginTone.panel, marginTone.effect)}>
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Маржа</div>
-              <div className={cn("mt-1 text-xl font-semibold leading-none", marginTone.value)}>{formatMargin(order.margin)}</div>
+              <div className={cn("mt-1 text-xl font-semibold leading-none", marginTone.value)}>{formatMargin(String(previewFinancials.margin))}</div>
             </div>
             <div className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", marginTone.badge)}>{marginStatus.label}</div>
           </div>
