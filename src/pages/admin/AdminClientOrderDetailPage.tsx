@@ -532,12 +532,12 @@ const AdminClientOrderDetailPage = () => {
           <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(String(previewFinancials.revenue))}</div>
         </div>
         <div className={cn("rounded-xl border px-3 py-2.5 shadow-sm", profitTone.panel, profitTone.effect)}>
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Прибыль</div>
-              <div className={cn("mt-1 text-xl font-semibold leading-none", profitTone.value)}>{formatAdminMoney(String(previewFinancials.profit))}</div>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <div className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Прибыль</div>
+              <div className={cn("max-w-[68%] rounded-full px-2 py-0.5 text-center text-[11px] font-medium leading-tight", profitTone.badge)}>{profitStatus.label}</div>
             </div>
-            <div className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", profitTone.badge)}>{profitStatus.label}</div>
+            <div className={cn("text-xl font-semibold leading-none", profitTone.value)}>{formatAdminMoney(String(previewFinancials.profit))}</div>
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
@@ -545,12 +545,12 @@ const AdminClientOrderDetailPage = () => {
           <div className="mt-1 text-xl font-semibold leading-none text-slate-950">{formatAdminMoney(String(previewFinancials.totalCosts))}</div>
         </div>
         <div className={cn("rounded-xl border px-3 py-2.5 shadow-sm", marginTone.panel, marginTone.effect)}>
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Маржа</div>
-              <div className={cn("mt-1 text-xl font-semibold leading-none", marginTone.value)}>{formatMargin(String(previewFinancials.margin))}</div>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <div className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">Маржа</div>
+              <div className={cn("max-w-[68%] rounded-full px-2 py-0.5 text-center text-[11px] font-medium leading-tight", marginTone.badge)}>{marginStatus.label}</div>
             </div>
-            <div className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", marginTone.badge)}>{marginStatus.label}</div>
+            <div className={cn("text-xl font-semibold leading-none", marginTone.value)}>{formatMargin(String(previewFinancials.margin))}</div>
           </div>
         </div>
       </div>
